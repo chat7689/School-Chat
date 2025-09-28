@@ -9,6 +9,10 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
         }
 
         body {
@@ -17,6 +21,7 @@
             min-height: 100vh;
             color: white;
             overflow: hidden;
+            cursor: default;
         }
 
         .game-container {
@@ -25,7 +30,7 @@
             flex-direction: column;
         }
 
-        .lobby-screen {
+        .name-prompt {
             position: absolute;
             top: 0;
             left: 0;
@@ -39,7 +44,7 @@
             z-index: 2000;
         }
 
-        .lobby-card {
+        .name-card {
             background: rgba(0, 0, 0, 0.4);
             backdrop-filter: blur(15px);
             padding: 3rem;
@@ -49,7 +54,7 @@
             min-width: 400px;
         }
 
-        .lobby-title {
+        .name-title {
             font-size: 2rem;
             font-weight: 800;
             background: linear-gradient(135deg, #00f5ff, #0066ff);
@@ -79,6 +84,10 @@
             background: rgba(255, 255, 255, 0.1);
             color: white;
             font-size: 1rem;
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
         }
 
         .input-group input:focus {
@@ -171,10 +180,9 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
+            cursor: move;
             transition: all 0.3s ease;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-            user-select: none;
             transform: translate(-50%, -50%);
         }
 
@@ -206,6 +214,12 @@
             box-shadow: 0 0 40px currentColor;
         }
 
+        .base.dragging {
+            z-index: 1000;
+            cursor: grabbing;
+            transform: translate(-50%, -50%) scale(1.2);
+        }
+
         .base.attacking {
             animation: pulse 0.5s infinite alternate;
         }
@@ -220,6 +234,7 @@
             font-weight: 800;
             color: white;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+            pointer-events: none;
         }
 
         .base-id {
@@ -227,6 +242,7 @@
             opacity: 0.9;
             margin-top: 2px;
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+            pointer-events: none;
         }
 
         .attack-line {
@@ -419,29 +435,30 @@
             border: 1px solid rgba(255, 71, 87, 0.3);
         }
 
-        .room-info {
+        .instructions {
             position: absolute;
-            top: 100px;
+            bottom: 20px;
             left: 20px;
             background: rgba(0, 0, 0, 0.4);
             backdrop-filter: blur(10px);
             padding: 1rem;
             border-radius: 15px;
-            min-width: 200px;
             border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.8rem;
+            opacity: 0.8;
         }
     </style>
 </head>
 <body>
-    <!-- Lobby Screen -->
-    <div class="lobby-screen" id="lobbyScreen">
-        <div class="lobby-card">
-            <h1 class="lobby-title">BASE COMMAND</h1>
+    <!-- Name Prompt Screen -->
+    <div class="name-prompt" id="namePrompt">
+        <div class="name-card">
+            <h1 class="name-title">BASE COMMAND</h1>
             <p style="margin-bottom: 2rem; opacity: 0.8;">Multiplayer Strategy Game</p>
 
             <div class="connection-status" id="connectionStatus">
                 <div class="status-dot"></div>
-                <span>Connecting to Firebase...</span>
+                <span>Connecting...</span>
             </div>
 
             <div class="input-group">
@@ -449,17 +466,11 @@
                 <input type="text" id="playerName" placeholder="Enter your name" maxlength="20">
             </div>
 
-            <div class="input-group">
-                <label for="roomCode">Room Code</label>
-                <input type="text" id="roomCode" placeholder="Enter room code or leave blank for new room" maxlength="10">
-            </div>
-
             <div style="display: flex; gap: 1rem; margin-top: 2rem;">
                 <button class="btn btn-primary" id="joinGameBtn" disabled>Join Game</button>
-                <button class="btn btn-secondary" id="createRoomBtn" disabled>Create Room</button>
             </div>
 
-            <div id="lobbyError" style="color: #f87171; margin-top: 1rem; display: none;"></div>
+            <div id="nameError" style="color: #f87171; margin-top: 1rem; display: none;"></div>
         </div>
     </div>
 
@@ -491,13 +502,6 @@
 
         <div class="controls">
             <button class="btn btn-primary" id="upgradeBtn">Upgrade Base (+50 Energy)</button>
-            <button class="btn btn-secondary" id="leaveGameBtn">Leave Game</button>
-        </div>
-
-        <div class="room-info">
-            <h3 style="margin-bottom: 0.5rem; color: #00f5ff;">Room Info</h3>
-            <div>Code: <span id="displayRoomCode">----</span></div>
-            <div>Players: <span id="roomPlayerCount">0</span>/8</div>
         </div>
 
         <div class="player-list">
@@ -505,6 +509,13 @@
             <div id="playerList">
                 <!-- Player list will be populated here -->
             </div>
+        </div>
+
+        <div class="instructions">
+            <div style="color: #00f5ff; font-weight: bold; margin-bottom: 0.5rem;">Controls:</div>
+            <div>• Drag your base to move it</div>
+            <div>• Click enemy bases to attack</div>
+            <div>• Click upgrade to gain energy</div>
         </div>
     </div>
 
@@ -530,16 +541,38 @@
         const app = initializeApp(firebaseConfig);
         const database = getDatabase(app);
 
-        class MultiplayerBaseCommand {
+        // Disable right-click context menu
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            return false;
+        });
+
+        // Disable text selection except for input fields
+        document.addEventListener('selectstart', function(e) {
+            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        // Disable drag and drop
+        document.addEventListener('dragstart', function(e) {
+            e.preventDefault();
+            return false;
+        });
+
+        class SingleRoomBaseCommand {
             constructor() {
                 this.playerId = this.generatePlayerId();
                 this.playerName = '';
-                this.roomCode = '';
+                this.roomCode = 'main-room'; // Single shared room
                 this.gameState = null;
                 this.selectedBase = null;
                 this.targetBase = null;
                 this.mapRadius = 0;
                 this.isConnected = false;
+                this.isDragging = false;
+                this.dragOffset = { x: 0, y: 0 };
 
                 this.initializeElements();
                 this.bindEvents();
@@ -551,38 +584,36 @@
             }
 
             initializeElements() {
-                this.lobbyScreen = document.getElementById('lobbyScreen');
+                this.namePrompt = document.getElementById('namePrompt');
                 this.gameContainer = document.getElementById('gameContainer');
                 this.connectionStatus = document.getElementById('connectionStatus');
                 this.playerNameInput = document.getElementById('playerName');
-                this.roomCodeInput = document.getElementById('roomCode');
                 this.joinGameBtn = document.getElementById('joinGameBtn');
-                this.createRoomBtn = document.getElementById('createRoomBtn');
                 this.mapCircle = document.getElementById('mapCircle');
                 this.playerEnergyDisplay = document.getElementById('playerEnergy');
                 this.playerCountDisplay = document.getElementById('playerCount');
-                this.displayRoomCode = document.getElementById('displayRoomCode');
-                this.roomPlayerCount = document.getElementById('roomPlayerCount');
                 this.playerList = document.getElementById('playerList');
-                this.lobbyError = document.getElementById('lobbyError');
+                this.nameError = document.getElementById('nameError');
             }
 
             bindEvents() {
                 this.joinGameBtn.addEventListener('click', () => this.joinGame());
-                this.createRoomBtn.addEventListener('click', () => this.createRoom());
                 this.playerNameInput.addEventListener('input', () => this.validateForm());
-                this.roomCodeInput.addEventListener('input', () => this.validateForm());
-
-                document.getElementById('upgradeBtn').addEventListener('click', () => this.upgradeBase());
-                document.getElementById('leaveGameBtn').addEventListener('click', () => this.leaveGame());
-
-                document.addEventListener('click', (e) => {
-                    if (e.target.closest('.base')) {
-                        this.handleBaseClick(e.target.closest('.base'));
-                    } else if (!e.target.closest('.attack-panel')) {
-                        this.clearSelection();
+                this.playerNameInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && !this.joinGameBtn.disabled) {
+                        this.joinGame();
                     }
                 });
+
+                document.getElementById('upgradeBtn').addEventListener('click', () => this.upgradeBase());
+
+                // Mouse events for base dragging
+                document.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+                document.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+                document.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+
+                // Attack events
+                document.addEventListener('click', (e) => this.handleClick(e));
             }
 
             async checkConnection() {
@@ -613,81 +644,24 @@
             validateForm() {
                 const nameValid = this.playerNameInput.value.trim().length > 0;
                 const connected = this.isConnected;
-
                 this.joinGameBtn.disabled = !nameValid || !connected;
-                this.createRoomBtn.disabled = !nameValid || !connected;
-            }
-
-            generateRoomCode() {
-                return Math.random().toString(36).substr(2, 6).toUpperCase();
-            }
-
-            async createRoom() {
-                this.playerName = this.playerNameInput.value.trim();
-                this.roomCode = this.generateRoomCode();
-
-                try {
-                    const roomRef = ref(database, `rooms/${this.roomCode}`);
-                    const initialGameState = {
-                        players: {
-                            [this.playerId]: {
-                                name: this.playerName,
-                                energy: 100,
-                                connected: true,
-                                joinedAt: serverTimestamp()
-                            }
-                        },
-                        bases: {
-                            [this.playerId]: {
-                                owner: this.playerId,
-                                energy: 100,
-                                x: 0,
-                                y: 0,
-                                type: 'player'
-                            }
-                        },
-                        gameStarted: true,
-                        createdAt: serverTimestamp()
-                    };
-
-                    await set(roomRef, initialGameState);
-                    this.joinGameRoom();
-                } catch (error) {
-                    this.showError('Failed to create room: ' + error.message);
-                }
             }
 
             async joinGame() {
                 this.playerName = this.playerNameInput.value.trim();
-                this.roomCode = this.roomCodeInput.value.trim().toUpperCase() || this.generateRoomCode();
 
                 try {
-                    const roomRef = ref(database, `rooms/${this.roomCode}`);
-                    onValue(roomRef, (snapshot) => {
-                        if (snapshot.exists()) {
-                            this.joinExistingRoom();
-                        } else if (this.roomCodeInput.value.trim() === '') {
-                            this.createRoom();
-                        } else {
-                            this.showError('Room not found');
-                        }
-                    }, { onlyOnce: true });
-                } catch (error) {
-                    this.showError('Failed to join game: ' + error.message);
-                }
-            }
-
-            async joinExistingRoom() {
-                try {
+                    // Add player to the single shared room
                     const playerRef = ref(database, `rooms/${this.roomCode}/players/${this.playerId}`);
                     await set(playerRef, {
                         name: this.playerName,
                         energy: 100,
                         connected: true,
+                        isBot: false,
                         joinedAt: serverTimestamp()
                     });
 
-                    // Add player's base
+                    // Add player's base at random position
                     const baseRef = ref(database, `rooms/${this.roomCode}/bases/${this.playerId}`);
                     const angle = Math.random() * 2 * Math.PI;
                     const distance = Math.random() * 200;
@@ -699,16 +673,67 @@
                         type: 'player'
                     });
 
-                    this.joinGameRoom();
+                    // Create AI bots if this is the first player
+                    await this.initializeBots();
+
+                    this.startGame();
                 } catch (error) {
-                    this.showError('Failed to join room: ' + error.message);
+                    this.showError('Failed to join game: ' + error.message);
                 }
             }
 
-            joinGameRoom() {
-                this.lobbyScreen.style.display = 'none';
+            async initializeBots() {
+                try {
+                    // Check if bots already exist
+                    const roomRef = ref(database, `rooms/${this.roomCode}/players`);
+                    const snapshot = await new Promise((resolve) => {
+                        onValue(roomRef, resolve, { onlyOnce: true });
+                    });
+
+                    let botCount = 0;
+                    if (snapshot.exists()) {
+                        const players = snapshot.val();
+                        botCount = Object.values(players).filter(p => p.isBot).length;
+                    }
+
+                    // Create 3 bots if none exist
+                    if (botCount === 0) {
+                        const botNames = ['Alpha', 'Beta', 'Gamma'];
+
+                        for (let i = 0; i < 3; i++) {
+                            const botId = `bot_${i}_${Date.now()}`;
+
+                            // Create bot player
+                            const botPlayerRef = ref(database, `rooms/${this.roomCode}/players/${botId}`);
+                            await set(botPlayerRef, {
+                                name: botNames[i],
+                                energy: 80 + Math.random() * 40, // 80-120 energy
+                                connected: true,
+                                isBot: true,
+                                joinedAt: serverTimestamp()
+                            });
+
+                            // Create bot base
+                            const angle = Math.random() * 2 * Math.PI;
+                            const distance = Math.random() * 180 + 50; // Keep some distance from center
+                            const botBaseRef = ref(database, `rooms/${this.roomCode}/bases/${botId}`);
+                            await set(botBaseRef, {
+                                owner: botId,
+                                energy: 80 + Math.random() * 40,
+                                x: Math.cos(angle) * distance,
+                                y: Math.sin(angle) * distance,
+                                type: 'bot'
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.log('Bot initialization error:', error);
+                }
+            }
+
+            startGame() {
+                this.namePrompt.style.display = 'none';
                 this.gameContainer.style.display = 'flex';
-                this.displayRoomCode.textContent = this.roomCode;
 
                 // Calculate map radius
                 this.mapRadius = Math.min(window.innerWidth, window.innerHeight) * 0.4 * 0.8;
@@ -718,6 +743,9 @@
 
                 // Set up disconnect cleanup
                 this.setupDisconnectCleanup();
+
+                // Start bot AI loop
+                this.startBotAI();
             }
 
             setupGameListeners() {
@@ -738,13 +766,123 @@
                 onDisconnect(baseRef).remove();
             }
 
+            handleMouseDown(e) {
+                const base = e.target.closest('.base');
+                if (!base) return;
+
+                const ownerId = base.dataset.owner;
+                if (ownerId !== this.playerId) return;
+
+                this.isDragging = true;
+                this.selectedBase = base;
+                base.classList.add('dragging');
+
+                const rect = base.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+
+                this.dragOffset = {
+                    x: e.clientX - centerX,
+                    y: e.clientY - centerY
+                };
+
+                e.preventDefault();
+            }
+
+            handleMouseMove(e) {
+                if (!this.isDragging || !this.selectedBase) return;
+
+                const mapRect = this.mapCircle.getBoundingClientRect();
+                const mapCenterX = mapRect.left + mapRect.width / 2;
+                const mapCenterY = mapRect.top + mapRect.height / 2;
+
+                // Calculate new position relative to map center
+                const newX = (e.clientX - this.dragOffset.x) - mapCenterX;
+                const newY = (e.clientY - this.dragOffset.y) - mapCenterY;
+
+                // Keep base within circle bounds
+                const distance = Math.sqrt(newX * newX + newY * newY);
+                const maxDistance = this.mapRadius - 50; // Leave some margin
+
+                let finalX = newX;
+                let finalY = newY;
+
+                if (distance > maxDistance) {
+                    const ratio = maxDistance / distance;
+                    finalX = newX * ratio;
+                    finalY = newY * ratio;
+                }
+
+                // Update visual position immediately
+                this.selectedBase.style.left = (this.mapRadius + finalX) + 'px';
+                this.selectedBase.style.top = (this.mapRadius + finalY) + 'px';
+            }
+
+            async handleMouseUp(e) {
+                if (!this.isDragging || !this.selectedBase) return;
+
+                this.selectedBase.classList.remove('dragging');
+
+                // Get final position and update database
+                const mapRect = this.mapCircle.getBoundingClientRect();
+                const mapCenterX = mapRect.left + mapRect.width / 2;
+                const mapCenterY = mapRect.top + mapRect.height / 2;
+
+                const newX = (e.clientX - this.dragOffset.x) - mapCenterX;
+                const newY = (e.clientY - this.dragOffset.y) - mapCenterY;
+
+                // Keep base within circle bounds
+                const distance = Math.sqrt(newX * newX + newY * newY);
+                const maxDistance = this.mapRadius - 50;
+
+                let finalX = newX;
+                let finalY = newY;
+
+                if (distance > maxDistance) {
+                    const ratio = maxDistance / distance;
+                    finalX = newX * ratio;
+                    finalY = newY * ratio;
+                }
+
+                try {
+                    // Update position in database
+                    const baseRef = ref(database, `rooms/${this.roomCode}/bases/${this.playerId}`);
+                    await set(baseRef, {
+                        owner: this.playerId,
+                        energy: this.gameState.bases[this.playerId].energy,
+                        x: finalX,
+                        y: finalY,
+                        type: 'player'
+                    });
+                } catch (error) {
+                    console.error('Failed to update base position:', error);
+                }
+
+                this.isDragging = false;
+                this.selectedBase = null;
+            }
+
+            handleClick(e) {
+                if (this.isDragging) return;
+
+                const base = e.target.closest('.base');
+                if (!base) return;
+
+                const baseId = base.dataset.id;
+                const ownerId = base.dataset.owner;
+
+                // Attack enemy base
+                if (ownerId !== this.playerId) {
+                    this.attackBase(this.playerId, baseId);
+                }
+            }
+
             updateGameDisplay() {
                 if (!this.gameState) return;
 
                 // Update player count
                 const playerCount = Object.keys(this.gameState.players || {}).length;
                 this.playerCountDisplay.textContent = playerCount;
-                this.roomPlayerCount.textContent = playerCount;
 
                 // Update current player energy
                 const currentPlayer = this.gameState.players[this.playerId];
@@ -790,7 +928,17 @@
             createBaseElement(baseId, baseData) {
                 const base = document.createElement('div');
                 const isOwnBase = baseData.owner === this.playerId;
-                const baseClass = isOwnBase ? 'player' : 'other-player';
+                const ownerData = this.gameState.players[baseData.owner];
+                const isBot = ownerData?.isBot || false;
+
+                let baseClass;
+                if (isOwnBase) {
+                    baseClass = 'player';
+                } else if (isBot) {
+                    baseClass = 'enemy'; // Red for bots
+                } else {
+                    baseClass = 'other-player'; // Orange for other players
+                }
 
                 base.className = `base ${baseClass}`;
                 base.dataset.id = baseId;
@@ -809,8 +957,15 @@
                 base.style.height = size + 'px';
 
                 // Get player name
-                const ownerName = this.gameState.players[baseData.owner]?.name || 'Unknown';
-                const displayName = isOwnBase ? 'YOU' : ownerName;
+                const ownerName = ownerData?.name || 'Unknown';
+                let displayName;
+                if (isOwnBase) {
+                    displayName = 'YOU';
+                } else if (isBot) {
+                    displayName = `🤖 ${ownerName}`;
+                } else {
+                    displayName = ownerName;
+                }
 
                 base.innerHTML = `
                     <div class="energy-level">${baseData.energy}</div>
@@ -820,108 +975,125 @@
                 this.mapCircle.appendChild(base);
             }
 
-            handleBaseClick(baseElement) {
-                const baseId = baseElement.dataset.id;
-                const ownerId = baseElement.dataset.owner;
+            startBotAI() {
+                // Run bot AI every 3-7 seconds
+                setInterval(() => {
+                    this.runBotAI();
+                }, 3000 + Math.random() * 4000);
+            }
 
-                if (ownerId === this.playerId) {
-                    // Select own base
-                    this.selectBase(baseElement);
-                } else if (this.selectedBase && this.selectedBase.dataset.owner === this.playerId) {
-                    // Attack enemy base
-                    this.targetBase = baseElement;
-                    this.showAttackPanel();
+            async runBotAI() {
+                if (!this.gameState || !this.gameState.players) return;
+
+                const bots = Object.entries(this.gameState.players).filter(([id, player]) => player.isBot);
+
+                for (const [botId, botData] of bots) {
+                    if (botData.energy <= 0) continue;
+
+                    // 60% chance to do something
+                    if (Math.random() > 0.6) continue;
+
+                    try {
+                        // Choose action: 30% upgrade, 70% attack or move
+                        if (Math.random() < 0.3) {
+                            await this.botUpgrade(botId);
+                        } else if (Math.random() < 0.7) {
+                            await this.botAttack(botId);
+                        } else {
+                            await this.botMove(botId);
+                        }
+                    } catch (error) {
+                        console.log('Bot AI error:', error);
+                    }
                 }
             }
 
-            selectBase(base) {
-                this.clearSelection();
-                this.selectedBase = base;
-                base.classList.add('selected');
+            async botUpgrade(botId) {
+                const bot = this.gameState.players[botId];
+                if (!bot || bot.energy < 30) return;
+
+                const newEnergy = bot.energy + 25; // Smaller upgrade than players
+
+                // Update bot energy
+                const playerRef = ref(database, `rooms/${this.roomCode}/players/${botId}/energy`);
+                await set(playerRef, newEnergy);
+
+                // Update bot base energy
+                const baseRef = ref(database, `rooms/${this.roomCode}/bases/${botId}/energy`);
+                await set(baseRef, newEnergy);
             }
 
-            clearSelection() {
-                if (this.selectedBase) {
-                    this.selectedBase.classList.remove('selected');
-                    this.selectedBase = null;
+            async botAttack(botId) {
+                const bot = this.gameState.players[botId];
+                if (!bot || bot.energy < 15) return;
+
+                // Find all non-bot targets
+                const targets = Object.entries(this.gameState.players)
+                    .filter(([id, player]) => !player.isBot && player.energy > 0)
+                    .map(([id]) => id);
+
+                if (targets.length === 0) return;
+
+                // Pick random target
+                const targetId = targets[Math.floor(Math.random() * targets.length)];
+                await this.attackBase(botId, targetId);
+            }
+
+            async botMove(botId) {
+                if (!this.gameState.bases[botId]) return;
+
+                const currentBase = this.gameState.bases[botId];
+
+                // Move to a new random position
+                const angle = Math.random() * 2 * Math.PI;
+                const distance = Math.random() * 180 + 50;
+                const newX = Math.cos(angle) * distance;
+                const newY = Math.sin(angle) * distance;
+
+                // Keep within bounds
+                const distanceFromCenter = Math.sqrt(newX * newX + newY * newY);
+                const maxDistance = this.mapRadius - 50;
+
+                let finalX = newX;
+                let finalY = newY;
+
+                if (distanceFromCenter > maxDistance) {
+                    const ratio = maxDistance / distanceFromCenter;
+                    finalX = newX * ratio;
+                    finalY = newY * ratio;
                 }
-                this.targetBase = null;
-                this.hideAttackPanel();
-            }
 
-            showAttackPanel() {
-                const currentPlayer = this.gameState.players[this.playerId];
-                const maxEnergy = Math.min(currentPlayer.energy, 50);
-
-                const panel = document.createElement('div');
-                panel.className = 'attack-panel';
-                panel.id = 'attackPanel';
-
-                panel.innerHTML = `
-                    <h3>Launch Attack</h3>
-                    <p>Choose energy to spend (more energy = more damage)</p>
-                    <div class="energy-display">
-                        <span>Energy: <span id="energyAmount">10</span></span>
-                        <span>Damage: ~<span id="damageAmount">15-25</span></span>
-                    </div>
-                    <input type="range" class="energy-slider" id="energySlider"
-                           min="5" max="${maxEnergy}" value="10" step="5">
-                    <div class="damage-preview">
-                        <small>Higher energy = more damage but costs more</small>
-                    </div>
-                    <div style="display: flex; gap: 1rem; margin-top: 1rem;">
-                        <button class="btn btn-primary" id="confirmAttack">Attack!</button>
-                        <button class="btn btn-secondary" id="cancelAttack">Cancel</button>
-                    </div>
-                `;
-
-                document.body.appendChild(panel);
-
-                const slider = document.getElementById('energySlider');
-                const energyAmount = document.getElementById('energyAmount');
-                const damageAmount = document.getElementById('damageAmount');
-
-                slider.addEventListener('input', () => {
-                    const energy = parseInt(slider.value);
-                    energyAmount.textContent = energy;
-                    const minDamage = Math.floor(energy * 1.5);
-                    const maxDamage = Math.floor(energy * 2.5);
-                    damageAmount.textContent = `${minDamage}-${maxDamage}`;
-                });
-
-                document.getElementById('confirmAttack').addEventListener('click', () => {
-                    const energy = parseInt(slider.value);
-                    this.attackBase(this.selectedBase.dataset.id, this.targetBase.dataset.id, energy);
-                    this.hideAttackPanel();
-                });
-
-                document.getElementById('cancelAttack').addEventListener('click', () => {
-                    this.hideAttackPanel();
+                // Update bot base position
+                const baseRef = ref(database, `rooms/${this.roomCode}/bases/${botId}`);
+                await set(baseRef, {
+                    owner: botId,
+                    energy: currentBase.energy,
+                    x: finalX,
+                    y: finalY,
+                    type: 'bot'
                 });
             }
 
-            hideAttackPanel() {
-                const panel = document.getElementById('attackPanel');
-                if (panel) {
-                    panel.remove();
-                }
-            }
-
-            async attackBase(attackerBaseId, targetBaseId, energySpent) {
+            async attackBase(attackerBaseId, targetBaseId) {
                 try {
+                    const attacker = this.gameState.players[attackerBaseId];
+                    const targetBase = this.gameState.bases[targetBaseId];
+
+                    if (!attacker || !targetBase || attacker.energy < 10) return;
+
+                    const energySpent = Math.min(attacker.energy, 20); // Fixed attack energy
                     const damage = Math.floor(energySpent * (1.5 + Math.random()));
 
                     // Update attacker energy
-                    const attackerRef = ref(database, `rooms/${this.roomCode}/players/${this.playerId}/energy`);
-                    const currentEnergy = this.gameState.players[this.playerId].energy;
-                    await set(attackerRef, Math.max(0, currentEnergy - energySpent));
+                    const attackerRef = ref(database, `rooms/${this.roomCode}/players/${attackerBaseId}/energy`);
+                    const newAttackerEnergy = Math.max(0, attacker.energy - energySpent);
+                    await set(attackerRef, newAttackerEnergy);
 
                     // Update attacker base energy
                     const attackerBaseRef = ref(database, `rooms/${this.roomCode}/bases/${attackerBaseId}/energy`);
-                    await set(attackerBaseRef, Math.max(0, currentEnergy - energySpent));
+                    await set(attackerBaseRef, newAttackerEnergy);
 
                     // Update target base energy
-                    const targetBase = this.gameState.bases[targetBaseId];
                     const newTargetEnergy = Math.max(0, targetBase.energy - damage);
                     const targetBaseRef = ref(database, `rooms/${this.roomCode}/bases/${targetBaseId}/energy`);
                     await set(targetBaseRef, newTargetEnergy);
@@ -939,8 +1111,9 @@
                         await remove(playerRef);
                     }
 
-                    this.showNotification(`Attack dealt ${damage} damage!`);
-                    this.clearSelection();
+                    if (attackerBaseId === this.playerId) {
+                        this.showNotification(`Attack dealt ${damage} damage!`);
+                    }
                 } catch (error) {
                     this.showError('Attack failed: ' + error.message);
                 }
@@ -965,30 +1138,6 @@
                 }
             }
 
-            async leaveGame() {
-                try {
-                    // Remove player and base from database
-                    const playerRef = ref(database, `rooms/${this.roomCode}/players/${this.playerId}`);
-                    const baseRef = ref(database, `rooms/${this.roomCode}/bases/${this.playerId}`);
-
-                    await remove(playerRef);
-                    await remove(baseRef);
-
-                    // Return to lobby
-                    this.gameContainer.style.display = 'none';
-                    this.lobbyScreen.style.display = 'flex';
-                    this.clearForm();
-                } catch (error) {
-                    this.showError('Failed to leave game: ' + error.message);
-                }
-            }
-
-            clearForm() {
-                this.playerNameInput.value = '';
-                this.roomCodeInput.value = '';
-                this.lobbyError.style.display = 'none';
-            }
-
             showNotification(message) {
                 const notification = document.createElement('div');
                 notification.className = 'notification';
@@ -1003,17 +1152,17 @@
             }
 
             showError(message) {
-                this.lobbyError.textContent = message;
-                this.lobbyError.style.display = 'block';
+                this.nameError.textContent = message;
+                this.nameError.style.display = 'block';
                 setTimeout(() => {
-                    this.lobbyError.style.display = 'none';
+                    this.nameError.style.display = 'none';
                 }, 5000);
             }
         }
 
         // Start the game when page loads
         window.addEventListener('load', () => {
-            new MultiplayerBaseCommand();
+            new SingleRoomBaseCommand();
         });
     </script>
 </body>
