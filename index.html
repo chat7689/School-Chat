@@ -471,7 +471,92 @@
             font-size: 0.8rem;
             opacity: 0.8;
             z-index: 1001;
-            max-width: 300px;
+            max-width: 350px;
+        }
+
+        .energy-orb {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #00ff88, #00cc66);
+            box-shadow: 0 0 20px #00ff88;
+            animation: orb-float 3s ease-in-out infinite;
+            cursor: pointer;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+        }
+
+        @keyframes orb-float {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.2); }
+        }
+
+        .troop {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ffffff, #cccccc);
+            border: 2px solid #666;
+            transform: translate(-50%, -50%);
+            z-index: 8;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .troop.player-troop {
+            border-color: #00f5ff;
+            box-shadow: 0 0 8px rgba(0, 245, 255, 0.6);
+        }
+
+        .troop.enemy-troop {
+            border-color: #ff4757;
+            box-shadow: 0 0 8px rgba(255, 71, 87, 0.6);
+        }
+
+        .troop:hover {
+            transform: translate(-50%, -50%) scale(1.3);
+        }
+
+        .territory {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            background: rgba(0, 245, 255, 0.05);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .mini-map {
+            position: fixed;
+            top: 100px;
+            left: 20px;
+            width: 150px;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid rgba(0, 245, 255, 0.3);
+            border-radius: 50%;
+            backdrop-filter: blur(10px);
+            z-index: 1001;
+        }
+
+        .power-up {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #ff6b9d, #c44569);
+            box-shadow: 0 0 15px #ff6b9d;
+            animation: power-pulse 2s ease-in-out infinite;
+            cursor: pointer;
+            transform: translate(-50%, -50%);
+            z-index: 6;
+        }
+
+        @keyframes power-pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+            50% { transform: translate(-50%, -50%) scale(1.4) rotate(180deg); }
         }
     </style>
 </head>
@@ -529,7 +614,13 @@
         </div>
 
         <div class="controls">
-            <button class="btn btn-primary" id="upgradeBtn">Upgrade Base (+50 Energy)</button>
+            <button class="btn btn-primary" id="upgradeBtn">Upgrade Base (E) - 50 Energy</button>
+            <button class="btn btn-secondary" id="deployBtn">Deploy Troops (SPACE) - 30 Energy</button>
+            <button class="btn btn-secondary" id="abilityBtn">Shield (Q) - 40 Energy</button>
+        </div>
+
+        <div class="mini-map" id="miniMap">
+            <!-- Mini map content -->
         </div>
 
         <div class="player-list">
@@ -541,11 +632,13 @@
 
         <div class="instructions">
             <div style="color: #00f5ff; font-weight: bold; margin-bottom: 0.5rem;">Controls:</div>
-            <div>• Drag your base to move it</div>
-            <div>• Click enemy bases to attack</div>
-            <div>• Click upgrade to gain energy</div>
-            <div>• Scroll wheel to zoom in/out</div>
-            <div>• Low energy bases blink red</div>
+            <div>• WASD/Arrow keys to move base</div>
+            <div>• SPACE to deploy troops</div>
+            <div>• Click energy orbs to collect</div>
+            <div>• Click enemies to attack</div>
+            <div>• E to upgrade base</div>
+            <div>• Q for special abilities</div>
+            <div>• Scroll wheel to zoom</div>
         </div>
     </div>
 
@@ -606,6 +699,14 @@
                 this.zoomLevel = 1;
                 this.minZoom = 0.3;
                 this.maxZoom = 2.0;
+                this.keysPressed = new Set();
+                this.moveSpeed = 3;
+                this.energyOrbs = new Map();
+                this.troops = new Map();
+                this.powerUps = new Map();
+                this.shieldActive = false;
+                this.lastOrbSpawn = 0;
+                this.lastPowerUpSpawn = 0;
 
                 this.initializeElements();
                 this.bindEvents();
@@ -624,6 +725,9 @@
                 this.joinGameBtn = document.getElementById('joinGameBtn');
                 this.mapCircle = document.getElementById('mapCircle');
                 this.mapContainer = document.getElementById('mapContainer');
+                this.deployBtn = document.getElementById('deployBtn');
+                this.abilityBtn = document.getElementById('abilityBtn');
+                this.miniMap = document.getElementById('miniMap');
                 this.playerEnergyDisplay = document.getElementById('playerEnergy');
                 this.playerCountDisplay = document.getElementById('playerCount');
                 this.playerList = document.getElementById('playerList');
@@ -640,13 +744,14 @@
                 });
 
                 document.getElementById('upgradeBtn').addEventListener('click', () => this.upgradeBase());
+                this.deployBtn.addEventListener('click', () => this.deployTroop());
+                this.abilityBtn.addEventListener('click', () => this.activateShield());
 
-                // Mouse events for base dragging
-                document.addEventListener('mousedown', (e) => this.handleMouseDown(e));
-                document.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-                document.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+                // Keyboard movement
+                document.addEventListener('keydown', (e) => this.handleKeyDown(e));
+                document.addEventListener('keyup', (e) => this.handleKeyUp(e));
 
-                // Attack events
+                // Click events
                 document.addEventListener('click', (e) => this.handleClick(e));
 
                 // Zoom events
@@ -781,8 +886,18 @@
                 // Set up disconnect cleanup
                 this.setupDisconnectCleanup();
 
+                // Initialize orb and power-up spawning
+                this.spawnEnergyOrb();
+                this.spawnEnergyOrb();
+                this.spawnEnergyOrb();
+
                 // Start bot AI loop
                 this.startBotAI();
+
+                // Start game loops
+                this.startMovementLoop();
+                this.startSpawnLoop();
+                this.startTroopLoop();
             }
 
             setupGameListeners() {
@@ -899,6 +1014,86 @@
                 this.selectedBase = null;
             }
 
+            handleKeyDown(e) {
+                // Prevent default for movement keys
+                if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight', 'Space', 'KeyE', 'KeyQ'].includes(e.code)) {
+                    e.preventDefault();
+                }
+
+                this.keysPressed.add(e.code);
+
+                // Handle instant actions
+                if (e.code === 'Space') {
+                    this.deployTroop();
+                } else if (e.code === 'KeyE') {
+                    this.upgradeBase();
+                } else if (e.code === 'KeyQ') {
+                    this.activateShield();
+                }
+            }
+
+            handleKeyUp(e) {
+                this.keysPressed.delete(e.code);
+            }
+
+            startMovementLoop() {
+                const moveLoop = () => {
+                    this.processMovement();
+                    requestAnimationFrame(moveLoop);
+                };
+                moveLoop();
+            }
+
+            async processMovement() {
+                if (!this.gameState || !this.gameState.bases[this.playerId]) return;
+
+                let deltaX = 0;
+                let deltaY = 0;
+
+                // Check movement keys
+                if (this.keysPressed.has('KeyW') || this.keysPressed.has('ArrowUp')) deltaY -= this.moveSpeed;
+                if (this.keysPressed.has('KeyS') || this.keysPressed.has('ArrowDown')) deltaY += this.moveSpeed;
+                if (this.keysPressed.has('KeyA') || this.keysPressed.has('ArrowLeft')) deltaX -= this.moveSpeed;
+                if (this.keysPressed.has('KeyD') || this.keysPressed.has('ArrowRight')) deltaX += this.moveSpeed;
+
+                if (deltaX === 0 && deltaY === 0) return;
+
+                const currentBase = this.gameState.bases[this.playerId];
+                const newX = currentBase.x + deltaX;
+                const newY = currentBase.y + deltaY;
+
+                // Keep within bounds
+                const distance = Math.sqrt(newX * newX + newY * newY);
+                const maxDistance = this.mapRadius - 50;
+
+                let finalX = newX;
+                let finalY = newY;
+
+                if (distance > maxDistance) {
+                    const ratio = maxDistance / distance;
+                    finalX = newX * ratio;
+                    finalY = newY * ratio;
+                }
+
+                try {
+                    // Update position in database
+                    const baseRef = ref(database, `rooms/${this.roomCode}/bases/${this.playerId}`);
+                    await set(baseRef, {
+                        owner: this.playerId,
+                        energy: currentBase.energy,
+                        x: finalX,
+                        y: finalY,
+                        type: 'player'
+                    });
+
+                    // Check for orb collection
+                    this.checkOrbCollection(finalX, finalY);
+                    this.checkPowerUpCollection(finalX, finalY);
+                } catch (error) {
+                    console.error('Movement failed:', error);
+                }
+            }
+
             handleZoom(e) {
                 e.preventDefault();
 
@@ -911,8 +1106,155 @@
                 }
             }
 
+            startSpawnLoop() {
+                setInterval(() => {
+                    this.spawnEnergyOrb();
+                    if (Math.random() < 0.3) {
+                        this.spawnPowerUp();
+                    }
+                }, 8000 + Math.random() * 7000); // 8-15 seconds
+            }
+
+            startTroopLoop() {
+                setInterval(() => {
+                    this.moveTroops();
+                }, 1000); // Move troops every second
+            }
+
+            spawnEnergyOrb() {
+                const orbId = 'orb_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+                const angle = Math.random() * 2 * Math.PI;
+                const distance = Math.random() * (this.mapRadius - 100) + 50;
+                const x = Math.cos(angle) * distance;
+                const y = Math.sin(angle) * distance;
+
+                this.energyOrbs.set(orbId, { x, y, energy: 25 + Math.random() * 50 });
+                this.renderEnergyOrb(orbId, x, y);
+
+                // Auto-remove after 45 seconds
+                setTimeout(() => {
+                    this.removeEnergyOrb(orbId);
+                }, 45000);
+            }
+
+            spawnPowerUp() {
+                const powerUpId = 'power_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+                const angle = Math.random() * 2 * Math.PI;
+                const distance = Math.random() * (this.mapRadius - 100) + 50;
+                const x = Math.cos(angle) * distance;
+                const y = Math.sin(angle) * distance;
+
+                this.powerUps.set(powerUpId, { x, y, type: 'shield' });
+                this.renderPowerUp(powerUpId, x, y);
+
+                // Auto-remove after 30 seconds
+                setTimeout(() => {
+                    this.removePowerUp(powerUpId);
+                }, 30000);
+            }
+
+            renderEnergyOrb(orbId, x, y) {
+                const orb = document.createElement('div');
+                orb.className = 'energy-orb';
+                orb.dataset.id = orbId;
+                orb.style.left = (this.mapRadius + x) + 'px';
+                orb.style.top = (this.mapRadius + y) + 'px';
+                orb.addEventListener('click', () => this.collectEnergyOrb(orbId));
+                this.mapCircle.appendChild(orb);
+            }
+
+            renderPowerUp(powerUpId, x, y) {
+                const powerUp = document.createElement('div');
+                powerUp.className = 'power-up';
+                powerUp.dataset.id = powerUpId;
+                powerUp.style.left = (this.mapRadius + x) + 'px';
+                powerUp.style.top = (this.mapRadius + y) + 'px';
+                powerUp.addEventListener('click', () => this.collectPowerUp(powerUpId));
+                this.mapCircle.appendChild(powerUp);
+            }
+
+            checkOrbCollection(playerX, playerY) {
+                for (const [orbId, orb] of this.energyOrbs) {
+                    const distance = Math.sqrt((playerX - orb.x) ** 2 + (playerY - orb.y) ** 2);
+                    if (distance < 30) {
+                        this.collectEnergyOrb(orbId);
+                    }
+                }
+            }
+
+            checkPowerUpCollection(playerX, playerY) {
+                for (const [powerUpId, powerUp] of this.powerUps) {
+                    const distance = Math.sqrt((playerX - powerUp.x) ** 2 + (playerY - powerUp.y) ** 2);
+                    if (distance < 25) {
+                        this.collectPowerUp(powerUpId);
+                    }
+                }
+            }
+
+            async collectEnergyOrb(orbId) {
+                const orb = this.energyOrbs.get(orbId);
+                if (!orb) return;
+
+                const currentPlayer = this.gameState.players[this.playerId];
+                const energyGain = Math.round(orb.energy);
+                const newEnergy = Math.round(currentPlayer.energy + energyGain);
+
+                try {
+                    // Update player energy
+                    const playerRef = ref(database, `rooms/${this.roomCode}/players/${this.playerId}/energy`);
+                    await set(playerRef, newEnergy);
+
+                    // Update base energy
+                    const baseRef = ref(database, `rooms/${this.roomCode}/bases/${this.playerId}/energy`);
+                    await set(baseRef, newEnergy);
+
+                    this.showNotification(`⚡ Collected ${energyGain} energy!`);
+                    this.removeEnergyOrb(orbId);
+                } catch (error) {
+                    console.error('Failed to collect orb:', error);
+                }
+            }
+
+            async collectPowerUp(powerUpId) {
+                const powerUp = this.powerUps.get(powerUpId);
+                if (!powerUp) return;
+
+                if (powerUp.type === 'shield') {
+                    this.activateShield();
+                    this.showNotification('🛡️ Shield activated!');
+                }
+
+                this.removePowerUp(powerUpId);
+            }
+
+            removeEnergyOrb(orbId) {
+                this.energyOrbs.delete(orbId);
+                const orbElement = document.querySelector(`[data-id="${orbId}"]`);
+                if (orbElement) {
+                    orbElement.remove();
+                }
+            }
+
+            removePowerUp(powerUpId) {
+                this.powerUps.delete(powerUpId);
+                const powerUpElement = document.querySelector(`[data-id="${powerUpId}"]`);
+                if (powerUpElement) {
+                    powerUpElement.remove();
+                }
+            }
+
             handleClick(e) {
-                if (this.isDragging) return;
+                const orb = e.target.closest('.energy-orb');
+                if (orb) {
+                    this.collectEnergyOrb(orb.dataset.id);
+                    return;
+                }
+
+                const powerUp = e.target.closest('.power-up');
+                if (powerUp) {
+                    this.collectPowerUp(powerUp.dataset.id);
+                    return;
+                }
 
                 const base = e.target.closest('.base');
                 if (!base) return;
@@ -1045,17 +1387,43 @@
                 for (const [botId, botData] of bots) {
                     if (botData.energy <= 0) continue;
 
-                    // 60% chance to do something
-                    if (Math.random() > 0.6) continue;
+                    // 70% chance to do something
+                    if (Math.random() > 0.7) continue;
 
                     try {
-                        // Choose action: 30% upgrade, 70% attack or move
-                        if (Math.random() < 0.3) {
-                            await this.botUpgrade(botId);
-                        } else if (Math.random() < 0.7) {
-                            await this.botAttack(botId);
+                        // Smart AI decisions based on energy
+                        if (botData.energy > 100) {
+                            // High energy: be aggressive
+                            const action = Math.random();
+                            if (action < 0.4) {
+                                await this.botDeployTroop(botId);
+                            } else if (action < 0.8) {
+                                await this.botAttack(botId);
+                            } else {
+                                await this.botMove(botId);
+                            }
+                        } else if (botData.energy > 50) {
+                            // Medium energy: balanced
+                            const action = Math.random();
+                            if (action < 0.3) {
+                                await this.botUpgrade(botId);
+                            } else if (action < 0.6) {
+                                await this.botAttack(botId);
+                            } else if (action < 0.8) {
+                                await this.botMove(botId);
+                            } else {
+                                this.botCollectOrbs(botId);
+                            }
                         } else {
-                            await this.botMove(botId);
+                            // Low energy: defensive
+                            const action = Math.random();
+                            if (action < 0.5) {
+                                this.botCollectOrbs(botId);
+                            } else if (action < 0.8) {
+                                await this.botUpgrade(botId);
+                            } else {
+                                await this.botMove(botId);
+                            }
                         }
                     } catch (error) {
                         console.log('Bot AI error:', error);
@@ -1092,6 +1460,102 @@
                 // Pick random target
                 const targetId = targets[Math.floor(Math.random() * targets.length)];
                 await this.attackBase(botId, targetId);
+            }
+
+            async botDeployTroop(botId) {
+                const bot = this.gameState.players[botId];
+                if (!bot || bot.energy < 30) return;
+
+                const newEnergy = Math.round(bot.energy - 30);
+
+                // Update bot energy
+                const playerRef = ref(database, `rooms/${this.roomCode}/players/${botId}/energy`);
+                await set(playerRef, newEnergy);
+
+                // Update bot base energy
+                const baseRef = ref(database, `rooms/${this.roomCode}/bases/${botId}/energy`);
+                await set(baseRef, newEnergy);
+
+                // Add troop to local storage
+                const troopId = 'troop_' + botId + '_' + Date.now();
+                const basePos = this.gameState.bases[botId];
+                const angle = Math.random() * 2 * Math.PI;
+                const distance = 40 + Math.random() * 20;
+                const troopX = basePos.x + Math.cos(angle) * distance;
+                const troopY = basePos.y + Math.sin(angle) * distance;
+
+                this.troops.set(troopId, {
+                    owner: botId,
+                    x: troopX,
+                    y: troopY,
+                    health: 50,
+                    target: null
+                });
+
+                this.renderTroop(troopId, troopX, troopY, botId);
+            }
+
+            botCollectOrbs(botId) {
+                const botBase = this.gameState.bases[botId];
+                if (!botBase) return;
+
+                // Move towards nearest orb
+                let nearestOrb = null;
+                let nearestDistance = Infinity;
+
+                for (const [orbId, orb] of this.energyOrbs) {
+                    const distance = Math.sqrt((botBase.x - orb.x) ** 2 + (botBase.y - orb.y) ** 2);
+                    if (distance < nearestDistance) {
+                        nearestDistance = distance;
+                        nearestOrb = orb;
+                    }
+                }
+
+                if (nearestOrb && nearestDistance < 100) {
+                    // Move towards orb
+                    this.botMoveTowards(botId, nearestOrb.x, nearestOrb.y);
+                }
+            }
+
+            async botMoveTowards(botId, targetX, targetY) {
+                if (!this.gameState.bases[botId]) return;
+
+                const currentBase = this.gameState.bases[botId];
+                const dx = targetX - currentBase.x;
+                const dy = targetY - currentBase.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < 5) return; // Already there
+
+                // Move a step towards target
+                const speed = 8;
+                const moveX = (dx / distance) * speed;
+                const moveY = (dy / distance) * speed;
+                const newX = currentBase.x + moveX;
+                const newY = currentBase.y + moveY;
+
+                // Keep within bounds
+                const distanceFromCenter = Math.sqrt(newX * newX + newY * newY);
+                const maxDistance = this.mapRadius - 50;
+
+                let finalX = newX;
+                let finalY = newY;
+
+                if (distanceFromCenter > maxDistance) {
+                    const ratio = maxDistance / distanceFromCenter;
+                    finalX = newX * ratio;
+                    finalY = newY * ratio;
+                }
+
+                // Update bot base position
+                const baseRef = ref(database, `rooms/${this.roomCode}/bases/${botId}`);
+                await set(baseRef, {
+                    owner: botId,
+                    energy: currentBase.energy,
+                    x: finalX,
+                    y: finalY,
+                    type: 'bot'
+                });
             }
 
             async botMove(botId) {
@@ -1230,6 +1694,187 @@
 
                 } catch (error) {
                     this.showError('Attack failed: ' + error.message);
+                }
+            }
+
+            async deployTroop() {
+                try {
+                    const currentPlayer = this.gameState.players[this.playerId];
+                    if (currentPlayer.energy < 30) {
+                        this.showNotification('⚠️ Not enough energy to deploy troops! (Need 30)');
+                        return;
+                    }
+
+                    const troopId = 'troop_' + this.playerId + '_' + Date.now();
+                    const basePos = this.gameState.bases[this.playerId];
+
+                    // Spawn troop near base
+                    const angle = Math.random() * 2 * Math.PI;
+                    const distance = 40 + Math.random() * 20;
+                    const troopX = basePos.x + Math.cos(angle) * distance;
+                    const troopY = basePos.y + Math.sin(angle) * distance;
+
+                    // Update player energy
+                    const newEnergy = Math.round(currentPlayer.energy - 30);
+                    const playerRef = ref(database, `rooms/${this.roomCode}/players/${this.playerId}/energy`);
+                    await set(playerRef, newEnergy);
+
+                    // Update base energy
+                    const baseRef = ref(database, `rooms/${this.roomCode}/bases/${this.playerId}/energy`);
+                    await set(baseRef, newEnergy);
+
+                    // Add troop to local storage
+                    this.troops.set(troopId, {
+                        owner: this.playerId,
+                        x: troopX,
+                        y: troopY,
+                        health: 50,
+                        target: null
+                    });
+
+                    this.renderTroop(troopId, troopX, troopY, this.playerId);
+                    this.showNotification('👥 Troop deployed!');
+                } catch (error) {
+                    this.showError('Troop deployment failed: ' + error.message);
+                }
+            }
+
+            async activateShield() {
+                try {
+                    const currentPlayer = this.gameState.players[this.playerId];
+                    if (currentPlayer.energy < 40) {
+                        this.showNotification('⚠️ Not enough energy for shield! (Need 40)');
+                        return;
+                    }
+
+                    if (this.shieldActive) {
+                        this.showNotification('🛡️ Shield already active!');
+                        return;
+                    }
+
+                    // Update player energy
+                    const newEnergy = Math.round(currentPlayer.energy - 40);
+                    const playerRef = ref(database, `rooms/${this.roomCode}/players/${this.playerId}/energy`);
+                    await set(playerRef, newEnergy);
+
+                    // Update base energy
+                    const baseRef = ref(database, `rooms/${this.roomCode}/bases/${this.playerId}/energy`);
+                    await set(baseRef, newEnergy);
+
+                    // Activate shield
+                    this.shieldActive = true;
+                    const playerBase = document.querySelector(`[data-owner="${this.playerId}"]`);
+                    if (playerBase) {
+                        playerBase.style.boxShadow = '0 0 40px #00f5ff, 0 0 80px #00f5ff';
+                    }
+
+                    this.showNotification('🛡️ Shield activated for 15 seconds!');
+
+                    // Deactivate after 15 seconds
+                    setTimeout(() => {
+                        this.shieldActive = false;
+                        if (playerBase) {
+                            playerBase.style.boxShadow = '0 0 30px rgba(0, 245, 255, 0.4)';
+                        }
+                        this.showNotification('🛡️ Shield deactivated');
+                    }, 15000);
+                } catch (error) {
+                    this.showError('Shield activation failed: ' + error.message);
+                }
+            }
+
+            renderTroop(troopId, x, y, ownerId) {
+                const troop = document.createElement('div');
+                const isPlayerTroop = ownerId === this.playerId;
+
+                troop.className = `troop ${isPlayerTroop ? 'player-troop' : 'enemy-troop'}`;
+                troop.dataset.id = troopId;
+                troop.dataset.owner = ownerId;
+                troop.style.left = (this.mapRadius + x) + 'px';
+                troop.style.top = (this.mapRadius + y) + 'px';
+
+                this.mapCircle.appendChild(troop);
+            }
+
+            moveTroops() {
+                for (const [troopId, troop] of this.troops) {
+                    if (!troop.target) {
+                        // Find nearest enemy
+                        this.findTroopTarget(troopId);
+                    } else {
+                        // Move towards target
+                        this.moveTroopToTarget(troopId);
+                    }
+                }
+            }
+
+            findTroopTarget(troopId) {
+                const troop = this.troops.get(troopId);
+                if (!troop || !this.gameState) return;
+
+                let nearestTarget = null;
+                let nearestDistance = Infinity;
+
+                // Look for enemy bases
+                for (const [baseId, base] of Object.entries(this.gameState.bases || {})) {
+                    if (base.owner !== troop.owner) {
+                        const distance = Math.sqrt((troop.x - base.x) ** 2 + (troop.y - base.y) ** 2);
+                        if (distance < nearestDistance) {
+                            nearestDistance = distance;
+                            nearestTarget = { type: 'base', id: baseId, x: base.x, y: base.y };
+                        }
+                    }
+                }
+
+                if (nearestTarget) {
+                    troop.target = nearestTarget;
+                }
+            }
+
+            moveTroopToTarget(troopId) {
+                const troop = this.troops.get(troopId);
+                if (!troop || !troop.target) return;
+
+                const dx = troop.target.x - troop.x;
+                const dy = troop.target.y - troop.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < 20) {
+                    // Attack target
+                    this.troopAttack(troopId);
+                } else {
+                    // Move towards target
+                    const speed = 2;
+                    const moveX = (dx / distance) * speed;
+                    const moveY = (dy / distance) * speed;
+
+                    troop.x += moveX;
+                    troop.y += moveY;
+
+                    // Update visual position
+                    const troopElement = document.querySelector(`[data-id="${troopId}"]`);
+                    if (troopElement) {
+                        troopElement.style.left = (this.mapRadius + troop.x) + 'px';
+                        troopElement.style.top = (this.mapRadius + troop.y) + 'px';
+                    }
+                }
+            }
+
+            async troopAttack(troopId) {
+                const troop = this.troops.get(troopId);
+                if (!troop || !troop.target) return;
+
+                if (troop.target.type === 'base') {
+                    // Attack base
+                    const damage = 15 + Math.random() * 10;
+                    await this.attackBase(troop.owner, troop.target.id, damage);
+                }
+
+                // Remove troop after attack
+                this.troops.delete(troopId);
+                const troopElement = document.querySelector(`[data-id="${troopId}"]`);
+                if (troopElement) {
+                    troopElement.remove();
                 }
             }
 
