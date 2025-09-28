@@ -163,6 +163,12 @@
             justify-content: center;
         }
 
+        .map-container {
+            position: relative;
+            transform-origin: center;
+            transition: transform 0.2s ease-out;
+        }
+
         .map-circle {
             width: 80vmin;
             height: 80vmin;
@@ -207,6 +213,11 @@
         .base:hover {
             transform: translate(-50%, -50%) scale(1.1);
             filter: brightness(1.2);
+            cursor: pointer;
+        }
+
+        .base.player:hover {
+            cursor: move;
         }
 
         .base.selected {
@@ -224,9 +235,18 @@
             animation: pulse 0.5s infinite alternate;
         }
 
+        .base.low-energy {
+            animation: warning-blink 2s infinite;
+        }
+
         @keyframes pulse {
             from { transform: translate(-50%, -50%) scale(1.1); }
             to { transform: translate(-50%, -50%) scale(1.2); }
+        }
+
+        @keyframes warning-blink {
+            0%, 50% { box-shadow: 0 0 30px currentColor; }
+            51%, 100% { box-shadow: 0 0 30px currentColor, 0 0 60px #ff4757; }
         }
 
         .energy-level {
@@ -388,7 +408,7 @@
         }
 
         .player-list {
-            position: absolute;
+            position: fixed;
             top: 100px;
             right: 20px;
             background: rgba(0, 0, 0, 0.4);
@@ -396,7 +416,11 @@
             padding: 1rem;
             border-radius: 15px;
             min-width: 200px;
+            max-width: 250px;
             border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1001;
+            max-height: 60vh;
+            overflow-y: auto;
         }
 
         .player-item {
@@ -436,7 +460,7 @@
         }
 
         .instructions {
-            position: absolute;
+            position: fixed;
             bottom: 20px;
             left: 20px;
             background: rgba(0, 0, 0, 0.4);
@@ -446,6 +470,8 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             font-size: 0.8rem;
             opacity: 0.8;
+            z-index: 1001;
+            max-width: 300px;
         }
     </style>
 </head>
@@ -495,8 +521,10 @@
         </div>
 
         <div class="game-field" id="gameField">
-            <div class="map-circle" id="mapCircle">
-                <!-- Bases will be dynamically added here -->
+            <div class="map-container" id="mapContainer">
+                <div class="map-circle" id="mapCircle">
+                    <!-- Bases will be dynamically added here -->
+                </div>
             </div>
         </div>
 
@@ -516,6 +544,8 @@
             <div>• Drag your base to move it</div>
             <div>• Click enemy bases to attack</div>
             <div>• Click upgrade to gain energy</div>
+            <div>• Scroll wheel to zoom in/out</div>
+            <div>• Low energy bases blink red</div>
         </div>
     </div>
 
@@ -573,6 +603,9 @@
                 this.isConnected = false;
                 this.isDragging = false;
                 this.dragOffset = { x: 0, y: 0 };
+                this.zoomLevel = 1;
+                this.minZoom = 0.3;
+                this.maxZoom = 2.0;
 
                 this.initializeElements();
                 this.bindEvents();
@@ -590,6 +623,7 @@
                 this.playerNameInput = document.getElementById('playerName');
                 this.joinGameBtn = document.getElementById('joinGameBtn');
                 this.mapCircle = document.getElementById('mapCircle');
+                this.mapContainer = document.getElementById('mapContainer');
                 this.playerEnergyDisplay = document.getElementById('playerEnergy');
                 this.playerCountDisplay = document.getElementById('playerCount');
                 this.playerList = document.getElementById('playerList');
@@ -614,6 +648,9 @@
 
                 // Attack events
                 document.addEventListener('click', (e) => this.handleClick(e));
+
+                // Zoom events
+                document.addEventListener('wheel', (e) => this.handleZoom(e), { passive: false });
             }
 
             async checkConnection() {
@@ -707,7 +744,7 @@
                             const botPlayerRef = ref(database, `rooms/${this.roomCode}/players/${botId}`);
                             await set(botPlayerRef, {
                                 name: botNames[i],
-                                energy: 80 + Math.random() * 40, // 80-120 energy
+                                energy: Math.round(80 + Math.random() * 40), // 80-120 energy
                                 connected: true,
                                 isBot: true,
                                 joinedAt: serverTimestamp()
@@ -862,6 +899,18 @@
                 this.selectedBase = null;
             }
 
+            handleZoom(e) {
+                e.preventDefault();
+
+                const delta = e.deltaY > 0 ? -0.1 : 0.1;
+                const newZoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.zoomLevel + delta));
+
+                if (newZoom !== this.zoomLevel) {
+                    this.zoomLevel = newZoom;
+                    this.mapContainer.style.transform = `scale(${this.zoomLevel})`;
+                }
+            }
+
             handleClick(e) {
                 if (this.isDragging) return;
 
@@ -874,6 +923,7 @@
                 // Attack enemy base
                 if (ownerId !== this.playerId) {
                     this.attackBase(this.playerId, baseId);
+                    this.showAttackEffect(this.playerId, baseId);
                 }
             }
 
@@ -887,7 +937,7 @@
                 // Update current player energy
                 const currentPlayer = this.gameState.players[this.playerId];
                 if (currentPlayer) {
-                    this.playerEnergyDisplay.textContent = currentPlayer.energy;
+                    this.playerEnergyDisplay.textContent = Math.round(currentPlayer.energy);
                 }
 
                 // Update player list
@@ -908,7 +958,7 @@
                     const label = isCurrentPlayer ? 'YOU' : player.name;
                     item.innerHTML = `
                         <span>${label}</span>
-                        <span>${player.energy}</span>
+                        <span>${Math.round(player.energy)}</span>
                     `;
                     this.playerList.appendChild(item);
                 });
@@ -956,6 +1006,11 @@
                 base.style.width = size + 'px';
                 base.style.height = size + 'px';
 
+                // Add low energy warning
+                if (baseData.energy < 20) {
+                    base.classList.add('low-energy');
+                }
+
                 // Get player name
                 const ownerName = ownerData?.name || 'Unknown';
                 let displayName;
@@ -968,7 +1023,7 @@
                 }
 
                 base.innerHTML = `
-                    <div class="energy-level">${baseData.energy}</div>
+                    <div class="energy-level">${Math.round(baseData.energy)}</div>
                     <div class="base-id">${displayName}</div>
                 `;
 
@@ -1012,7 +1067,7 @@
                 const bot = this.gameState.players[botId];
                 if (!bot || bot.energy < 30) return;
 
-                const newEnergy = bot.energy + 25; // Smaller upgrade than players
+                const newEnergy = Math.round(bot.energy + 25); // Smaller upgrade than players
 
                 // Update bot energy
                 const playerRef = ref(database, `rooms/${this.roomCode}/players/${botId}/energy`);
@@ -1074,15 +1129,63 @@
                 });
             }
 
+            showAttackEffect(attackerBaseId, targetBaseId) {
+                const attackerBase = document.querySelector(`[data-id="${attackerBaseId}"]`);
+                const targetBase = document.querySelector(`[data-id="${targetBaseId}"]`);
+
+                if (!attackerBase || !targetBase) return;
+
+                // Get positions
+                const attackerRect = attackerBase.getBoundingClientRect();
+                const targetRect = targetBase.getBoundingClientRect();
+
+                // Calculate line properties
+                const startX = attackerRect.left + attackerRect.width / 2;
+                const startY = attackerRect.top + attackerRect.height / 2;
+                const endX = targetRect.left + targetRect.width / 2;
+                const endY = targetRect.top + targetRect.height / 2;
+
+                const length = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2);
+                const angle = Math.atan2(endY - startY, endX - startX) * 180 / Math.PI;
+
+                // Create attack beam
+                const beam = document.createElement('div');
+                beam.className = 'attack-line';
+                beam.style.left = startX + 'px';
+                beam.style.top = startY + 'px';
+                beam.style.width = length + 'px';
+                beam.style.transform = `rotate(${angle}deg)`;
+
+                document.body.appendChild(beam);
+
+                // Add attacking animation to bases
+                attackerBase.classList.add('attacking');
+                targetBase.classList.add('attacking');
+
+                // Clean up after animation
+                setTimeout(() => {
+                    if (beam.parentNode) beam.parentNode.removeChild(beam);
+                    attackerBase.classList.remove('attacking');
+                    targetBase.classList.remove('attacking');
+                }, 1200);
+            }
+
             async attackBase(attackerBaseId, targetBaseId) {
                 try {
                     const attacker = this.gameState.players[attackerBaseId];
                     const targetBase = this.gameState.bases[targetBaseId];
 
-                    if (!attacker || !targetBase || attacker.energy < 10) return;
+                    if (!attacker || !targetBase || attacker.energy < 10) {
+                        if (attackerBaseId === this.playerId) {
+                            this.showNotification('⚠️ Not enough energy to attack! (Minimum: 10)');
+                        }
+                        return;
+                    }
 
-                    const energySpent = Math.min(attacker.energy, 20); // Fixed attack energy
-                    const damage = Math.floor(energySpent * (1.5 + Math.random()));
+                    const energySpent = Math.min(attacker.energy, 25); // Increased attack energy
+                    const baseDamage = Math.floor(energySpent * 1.2);
+                    const criticalHit = Math.random() < 0.15; // 15% crit chance
+                    const damage = Math.round(criticalHit ? baseDamage * 1.8 : baseDamage);
 
                     // Update attacker energy
                     const attackerRef = ref(database, `rooms/${this.roomCode}/players/${attackerBaseId}/energy`);
@@ -1103,17 +1206,28 @@
                     const targetPlayerRef = ref(database, `rooms/${this.roomCode}/players/${targetPlayerId}/energy`);
                     await set(targetPlayerRef, newTargetEnergy);
 
-                    // If target is destroyed, remove it
+                    // Show attack feedback
+                    if (attackerBaseId === this.playerId) {
+                        const message = criticalHit ?
+                            `🎯 CRITICAL HIT! ${damage} damage!` :
+                            `Attack dealt ${damage} damage!`;
+                        this.showNotification(message);
+                    }
+
+                    // Check for destruction
                     if (newTargetEnergy <= 0) {
                         const targetRef = ref(database, `rooms/${this.roomCode}/bases/${targetBaseId}`);
                         await remove(targetRef);
                         const playerRef = ref(database, `rooms/${this.roomCode}/players/${targetPlayerId}`);
                         await remove(playerRef);
+
+                        if (attackerBaseId === this.playerId) {
+                            const targetOwner = this.gameState.players[targetPlayerId];
+                        const targetName = targetOwner?.name || 'Enemy';
+                        this.showNotification(`💥 ${targetName}'s base destroyed!`);
+                        }
                     }
 
-                    if (attackerBaseId === this.playerId) {
-                        this.showNotification(`Attack dealt ${damage} damage!`);
-                    }
                 } catch (error) {
                     this.showError('Attack failed: ' + error.message);
                 }
@@ -1122,7 +1236,7 @@
             async upgradeBase() {
                 try {
                     const currentPlayer = this.gameState.players[this.playerId];
-                    const newEnergy = currentPlayer.energy + 50;
+                    const newEnergy = Math.round(currentPlayer.energy + 50);
 
                     // Update player energy
                     const playerRef = ref(database, `rooms/${this.roomCode}/players/${this.playerId}/energy`);
@@ -1132,7 +1246,7 @@
                     const baseRef = ref(database, `rooms/${this.roomCode}/bases/${this.playerId}/energy`);
                     await set(baseRef, newEnergy);
 
-                    this.showNotification(`Base upgraded! Energy: ${newEnergy}`);
+                    this.showNotification(`⚡ Base upgraded! Energy: ${newEnergy}`);
                 } catch (error) {
                     this.showError('Upgrade failed: ' + error.message);
                 }
