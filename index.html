@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Base Command - Multiplayer Strategy</title>
+    <title>Tower Defense - Multiplayer</title>
     <style>
         * {
             margin: 0;
@@ -21,7 +21,6 @@
             min-height: 100vh;
             color: white;
             overflow: hidden;
-            cursor: default;
         }
 
         .game-container {
@@ -101,6 +100,9 @@
             padding: 0.5rem;
             border-radius: 8px;
             background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .status-connected {
@@ -111,6 +113,19 @@
         .status-disconnected {
             color: #f87171;
             background: rgba(248, 113, 113, 0.1);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00f5ff;
+            animation: blink 2s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
         }
 
         .header {
@@ -158,148 +173,265 @@
             flex: 1;
             position: relative;
             overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            background: linear-gradient(45deg, #1a2332 0%, #2d3748 50%, #1a2332 100%);
         }
 
-        .map-container {
-            position: relative;
-            transform-origin: center;
-            transition: transform 0.2s ease-out;
-        }
-
-        .map-circle {
-            width: 80vmin;
-            height: 80vmin;
-            border: 3px solid rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            position: relative;
-            background: radial-gradient(circle at center, rgba(0, 245, 255, 0.05), transparent 70%);
-            box-shadow: inset 0 0 50px rgba(0, 245, 255, 0.1);
-        }
-
-        .base {
+        .game-grid {
             position: absolute;
-            border-radius: 50%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            cursor: move;
-            transition: all 0.3s ease;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-            transform: translate(-50%, -50%);
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(20, 1fr);
+            grid-template-rows: repeat(15, 1fr);
+            gap: 1px;
         }
 
-        .base.player {
-            background: linear-gradient(135deg, #00f5ff, #0066ff);
-            border: 3px solid #00ccff;
-            box-shadow: 0 0 30px rgba(0, 245, 255, 0.4);
-        }
-
-        .base.enemy {
-            background: linear-gradient(135deg, #ff4757, #c44569);
-            border: 3px solid #ff6b7a;
-            box-shadow: 0 0 30px rgba(255, 71, 87, 0.4);
-        }
-
-        .base.other-player {
-            background: linear-gradient(135deg, #ffa502, #ff6348);
-            border: 3px solid #ff7675;
-            box-shadow: 0 0 30px rgba(255, 165, 2, 0.4);
-        }
-
-        .base:hover {
-            transform: translate(-50%, -50%) scale(1.1);
-            filter: brightness(1.2);
+        .grid-cell {
+            border: 1px solid rgba(255, 255, 255, 0.05);
             cursor: pointer;
+            transition: all 0.2s ease;
         }
 
-        .base.player:hover {
-            cursor: move;
+        .grid-cell:hover {
+            background: rgba(0, 245, 255, 0.1);
+            border-color: rgba(0, 245, 255, 0.3);
         }
 
-        .base.selected {
-            transform: translate(-50%, -50%) scale(1.15);
-            box-shadow: 0 0 40px currentColor;
+        .grid-cell.path {
+            background: rgba(139, 69, 19, 0.3);
+            border-color: rgba(139, 69, 19, 0.5);
         }
 
-        .base.dragging {
-            z-index: 1000;
-            cursor: grabbing;
-            transform: translate(-50%, -50%) scale(1.2);
+        .grid-cell.spawn {
+            background: rgba(255, 0, 0, 0.3);
+            border-color: rgba(255, 0, 0, 0.5);
         }
 
-        .base.attacking {
-            animation: pulse 0.5s infinite alternate;
+        .grid-cell.goal {
+            background: rgba(0, 255, 0, 0.3);
+            border-color: rgba(0, 255, 0, 0.5);
         }
 
-        .base.low-energy {
-            animation: warning-blink 2s infinite;
+        .grid-cell.occupied {
+            background: rgba(255, 255, 255, 0.1);
+            cursor: not-allowed;
         }
 
-        @keyframes pulse {
-            from { transform: translate(-50%, -50%) scale(1.1); }
-            to { transform: translate(-50%, -50%) scale(1.2); }
-        }
-
-        @keyframes warning-blink {
-            0%, 50% { box-shadow: 0 0 30px currentColor; }
-            51%, 100% { box-shadow: 0 0 30px currentColor, 0 0 60px #ff4757; }
-        }
-
-        .energy-level {
-            font-size: 1rem;
-            font-weight: 800;
-            color: white;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
-            pointer-events: none;
-        }
-
-        .base-id {
-            font-size: 0.6rem;
-            opacity: 0.9;
-            margin-top: 2px;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-            pointer-events: none;
-        }
-
-        .attack-line {
+        .tower {
             position: absolute;
-            height: 4px;
-            background: linear-gradient(90deg, #00f5ff, #ff4757, transparent);
-            transform-origin: left center;
-            animation: attack-beam 1.2s ease-out forwards;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            cursor: pointer;
             z-index: 10;
+            transition: all 0.3s ease;
+        }
+
+        .tower:hover {
+            transform: scale(1.1);
+        }
+
+        .tower.basic {
+            background: linear-gradient(135deg, #4a90e2, #357abd);
+            border: 2px solid #2171b5;
+        }
+
+        .tower.sniper {
+            background: linear-gradient(135deg, #5cb85c, #449d44);
+            border: 2px solid #398439;
+        }
+
+        .tower.splash {
+            background: linear-gradient(135deg, #f0ad4e, #ec971f);
+            border: 2px solid #d58512;
+        }
+
+        .tower.slow {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            border: 2px solid #7d3c98;
+        }
+
+        .enemy {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            z-index: 8;
+            transition: all 0.1s ease;
+        }
+
+        .enemy.basic {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            border: 2px solid #a93226;
+        }
+
+        .enemy.fast {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            border: 2px solid #d35400;
+        }
+
+        .enemy.tank {
+            background: linear-gradient(135deg, #34495e, #2c3e50);
+            border: 2px solid #1b2631;
+            width: 25px;
+            height: 25px;
+        }
+
+        .enemy.boss {
+            background: linear-gradient(135deg, #8e44ad, #9b59b6);
+            border: 2px solid #7d3c98;
+            width: 30px;
+            height: 30px;
+        }
+
+        .health-bar {
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 24px;
+            height: 3px;
+            background: rgba(0, 0, 0, 0.5);
             border-radius: 2px;
         }
 
-        @keyframes attack-beam {
-            0% {
-                width: 0;
-                opacity: 1;
-                box-shadow: 0 0 10px currentColor;
-            }
-            50% {
-                opacity: 1;
-                box-shadow: 0 0 20px currentColor;
-            }
-            100% {
-                width: 100%;
-                opacity: 0;
-            }
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #e74c3c, #f1c40f, #2ecc71);
+            border-radius: 2px;
+            transition: width 0.2s ease;
         }
 
-        .controls {
+        .projectile {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #00f5ff;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #00f5ff;
+            z-index: 9;
+        }
+
+        .explosion {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #ff6b35, #f7931e, transparent);
+            animation: explode 0.5s ease-out forwards;
+            z-index: 15;
+        }
+
+        @keyframes explode {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        .tower-menu {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1rem;
             background: rgba(0, 0, 0, 0.4);
             backdrop-filter: blur(10px);
-            padding: 1rem 2rem;
+            padding: 1rem;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1001;
+        }
+
+        .tower-btn {
+            padding: 0.75rem 1rem;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            min-width: 100px;
             display: flex;
-            justify-content: center;
-            gap: 1rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            z-index: 1000;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .tower-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .tower-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .tower-btn.basic {
+            background: linear-gradient(135deg, #4a90e2, #357abd);
+            color: white;
+        }
+
+        .tower-btn.sniper {
+            background: linear-gradient(135deg, #5cb85c, #449d44);
+            color: white;
+        }
+
+        .tower-btn.splash {
+            background: linear-gradient(135deg, #f0ad4e, #ec971f);
+            color: white;
+        }
+
+        .tower-btn.slow {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            color: white;
+        }
+
+        .tower-cost {
+            font-size: 0.7rem;
+            opacity: 0.9;
+        }
+
+        .wave-info {
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            padding: 1rem;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1001;
+            min-width: 200px;
+        }
+
+        .wave-progress {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            margin: 0.5rem 0;
+            overflow: hidden;
+        }
+
+        .wave-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00f5ff, #0066ff);
+            border-radius: 4px;
+            transition: width 0.3s ease;
         }
 
         .btn {
@@ -317,12 +449,6 @@
             color: white;
         }
 
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
@@ -332,53 +458,6 @@
             opacity: 0.5;
             cursor: not-allowed;
             transform: none;
-        }
-
-        .attack-panel {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9);
-            backdrop-filter: blur(15px);
-            padding: 2rem;
-            border-radius: 20px;
-            text-align: center;
-            z-index: 1000;
-            border: 2px solid rgba(0, 245, 255, 0.3);
-            min-width: 300px;
-        }
-
-        .attack-panel h3 {
-            color: #00f5ff;
-            margin-bottom: 1rem;
-        }
-
-        .energy-slider {
-            width: 100%;
-            margin: 1rem 0;
-            height: 8px;
-            border-radius: 4px;
-            background: rgba(255, 255, 255, 0.2);
-            outline: none;
-            appearance: none;
-        }
-
-        .energy-slider::-webkit-slider-thumb {
-            appearance: none;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #00f5ff, #0066ff);
-            cursor: pointer;
-            box-shadow: 0 0 10px rgba(0, 245, 255, 0.5);
-        }
-
-        .energy-display {
-            display: flex;
-            justify-content: space-between;
-            margin: 1rem 0;
-            font-size: 0.9rem;
         }
 
         .notification {
@@ -407,156 +486,32 @@
             }
         }
 
-        .player-list {
-            position: fixed;
-            top: 100px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(10px);
-            padding: 1rem;
-            border-radius: 15px;
-            min-width: 200px;
-            max-width: 250px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            z-index: 1001;
-            max-height: 60vh;
-            overflow-y: auto;
-        }
-
-        .player-item {
+        .game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
             display: flex;
-            justify-content: space-between;
-            padding: 0.5rem;
-            margin: 0.25rem 0;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .connection-status {
-            display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 0.5rem;
+            justify-content: center;
+            z-index: 2000;
         }
 
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #00f5ff;
-            animation: blink 2s infinite;
+        .game-over h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: #e74c3c;
         }
 
-        @keyframes blink {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0.3; }
-        }
-
-        .damage-preview {
-            background: rgba(255, 71, 87, 0.2);
-            padding: 0.5rem;
-            border-radius: 8px;
-            margin: 0.5rem 0;
-            border: 1px solid rgba(255, 71, 87, 0.3);
-        }
-
-        .instructions {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(10px);
-            padding: 1rem;
-            border-radius: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            font-size: 0.8rem;
-            opacity: 0.8;
-            z-index: 1001;
-            max-width: 350px;
-        }
-
-        .energy-orb {
+        .range-indicator {
             position: absolute;
-            width: 20px;
-            height: 20px;
+            border: 2px dashed rgba(0, 245, 255, 0.5);
             border-radius: 50%;
-            background: radial-gradient(circle, #00ff88, #00cc66);
-            box-shadow: 0 0 20px #00ff88;
-            animation: orb-float 3s ease-in-out infinite;
-            cursor: pointer;
-            transform: translate(-50%, -50%);
-            z-index: 5;
-        }
-
-        @keyframes orb-float {
-            0%, 100% { transform: translate(-50%, -50%) scale(1); }
-            50% { transform: translate(-50%, -50%) scale(1.2); }
-        }
-
-        .troop {
-            position: absolute;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #ffffff, #cccccc);
-            border: 2px solid #666;
-            transform: translate(-50%, -50%);
-            z-index: 8;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .troop.player-troop {
-            border-color: #00f5ff;
-            box-shadow: 0 0 8px rgba(0, 245, 255, 0.6);
-        }
-
-        .troop.enemy-troop {
-            border-color: #ff4757;
-            box-shadow: 0 0 8px rgba(255, 71, 87, 0.6);
-        }
-
-        .troop:hover {
-            transform: translate(-50%, -50%) scale(1.3);
-        }
-
-        .territory {
-            position: absolute;
-            border-radius: 50%;
-            border: 2px dashed rgba(255, 255, 255, 0.3);
-            background: rgba(0, 245, 255, 0.05);
             pointer-events: none;
-            z-index: 1;
-        }
-
-        .mini-map {
-            position: fixed;
-            top: 100px;
-            left: 20px;
-            width: 150px;
-            height: 150px;
-            background: rgba(0, 0, 0, 0.6);
-            border: 2px solid rgba(0, 245, 255, 0.3);
-            border-radius: 50%;
-            backdrop-filter: blur(10px);
-            z-index: 1001;
-        }
-
-        .power-up {
-            position: absolute;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: radial-gradient(circle, #ff6b9d, #c44569);
-            box-shadow: 0 0 15px #ff6b9d;
-            animation: power-pulse 2s ease-in-out infinite;
-            cursor: pointer;
-            transform: translate(-50%, -50%);
-            z-index: 6;
-        }
-
-        @keyframes power-pulse {
-            0%, 100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); }
-            50% { transform: translate(-50%, -50%) scale(1.4) rotate(180deg); }
+            z-index: 5;
         }
     </style>
 </head>
@@ -564,8 +519,8 @@
     <!-- Name Prompt Screen -->
     <div class="name-prompt" id="namePrompt">
         <div class="name-card">
-            <h1 class="name-title">BASE COMMAND</h1>
-            <p style="margin-bottom: 2rem; opacity: 0.8;">Multiplayer Strategy Game</p>
+            <h1 class="name-title">TOWER DEFENSE</h1>
+            <p style="margin-bottom: 2rem; opacity: 0.8;">Multiplayer Strategy Defense</p>
 
             <div class="connection-status" id="connectionStatus">
                 <div class="status-dot"></div>
@@ -588,15 +543,19 @@
     <!-- Game Screen -->
     <div class="game-container" id="gameContainer" style="display: none;">
         <div class="header">
-            <div class="logo">BASE COMMAND</div>
+            <div class="logo">TOWER DEFENSE</div>
             <div class="stats">
                 <div class="stat-item">
-                    <span>Energy:</span>
-                    <span class="stat-value" id="playerEnergy">100</span>
+                    <span>💰</span>
+                    <span class="stat-value" id="playerGold">100</span>
                 </div>
                 <div class="stat-item">
-                    <span>Players:</span>
-                    <span class="stat-value" id="playerCount">1</span>
+                    <span>❤️</span>
+                    <span class="stat-value" id="playerLives">20</span>
+                </div>
+                <div class="stat-item">
+                    <span>Wave:</span>
+                    <span class="stat-value" id="currentWave">1</span>
                 </div>
                 <div class="connection-status">
                     <div class="status-dot"></div>
@@ -606,39 +565,40 @@
         </div>
 
         <div class="game-field" id="gameField">
-            <div class="map-container" id="mapContainer">
-                <div class="map-circle" id="mapCircle">
-                    <!-- Bases will be dynamically added here -->
-                </div>
+            <div class="game-grid" id="gameGrid">
+                <!-- Grid cells will be generated here -->
             </div>
         </div>
 
-        <div class="controls">
-            <button class="btn btn-primary" id="upgradeBtn">Upgrade Base (E) - 50 Energy</button>
-            <button class="btn btn-secondary" id="deployBtn">Deploy Troops (SPACE) - 30 Energy</button>
-            <button class="btn btn-secondary" id="abilityBtn">Shield (Q) - 40 Energy</button>
+        <div class="tower-menu">
+            <button class="tower-btn basic" id="basicTowerBtn">
+                <span>🔫 Basic</span>
+                <span class="tower-cost">$10</span>
+            </button>
+            <button class="tower-btn sniper" id="sniperTowerBtn">
+                <span>🎯 Sniper</span>
+                <span class="tower-cost">$25</span>
+            </button>
+            <button class="tower-btn splash" id="splashTowerBtn">
+                <span>💥 Splash</span>
+                <span class="tower-cost">$40</span>
+            </button>
+            <button class="tower-btn slow" id="slowTowerBtn">
+                <span>❄️ Slow</span>
+                <span class="tower-cost">$30</span>
+            </button>
         </div>
 
-        <div class="mini-map" id="miniMap">
-            <!-- Mini map content -->
-        </div>
-
-        <div class="player-list">
-            <h3 style="margin-bottom: 0.5rem; color: #00f5ff;">Players</h3>
-            <div id="playerList">
-                <!-- Player list will be populated here -->
+        <div class="wave-info">
+            <h3 style="margin-bottom: 0.5rem; color: #00f5ff;">Wave Progress</h3>
+            <div class="wave-progress">
+                <div class="wave-fill" id="waveFill" style="width: 0%;"></div>
             </div>
-        </div>
-
-        <div class="instructions">
-            <div style="color: #00f5ff; font-weight: bold; margin-bottom: 0.5rem;">Controls:</div>
-            <div>• WASD/Arrow keys to move base</div>
-            <div>• SPACE to deploy troops</div>
-            <div>• Click energy orbs to collect</div>
-            <div>• Click enemies to attack</div>
-            <div>• E to upgrade base</div>
-            <div>• Q for special abilities</div>
-            <div>• Scroll wheel to zoom</div>
+            <div style="font-size: 0.9rem; margin-top: 0.5rem;">
+                <div>Enemies: <span id="enemiesLeft">0</span></div>
+                <div>Next Wave: <span id="nextWaveTime">30s</span></div>
+            </div>
+            <button class="btn btn-primary" id="startWaveBtn" style="margin-top: 1rem; width: 100%;">Start Wave</button>
         </div>
     </div>
 
@@ -670,43 +630,44 @@
             return false;
         });
 
-        // Disable text selection except for input fields
-        document.addEventListener('selectstart', function(e) {
-            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
-                e.preventDefault();
-                return false;
-            }
-        });
-
-        // Disable drag and drop
-        document.addEventListener('dragstart', function(e) {
-            e.preventDefault();
-            return false;
-        });
-
-        class SingleRoomBaseCommand {
+        class TowerDefenseGame {
             constructor() {
                 this.playerId = this.generatePlayerId();
                 this.playerName = '';
-                this.roomCode = 'main-room'; // Single shared room
+                this.roomCode = 'tower-defense-room';
                 this.gameState = null;
-                this.selectedBase = null;
-                this.targetBase = null;
-                this.mapRadius = 0;
                 this.isConnected = false;
-                this.isDragging = false;
-                this.dragOffset = { x: 0, y: 0 };
-                this.zoomLevel = 1;
-                this.minZoom = 0.3;
-                this.maxZoom = 2.0;
-                this.keysPressed = new Set();
-                this.moveSpeed = 3;
-                this.energyOrbs = new Map();
-                this.troops = new Map();
-                this.powerUps = new Map();
-                this.shieldActive = false;
-                this.lastOrbSpawn = 0;
-                this.lastPowerUpSpawn = 0;
+
+                // Game state
+                this.gold = 100;
+                this.lives = 20;
+                this.wave = 1;
+                this.selectedTowerType = null;
+                this.towers = new Map();
+                this.enemies = new Map();
+                this.projectiles = new Map();
+                this.gameGrid = [];
+                this.path = [];
+                this.isWaveActive = false;
+                this.enemiesInWave = 0;
+                this.enemiesSpawned = 0;
+                this.nextWaveTimer = 30;
+
+                // Tower types
+                this.towerTypes = {
+                    basic: { cost: 10, damage: 15, range: 80, fireRate: 1000, icon: '🔫' },
+                    sniper: { cost: 25, damage: 40, range: 150, fireRate: 2000, icon: '🎯' },
+                    splash: { cost: 40, damage: 25, range: 70, fireRate: 1500, icon: '💥', splash: 50 },
+                    slow: { cost: 30, damage: 10, range: 90, fireRate: 800, icon: '❄️', slow: 0.5 }
+                };
+
+                // Enemy types
+                this.enemyTypes = {
+                    basic: { health: 50, speed: 1, reward: 5, icon: '👾' },
+                    fast: { health: 30, speed: 2, reward: 8, icon: '⚡' },
+                    tank: { health: 150, speed: 0.5, reward: 15, icon: '🛡️' },
+                    boss: { health: 300, speed: 0.8, reward: 50, icon: '💀' }
+                };
 
                 this.initializeElements();
                 this.bindEvents();
@@ -723,15 +684,21 @@
                 this.connectionStatus = document.getElementById('connectionStatus');
                 this.playerNameInput = document.getElementById('playerName');
                 this.joinGameBtn = document.getElementById('joinGameBtn');
-                this.mapCircle = document.getElementById('mapCircle');
-                this.mapContainer = document.getElementById('mapContainer');
-                this.deployBtn = document.getElementById('deployBtn');
-                this.abilityBtn = document.getElementById('abilityBtn');
-                this.miniMap = document.getElementById('miniMap');
-                this.playerEnergyDisplay = document.getElementById('playerEnergy');
-                this.playerCountDisplay = document.getElementById('playerCount');
-                this.playerList = document.getElementById('playerList');
+                this.gameField = document.getElementById('gameField');
+                this.gameGridElement = document.getElementById('gameGrid');
+                this.playerGoldDisplay = document.getElementById('playerGold');
+                this.playerLivesDisplay = document.getElementById('playerLives');
+                this.currentWaveDisplay = document.getElementById('currentWave');
+                this.waveFill = document.getElementById('waveFill');
+                this.enemiesLeft = document.getElementById('enemiesLeft');
+                this.nextWaveTime = document.getElementById('nextWaveTime');
+                this.startWaveBtn = document.getElementById('startWaveBtn');
                 this.nameError = document.getElementById('nameError');
+
+                this.basicTowerBtn = document.getElementById('basicTowerBtn');
+                this.sniperTowerBtn = document.getElementById('sniperTowerBtn');
+                this.splashTowerBtn = document.getElementById('splashTowerBtn');
+                this.slowTowerBtn = document.getElementById('slowTowerBtn');
             }
 
             bindEvents() {
@@ -743,19 +710,15 @@
                     }
                 });
 
-                document.getElementById('upgradeBtn').addEventListener('click', () => this.upgradeBase());
-                this.deployBtn.addEventListener('click', () => this.deployTroop());
-                this.abilityBtn.addEventListener('click', () => this.activateShield());
+                this.basicTowerBtn.addEventListener('click', () => this.selectTowerType('basic'));
+                this.sniperTowerBtn.addEventListener('click', () => this.selectTowerType('sniper'));
+                this.splashTowerBtn.addEventListener('click', () => this.selectTowerType('splash'));
+                this.slowTowerBtn.addEventListener('click', () => this.selectTowerType('slow'));
 
-                // Keyboard movement
-                document.addEventListener('keydown', (e) => this.handleKeyDown(e));
-                document.addEventListener('keyup', (e) => this.handleKeyUp(e));
+                this.startWaveBtn.addEventListener('click', () => this.startWave());
 
-                // Click events
                 document.addEventListener('click', (e) => this.handleClick(e));
-
-                // Zoom events
-                document.addEventListener('wheel', (e) => this.handleZoom(e), { passive: false });
+                document.addEventListener('keydown', (e) => this.handleKeyDown(e));
             }
 
             async checkConnection() {
@@ -793,30 +756,16 @@
                 this.playerName = this.playerNameInput.value.trim();
 
                 try {
-                    // Add player to the single shared room
+                    // Add player to the game
                     const playerRef = ref(database, `rooms/${this.roomCode}/players/${this.playerId}`);
                     await set(playerRef, {
                         name: this.playerName,
-                        energy: 100,
+                        gold: this.gold,
+                        lives: this.lives,
+                        wave: this.wave,
                         connected: true,
-                        isBot: false,
                         joinedAt: serverTimestamp()
                     });
-
-                    // Add player's base at random position
-                    const baseRef = ref(database, `rooms/${this.roomCode}/bases/${this.playerId}`);
-                    const angle = Math.random() * 2 * Math.PI;
-                    const distance = Math.random() * 200;
-                    await set(baseRef, {
-                        owner: this.playerId,
-                        energy: 100,
-                        x: Math.cos(angle) * distance,
-                        y: Math.sin(angle) * distance,
-                        type: 'player'
-                    });
-
-                    // Create AI bots if this is the first player
-                    await this.initializeBots();
 
                     this.startGame();
                 } catch (error) {
@@ -824,61 +773,14 @@
                 }
             }
 
-            async initializeBots() {
-                try {
-                    // Check if bots already exist
-                    const roomRef = ref(database, `rooms/${this.roomCode}/players`);
-                    const snapshot = await new Promise((resolve) => {
-                        onValue(roomRef, resolve, { onlyOnce: true });
-                    });
-
-                    let botCount = 0;
-                    if (snapshot.exists()) {
-                        const players = snapshot.val();
-                        botCount = Object.values(players).filter(p => p.isBot).length;
-                    }
-
-                    // Create 3 bots if none exist
-                    if (botCount === 0) {
-                        const botNames = ['Alpha', 'Beta', 'Gamma'];
-
-                        for (let i = 0; i < 3; i++) {
-                            const botId = `bot_${i}_${Date.now()}`;
-
-                            // Create bot player
-                            const botPlayerRef = ref(database, `rooms/${this.roomCode}/players/${botId}`);
-                            await set(botPlayerRef, {
-                                name: botNames[i],
-                                energy: Math.round(80 + Math.random() * 40), // 80-120 energy
-                                connected: true,
-                                isBot: true,
-                                joinedAt: serverTimestamp()
-                            });
-
-                            // Create bot base
-                            const angle = Math.random() * 2 * Math.PI;
-                            const distance = Math.random() * 180 + 50; // Keep some distance from center
-                            const botBaseRef = ref(database, `rooms/${this.roomCode}/bases/${botId}`);
-                            await set(botBaseRef, {
-                                owner: botId,
-                                energy: 80 + Math.random() * 40,
-                                x: Math.cos(angle) * distance,
-                                y: Math.sin(angle) * distance,
-                                type: 'bot'
-                            });
-                        }
-                    }
-                } catch (error) {
-                    console.log('Bot initialization error:', error);
-                }
-            }
-
             startGame() {
                 this.namePrompt.style.display = 'none';
                 this.gameContainer.style.display = 'flex';
 
-                // Calculate map radius
-                this.mapRadius = Math.min(window.innerWidth, window.innerHeight) * 0.4 * 0.8;
+                // Initialize game grid
+                this.createGameGrid();
+                this.createPath();
+                this.renderPath();
 
                 // Set up Firebase listeners
                 this.setupGameListeners();
@@ -886,18 +788,63 @@
                 // Set up disconnect cleanup
                 this.setupDisconnectCleanup();
 
-                // Initialize orb and power-up spawning
-                this.spawnEnergyOrb();
-                this.spawnEnergyOrb();
-                this.spawnEnergyOrb();
-
-                // Start bot AI loop
-                this.startBotAI();
-
                 // Start game loops
-                this.startMovementLoop();
-                this.startSpawnLoop();
-                this.startTroopLoop();
+                this.startGameLoop();
+                this.startNextWaveTimer();
+            }
+
+            createGameGrid() {
+                this.gameGrid = [];
+                this.gameGridElement.innerHTML = '';
+
+                for (let row = 0; row < 15; row++) {
+                    this.gameGrid[row] = [];
+                    for (let col = 0; col < 20; col++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'grid-cell';
+                        cell.dataset.row = row;
+                        cell.dataset.col = col;
+                        this.gameGridElement.appendChild(cell);
+                        this.gameGrid[row][col] = { type: 'empty', element: cell };
+                    }
+                }
+            }
+
+            createPath() {
+                // Create a simple path from left to right with some curves
+                this.path = [
+                    { row: 7, col: 0 }, { row: 7, col: 1 }, { row: 7, col: 2 }, { row: 7, col: 3 },
+                    { row: 6, col: 4 }, { row: 5, col: 5 }, { row: 4, col: 6 }, { row: 3, col: 7 },
+                    { row: 3, col: 8 }, { row: 3, col: 9 }, { row: 4, col: 10 }, { row: 5, col: 11 },
+                    { row: 6, col: 12 }, { row: 7, col: 13 }, { row: 8, col: 14 }, { row: 9, col: 15 },
+                    { row: 10, col: 16 }, { row: 11, col: 17 }, { row: 11, col: 18 }, { row: 11, col: 19 }
+                ];
+
+                // Mark path cells
+                this.path.forEach((pos, index) => {
+                    if (this.gameGrid[pos.row] && this.gameGrid[pos.row][pos.col]) {
+                        if (index === 0) {
+                            this.gameGrid[pos.row][pos.col].type = 'spawn';
+                        } else if (index === this.path.length - 1) {
+                            this.gameGrid[pos.row][pos.col].type = 'goal';
+                        } else {
+                            this.gameGrid[pos.row][pos.col].type = 'path';
+                        }
+                    }
+                });
+            }
+
+            renderPath() {
+                this.path.forEach((pos, index) => {
+                    const cell = this.gameGrid[pos.row][pos.col].element;
+                    if (index === 0) {
+                        cell.className = 'grid-cell spawn';
+                    } else if (index === this.path.length - 1) {
+                        cell.className = 'grid-cell goal';
+                    } else {
+                        cell.className = 'grid-cell path';
+                    }
+                });
             }
 
             setupGameListeners() {
@@ -912,989 +859,515 @@
 
             setupDisconnectCleanup() {
                 const playerRef = ref(database, `rooms/${this.roomCode}/players/${this.playerId}`);
-                const baseRef = ref(database, `rooms/${this.roomCode}/bases/${this.playerId}`);
-
                 onDisconnect(playerRef).remove();
-                onDisconnect(baseRef).remove();
             }
 
-            handleMouseDown(e) {
-                const base = e.target.closest('.base');
-                if (!base) return;
+            selectTowerType(type) {
+                // Clear previous selection
+                document.querySelectorAll('.tower-btn').forEach(btn => {
+                    btn.style.transform = '';
+                    btn.style.boxShadow = '';
+                });
 
-                const ownerId = base.dataset.owner;
-                if (ownerId !== this.playerId) return;
-
-                this.isDragging = true;
-                this.selectedBase = base;
-                base.classList.add('dragging');
-
-                const rect = base.getBoundingClientRect();
-                const centerX = rect.left + rect.width / 2;
-                const centerY = rect.top + rect.height / 2;
-
-                this.dragOffset = {
-                    x: e.clientX - centerX,
-                    y: e.clientY - centerY
-                };
-
-                e.preventDefault();
-            }
-
-            handleMouseMove(e) {
-                if (!this.isDragging || !this.selectedBase) return;
-
-                const mapRect = this.mapCircle.getBoundingClientRect();
-                const mapCenterX = mapRect.left + mapRect.width / 2;
-                const mapCenterY = mapRect.top + mapRect.height / 2;
-
-                // Calculate new position relative to map center
-                const newX = (e.clientX - this.dragOffset.x) - mapCenterX;
-                const newY = (e.clientY - this.dragOffset.y) - mapCenterY;
-
-                // Keep base within circle bounds
-                const distance = Math.sqrt(newX * newX + newY * newY);
-                const maxDistance = this.mapRadius - 50; // Leave some margin
-
-                let finalX = newX;
-                let finalY = newY;
-
-                if (distance > maxDistance) {
-                    const ratio = maxDistance / distance;
-                    finalX = newX * ratio;
-                    finalY = newY * ratio;
-                }
-
-                // Update visual position immediately
-                this.selectedBase.style.left = (this.mapRadius + finalX) + 'px';
-                this.selectedBase.style.top = (this.mapRadius + finalY) + 'px';
-            }
-
-            async handleMouseUp(e) {
-                if (!this.isDragging || !this.selectedBase) return;
-
-                this.selectedBase.classList.remove('dragging');
-
-                // Get final position and update database
-                const mapRect = this.mapCircle.getBoundingClientRect();
-                const mapCenterX = mapRect.left + mapRect.width / 2;
-                const mapCenterY = mapRect.top + mapRect.height / 2;
-
-                const newX = (e.clientX - this.dragOffset.x) - mapCenterX;
-                const newY = (e.clientY - this.dragOffset.y) - mapCenterY;
-
-                // Keep base within circle bounds
-                const distance = Math.sqrt(newX * newX + newY * newY);
-                const maxDistance = this.mapRadius - 50;
-
-                let finalX = newX;
-                let finalY = newY;
-
-                if (distance > maxDistance) {
-                    const ratio = maxDistance / distance;
-                    finalX = newX * ratio;
-                    finalY = newY * ratio;
-                }
-
-                try {
-                    // Update position in database
-                    const baseRef = ref(database, `rooms/${this.roomCode}/bases/${this.playerId}`);
-                    await set(baseRef, {
-                        owner: this.playerId,
-                        energy: this.gameState.bases[this.playerId].energy,
-                        x: finalX,
-                        y: finalY,
-                        type: 'player'
-                    });
-                } catch (error) {
-                    console.error('Failed to update base position:', error);
-                }
-
-                this.isDragging = false;
-                this.selectedBase = null;
-            }
-
-            handleKeyDown(e) {
-                // Prevent default for movement keys
-                if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight', 'Space', 'KeyE', 'KeyQ'].includes(e.code)) {
-                    e.preventDefault();
-                }
-
-                this.keysPressed.add(e.code);
-
-                // Handle instant actions
-                if (e.code === 'Space') {
-                    this.deployTroop();
-                } else if (e.code === 'KeyE') {
-                    this.upgradeBase();
-                } else if (e.code === 'KeyQ') {
-                    this.activateShield();
-                }
-            }
-
-            handleKeyUp(e) {
-                this.keysPressed.delete(e.code);
-            }
-
-            startMovementLoop() {
-                const moveLoop = () => {
-                    this.processMovement();
-                    requestAnimationFrame(moveLoop);
-                };
-                moveLoop();
-            }
-
-            async processMovement() {
-                if (!this.gameState || !this.gameState.bases[this.playerId]) return;
-
-                let deltaX = 0;
-                let deltaY = 0;
-
-                // Check movement keys
-                if (this.keysPressed.has('KeyW') || this.keysPressed.has('ArrowUp')) deltaY -= this.moveSpeed;
-                if (this.keysPressed.has('KeyS') || this.keysPressed.has('ArrowDown')) deltaY += this.moveSpeed;
-                if (this.keysPressed.has('KeyA') || this.keysPressed.has('ArrowLeft')) deltaX -= this.moveSpeed;
-                if (this.keysPressed.has('KeyD') || this.keysPressed.has('ArrowRight')) deltaX += this.moveSpeed;
-
-                if (deltaX === 0 && deltaY === 0) return;
-
-                const currentBase = this.gameState.bases[this.playerId];
-                const newX = currentBase.x + deltaX;
-                const newY = currentBase.y + deltaY;
-
-                // Keep within bounds
-                const distance = Math.sqrt(newX * newX + newY * newY);
-                const maxDistance = this.mapRadius - 50;
-
-                let finalX = newX;
-                let finalY = newY;
-
-                if (distance > maxDistance) {
-                    const ratio = maxDistance / distance;
-                    finalX = newX * ratio;
-                    finalY = newY * ratio;
-                }
-
-                try {
-                    // Update position in database
-                    const baseRef = ref(database, `rooms/${this.roomCode}/bases/${this.playerId}`);
-                    await set(baseRef, {
-                        owner: this.playerId,
-                        energy: currentBase.energy,
-                        x: finalX,
-                        y: finalY,
-                        type: 'player'
-                    });
-
-                    // Check for orb collection
-                    this.checkOrbCollection(finalX, finalY);
-                    this.checkPowerUpCollection(finalX, finalY);
-                } catch (error) {
-                    console.error('Movement failed:', error);
-                }
-            }
-
-            handleZoom(e) {
-                e.preventDefault();
-
-                const delta = e.deltaY > 0 ? -0.1 : 0.1;
-                const newZoom = Math.max(this.minZoom, Math.min(this.maxZoom, this.zoomLevel + delta));
-
-                if (newZoom !== this.zoomLevel) {
-                    this.zoomLevel = newZoom;
-                    this.mapContainer.style.transform = `scale(${this.zoomLevel})`;
-                }
-            }
-
-            startSpawnLoop() {
-                setInterval(() => {
-                    this.spawnEnergyOrb();
-                    if (Math.random() < 0.3) {
-                        this.spawnPowerUp();
-                    }
-                }, 8000 + Math.random() * 7000); // 8-15 seconds
-            }
-
-            startTroopLoop() {
-                setInterval(() => {
-                    this.moveTroops();
-                }, 1000); // Move troops every second
-            }
-
-            spawnEnergyOrb() {
-                const orbId = 'orb_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-                const angle = Math.random() * 2 * Math.PI;
-                const distance = Math.random() * (this.mapRadius - 100) + 50;
-                const x = Math.cos(angle) * distance;
-                const y = Math.sin(angle) * distance;
-
-                this.energyOrbs.set(orbId, { x, y, energy: 25 + Math.random() * 50 });
-                this.renderEnergyOrb(orbId, x, y);
-
-                // Auto-remove after 45 seconds
-                setTimeout(() => {
-                    this.removeEnergyOrb(orbId);
-                }, 45000);
-            }
-
-            spawnPowerUp() {
-                const powerUpId = 'power_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-                const angle = Math.random() * 2 * Math.PI;
-                const distance = Math.random() * (this.mapRadius - 100) + 50;
-                const x = Math.cos(angle) * distance;
-                const y = Math.sin(angle) * distance;
-
-                this.powerUps.set(powerUpId, { x, y, type: 'shield' });
-                this.renderPowerUp(powerUpId, x, y);
-
-                // Auto-remove after 30 seconds
-                setTimeout(() => {
-                    this.removePowerUp(powerUpId);
-                }, 30000);
-            }
-
-            renderEnergyOrb(orbId, x, y) {
-                const orb = document.createElement('div');
-                orb.className = 'energy-orb';
-                orb.dataset.id = orbId;
-                orb.style.left = (this.mapRadius + x) + 'px';
-                orb.style.top = (this.mapRadius + y) + 'px';
-                orb.addEventListener('click', () => this.collectEnergyOrb(orbId));
-                this.mapCircle.appendChild(orb);
-            }
-
-            renderPowerUp(powerUpId, x, y) {
-                const powerUp = document.createElement('div');
-                powerUp.className = 'power-up';
-                powerUp.dataset.id = powerUpId;
-                powerUp.style.left = (this.mapRadius + x) + 'px';
-                powerUp.style.top = (this.mapRadius + y) + 'px';
-                powerUp.addEventListener('click', () => this.collectPowerUp(powerUpId));
-                this.mapCircle.appendChild(powerUp);
-            }
-
-            checkOrbCollection(playerX, playerY) {
-                for (const [orbId, orb] of this.energyOrbs) {
-                    const distance = Math.sqrt((playerX - orb.x) ** 2 + (playerY - orb.y) ** 2);
-                    if (distance < 30) {
-                        this.collectEnergyOrb(orbId);
-                    }
-                }
-            }
-
-            checkPowerUpCollection(playerX, playerY) {
-                for (const [powerUpId, powerUp] of this.powerUps) {
-                    const distance = Math.sqrt((playerX - powerUp.x) ** 2 + (playerY - powerUp.y) ** 2);
-                    if (distance < 25) {
-                        this.collectPowerUp(powerUpId);
-                    }
-                }
-            }
-
-            async collectEnergyOrb(orbId) {
-                const orb = this.energyOrbs.get(orbId);
-                if (!orb) return;
-
-                const currentPlayer = this.gameState.players[this.playerId];
-                const energyGain = Math.round(orb.energy);
-                const newEnergy = Math.round(currentPlayer.energy + energyGain);
-
-                try {
-                    // Update player energy
-                    const playerRef = ref(database, `rooms/${this.roomCode}/players/${this.playerId}/energy`);
-                    await set(playerRef, newEnergy);
-
-                    // Update base energy
-                    const baseRef = ref(database, `rooms/${this.roomCode}/bases/${this.playerId}/energy`);
-                    await set(baseRef, newEnergy);
-
-                    this.showNotification(`⚡ Collected ${energyGain} energy!`);
-                    this.removeEnergyOrb(orbId);
-                } catch (error) {
-                    console.error('Failed to collect orb:', error);
-                }
-            }
-
-            async collectPowerUp(powerUpId) {
-                const powerUp = this.powerUps.get(powerUpId);
-                if (!powerUp) return;
-
-                if (powerUp.type === 'shield') {
-                    this.activateShield();
-                    this.showNotification('🛡️ Shield activated!');
-                }
-
-                this.removePowerUp(powerUpId);
-            }
-
-            removeEnergyOrb(orbId) {
-                this.energyOrbs.delete(orbId);
-                const orbElement = document.querySelector(`[data-id="${orbId}"]`);
-                if (orbElement) {
-                    orbElement.remove();
-                }
-            }
-
-            removePowerUp(powerUpId) {
-                this.powerUps.delete(powerUpId);
-                const powerUpElement = document.querySelector(`[data-id="${powerUpId}"]`);
-                if (powerUpElement) {
-                    powerUpElement.remove();
+                if (this.selectedTowerType === type) {
+                    this.selectedTowerType = null;
+                    this.hideRangeIndicator();
+                } else {
+                    this.selectedTowerType = type;
+                    const btn = document.getElementById(type + 'TowerBtn');
+                    btn.style.transform = 'scale(1.1)';
+                    btn.style.boxShadow = '0 0 20px rgba(0, 245, 255, 0.5)';
                 }
             }
 
             handleClick(e) {
-                const orb = e.target.closest('.energy-orb');
-                if (orb) {
-                    this.collectEnergyOrb(orb.dataset.id);
+                const cell = e.target.closest('.grid-cell');
+                if (!cell || !this.selectedTowerType) return;
+
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                const cellData = this.gameGrid[row][col];
+
+                if (cellData.type === 'empty') {
+                    this.placeTower(row, col, this.selectedTowerType);
+                }
+            }
+
+            handleKeyDown(e) {
+                if (e.key === 'Escape') {
+                    this.selectedTowerType = null;
+                    this.hideRangeIndicator();
+                    document.querySelectorAll('.tower-btn').forEach(btn => {
+                        btn.style.transform = '';
+                        btn.style.boxShadow = '';
+                    });
+                } else if (e.key >= '1' && e.key <= '4') {
+                    const types = ['basic', 'sniper', 'splash', 'slow'];
+                    this.selectTowerType(types[parseInt(e.key) - 1]);
+                }
+            }
+
+            async placeTower(row, col, type) {
+                const tower = this.towerTypes[type];
+                if (this.gold < tower.cost) {
+                    this.showNotification('❌ Not enough gold!');
                     return;
                 }
 
-                const powerUp = e.target.closest('.power-up');
-                if (powerUp) {
-                    this.collectPowerUp(powerUp.dataset.id);
-                    return;
+                const towerId = 'tower_' + this.playerId + '_' + Date.now();
+                const towerData = {
+                    id: towerId,
+                    type: type,
+                    row: row,
+                    col: col,
+                    owner: this.playerId,
+                    lastFired: 0,
+                    ...tower
+                };
+
+                this.towers.set(towerId, towerData);
+                this.gold -= tower.cost;
+
+                // Update visual
+                this.gameGrid[row][col].type = 'occupied';
+                this.gameGrid[row][col].element.className = 'grid-cell occupied';
+                this.renderTower(towerData);
+
+                // Update database
+                await this.updatePlayerStats();
+                this.updateGameDisplay();
+
+                this.showNotification(`🏗️ ${type.charAt(0).toUpperCase() + type.slice(1)} tower placed!`);
+            }
+
+            renderTower(tower) {
+                const towerElement = document.createElement('div');
+                towerElement.className = `tower ${tower.type}`;
+                towerElement.dataset.id = tower.id;
+                towerElement.textContent = tower.icon;
+
+                const cellRect = tower.row * (this.gameField.clientHeight / 15);
+                const cellWidth = this.gameField.clientWidth / 20;
+                const cellHeight = this.gameField.clientHeight / 15;
+
+                towerElement.style.left = (tower.col * cellWidth + cellWidth / 2 - 15) + 'px';
+                towerElement.style.top = (tower.row * cellHeight + cellHeight / 2 - 15) + 'px';
+
+                towerElement.addEventListener('mouseenter', () => this.showRangeIndicator(tower));
+                towerElement.addEventListener('mouseleave', () => this.hideRangeIndicator());
+
+                this.gameField.appendChild(towerElement);
+            }
+
+            showRangeIndicator(tower) {
+                this.hideRangeIndicator();
+
+                const indicator = document.createElement('div');
+                indicator.className = 'range-indicator';
+                indicator.id = 'rangeIndicator';
+
+                const cellWidth = this.gameField.clientWidth / 20;
+                const cellHeight = this.gameField.clientHeight / 15;
+
+                const centerX = tower.col * cellWidth + cellWidth / 2;
+                const centerY = tower.row * cellHeight + cellHeight / 2;
+
+                indicator.style.left = (centerX - tower.range) + 'px';
+                indicator.style.top = (centerY - tower.range) + 'px';
+                indicator.style.width = (tower.range * 2) + 'px';
+                indicator.style.height = (tower.range * 2) + 'px';
+
+                this.gameField.appendChild(indicator);
+            }
+
+            hideRangeIndicator() {
+                const indicator = document.getElementById('rangeIndicator');
+                if (indicator) {
+                    indicator.remove();
+                }
+            }
+
+            async startWave() {
+                if (this.isWaveActive) return;
+
+                this.isWaveActive = true;
+                this.enemiesInWave = Math.min(5 + this.wave * 2, 30);
+                this.enemiesSpawned = 0;
+                this.startWaveBtn.disabled = true;
+                this.startWaveBtn.textContent = 'Wave Active';
+
+                this.showNotification(`🌊 Wave ${this.wave} starting! ${this.enemiesInWave} enemies incoming!`);
+
+                // Spawn enemies with delay
+                const spawnInterval = setInterval(() => {
+                    if (this.enemiesSpawned >= this.enemiesInWave) {
+                        clearInterval(spawnInterval);
+                        return;
+                    }
+
+                    this.spawnEnemy();
+                    this.enemiesSpawned++;
+                }, 1000);
+            }
+
+            spawnEnemy() {
+                const enemyTypes = Object.keys(this.enemyTypes);
+                let enemyType;
+
+                // Different enemy types based on wave
+                if (this.wave < 3) {
+                    enemyType = 'basic';
+                } else if (this.wave < 6) {
+                    enemyType = Math.random() < 0.7 ? 'basic' : 'fast';
+                } else if (this.wave < 10) {
+                    const rand = Math.random();
+                    if (rand < 0.5) enemyType = 'basic';
+                    else if (rand < 0.8) enemyType = 'fast';
+                    else enemyType = 'tank';
+                } else {
+                    const rand = Math.random();
+                    if (rand < 0.3) enemyType = 'basic';
+                    else if (rand < 0.6) enemyType = 'fast';
+                    else if (rand < 0.9) enemyType = 'tank';
+                    else enemyType = 'boss';
                 }
 
-                const base = e.target.closest('.base');
-                if (!base) return;
+                const enemyId = 'enemy_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+                const enemyData = {
+                    id: enemyId,
+                    type: enemyType,
+                    pathIndex: 0,
+                    health: this.enemyTypes[enemyType].health * (1 + this.wave * 0.1), // Scale with wave
+                    maxHealth: this.enemyTypes[enemyType].health * (1 + this.wave * 0.1),
+                    speed: this.enemyTypes[enemyType].speed,
+                    reward: this.enemyTypes[enemyType].reward,
+                    icon: this.enemyTypes[enemyType].icon,
+                    slowEffect: 1
+                };
 
-                const baseId = base.dataset.id;
-                const ownerId = base.dataset.owner;
+                this.enemies.set(enemyId, enemyData);
+                this.renderEnemy(enemyData);
+            }
 
-                // Attack enemy base
-                if (ownerId !== this.playerId) {
-                    this.attackBase(this.playerId, baseId);
-                    this.showAttackEffect(this.playerId, baseId);
+            renderEnemy(enemy) {
+                const enemyElement = document.createElement('div');
+                enemyElement.className = `enemy ${enemy.type}`;
+                enemyElement.dataset.id = enemy.id;
+                enemyElement.textContent = enemy.icon;
+
+                // Health bar
+                const healthBar = document.createElement('div');
+                healthBar.className = 'health-bar';
+                const healthFill = document.createElement('div');
+                healthFill.className = 'health-fill';
+                healthFill.style.width = '100%';
+                healthBar.appendChild(healthFill);
+                enemyElement.appendChild(healthBar);
+
+                this.gameField.appendChild(enemyElement);
+                this.updateEnemyPosition(enemy);
+            }
+
+            updateEnemyPosition(enemy) {
+                const enemyElement = document.querySelector(`[data-id="${enemy.id}"]`);
+                if (!enemyElement || enemy.pathIndex >= this.path.length) return;
+
+                const pos = this.path[enemy.pathIndex];
+                const cellWidth = this.gameField.clientWidth / 20;
+                const cellHeight = this.gameField.clientHeight / 15;
+
+                const x = pos.col * cellWidth + cellWidth / 2 - 10;
+                const y = pos.row * cellHeight + cellHeight / 2 - 10;
+
+                enemyElement.style.left = x + 'px';
+                enemyElement.style.top = y + 'px';
+
+                // Update health bar
+                const healthFill = enemyElement.querySelector('.health-fill');
+                const healthPercent = (enemy.health / enemy.maxHealth) * 100;
+                healthFill.style.width = healthPercent + '%';
+            }
+
+            moveEnemies() {
+                for (const [enemyId, enemy] of this.enemies) {
+                    enemy.pathIndex += enemy.speed * enemy.slowEffect * 0.05;
+
+                    if (enemy.pathIndex >= this.path.length - 1) {
+                        // Enemy reached the goal
+                        this.lives--;
+                        this.enemies.delete(enemyId);
+                        const enemyElement = document.querySelector(`[data-id="${enemyId}"]`);
+                        if (enemyElement) enemyElement.remove();
+
+                        this.showNotification(`💔 Enemy reached base! Lives: ${this.lives}`);
+
+                        if (this.lives <= 0) {
+                            this.gameOver();
+                        }
+                    } else {
+                        this.updateEnemyPosition(enemy);
+                    }
+
+                    // Reset slow effect
+                    enemy.slowEffect = Math.min(1, enemy.slowEffect + 0.02);
                 }
+            }
+
+            towerShooting() {
+                const now = Date.now();
+
+                for (const [towerId, tower] of this.towers) {
+                    if (now - tower.lastFired < tower.fireRate) continue;
+
+                    // Find nearest enemy in range
+                    let target = null;
+                    let nearestDistance = Infinity;
+
+                    for (const [enemyId, enemy] of this.enemies) {
+                        const enemyPos = this.path[Math.floor(enemy.pathIndex)];
+                        if (!enemyPos) continue;
+
+                        const cellWidth = this.gameField.clientWidth / 20;
+                        const cellHeight = this.gameField.clientHeight / 15;
+
+                        const towerX = tower.col * cellWidth + cellWidth / 2;
+                        const towerY = tower.row * cellHeight + cellHeight / 2;
+                        const enemyX = enemyPos.col * cellWidth + cellWidth / 2;
+                        const enemyY = enemyPos.row * cellHeight + cellHeight / 2;
+
+                        const distance = Math.sqrt((towerX - enemyX) ** 2 + (towerY - enemyY) ** 2);
+
+                        if (distance <= tower.range && distance < nearestDistance) {
+                            nearestDistance = distance;
+                            target = enemy;
+                        }
+                    }
+
+                    if (target) {
+                        this.fireTower(tower, target);
+                        tower.lastFired = now;
+                    }
+                }
+            }
+
+            fireTower(tower, enemy) {
+                const cellWidth = this.gameField.clientWidth / 20;
+                const cellHeight = this.gameField.clientHeight / 15;
+
+                const towerX = tower.col * cellWidth + cellWidth / 2;
+                const towerY = tower.row * cellHeight + cellHeight / 2;
+
+                const enemyPos = this.path[Math.floor(enemy.pathIndex)];
+                const enemyX = enemyPos.col * cellWidth + cellWidth / 2;
+                const enemyY = enemyPos.row * cellHeight + cellHeight / 2;
+
+                // Create projectile
+                const projectileId = 'proj_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+                const projectile = {
+                    id: projectileId,
+                    x: towerX,
+                    y: towerY,
+                    targetX: enemyX,
+                    targetY: enemyY,
+                    damage: tower.damage,
+                    tower: tower,
+                    target: enemy,
+                    speed: 300
+                };
+
+                this.projectiles.set(projectileId, projectile);
+                this.renderProjectile(projectile);
+            }
+
+            renderProjectile(projectile) {
+                const projectileElement = document.createElement('div');
+                projectileElement.className = 'projectile';
+                projectileElement.dataset.id = projectile.id;
+                projectileElement.style.left = projectile.x + 'px';
+                projectileElement.style.top = projectile.y + 'px';
+
+                this.gameField.appendChild(projectileElement);
+            }
+
+            moveProjectiles() {
+                for (const [projectileId, projectile] of this.projectiles) {
+                    const dx = projectile.targetX - projectile.x;
+                    const dy = projectile.targetY - projectile.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < 5) {
+                        // Hit target
+                        this.projectileHit(projectile);
+                        this.projectiles.delete(projectileId);
+                        const projectileElement = document.querySelector(`[data-id="${projectileId}"]`);
+                        if (projectileElement) projectileElement.remove();
+                    } else {
+                        // Move towards target
+                        const moveX = (dx / distance) * projectile.speed * 0.016;
+                        const moveY = (dy / distance) * projectile.speed * 0.016;
+
+                        projectile.x += moveX;
+                        projectile.y += moveY;
+
+                        const projectileElement = document.querySelector(`[data-id="${projectileId}"]`);
+                        if (projectileElement) {
+                            projectileElement.style.left = projectile.x + 'px';
+                            projectileElement.style.top = projectile.y + 'px';
+                        }
+                    }
+                }
+            }
+
+            projectileHit(projectile) {
+                // Create explosion effect
+                const explosion = document.createElement('div');
+                explosion.className = 'explosion';
+                explosion.style.left = (projectile.x - 20) + 'px';
+                explosion.style.top = (projectile.y - 20) + 'px';
+                this.gameField.appendChild(explosion);
+
+                setTimeout(() => explosion.remove(), 500);
+
+                // Apply damage
+                if (projectile.tower.splash) {
+                    // Splash damage
+                    for (const [enemyId, enemy] of this.enemies) {
+                        const enemyPos = this.path[Math.floor(enemy.pathIndex)];
+                        if (!enemyPos) continue;
+
+                        const cellWidth = this.gameField.clientWidth / 20;
+                        const cellHeight = this.gameField.clientHeight / 15;
+                        const enemyX = enemyPos.col * cellWidth + cellWidth / 2;
+                        const enemyY = enemyPos.row * cellHeight + cellHeight / 2;
+
+                        const distance = Math.sqrt((projectile.x - enemyX) ** 2 + (projectile.y - enemyY) ** 2);
+
+                        if (distance <= projectile.tower.splash) {
+                            this.damageEnemy(enemy, projectile.damage, projectile.tower);
+                        }
+                    }
+                } else {
+                    // Single target damage
+                    if (this.enemies.has(projectile.target.id)) {
+                        this.damageEnemy(projectile.target, projectile.damage, projectile.tower);
+                    }
+                }
+            }
+
+            damageEnemy(enemy, damage, tower) {
+                enemy.health -= damage;
+
+                // Apply slow effect
+                if (tower.slow) {
+                    enemy.slowEffect = tower.slow;
+                }
+
+                if (enemy.health <= 0) {
+                    // Enemy killed
+                    this.gold += enemy.reward;
+                    this.enemies.delete(enemy.id);
+                    const enemyElement = document.querySelector(`[data-id="${enemy.id}"]`);
+                    if (enemyElement) enemyElement.remove();
+
+                    this.showNotification(`💰 +$${enemy.reward}`);
+                }
+            }
+
+            checkWaveCompletion() {
+                if (this.isWaveActive && this.enemiesSpawned >= this.enemiesInWave && this.enemies.size === 0) {
+                    // Wave completed
+                    this.isWaveActive = false;
+                    this.wave++;
+                    this.gold += 20; // Wave completion bonus
+                    this.startWaveBtn.disabled = false;
+                    this.startWaveBtn.textContent = 'Start Wave';
+
+                    this.showNotification(`🎉 Wave ${this.wave - 1} completed! +$20 bonus`);
+                    this.nextWaveTimer = 30;
+                }
+            }
+
+            startNextWaveTimer() {
+                setInterval(() => {
+                    if (!this.isWaveActive && this.nextWaveTimer > 0) {
+                        this.nextWaveTimer--;
+                        this.nextWaveTime.textContent = this.nextWaveTimer + 's';
+
+                        if (this.nextWaveTimer === 0) {
+                            this.startWave();
+                            this.nextWaveTimer = 30;
+                        }
+                    }
+                }, 1000);
+            }
+
+            startGameLoop() {
+                const gameLoop = () => {
+                    this.moveEnemies();
+                    this.towerShooting();
+                    this.moveProjectiles();
+                    this.checkWaveCompletion();
+                    this.updateUI();
+                    requestAnimationFrame(gameLoop);
+                };
+                gameLoop();
+            }
+
+            updateUI() {
+                this.playerGoldDisplay.textContent = this.gold;
+                this.playerLivesDisplay.textContent = this.lives;
+                this.currentWaveDisplay.textContent = this.wave;
+                this.enemiesLeft.textContent = this.enemies.size;
+
+                // Update wave progress
+                if (this.isWaveActive && this.enemiesInWave > 0) {
+                    const progress = ((this.enemiesInWave - this.enemies.size) / this.enemiesInWave) * 100;
+                    this.waveFill.style.width = Math.max(0, progress) + '%';
+                } else {
+                    this.waveFill.style.width = '0%';
+                }
+
+                // Update tower button states
+                Object.keys(this.towerTypes).forEach(type => {
+                    const btn = document.getElementById(type + 'TowerBtn');
+                    const tower = this.towerTypes[type];
+                    btn.disabled = this.gold < tower.cost;
+                });
             }
 
             updateGameDisplay() {
-                if (!this.gameState) return;
-
-                // Update player count
-                const playerCount = Object.keys(this.gameState.players || {}).length;
-                this.playerCountDisplay.textContent = playerCount;
-
-                // Update current player energy
-                const currentPlayer = this.gameState.players[this.playerId];
-                if (currentPlayer) {
-                    this.playerEnergyDisplay.textContent = Math.round(currentPlayer.energy);
-                }
-
-                // Update player list
-                this.updatePlayerList();
-
-                // Update bases
-                this.updateBases();
-            }
-
-            updatePlayerList() {
-                this.playerList.innerHTML = '';
-                if (!this.gameState.players) return;
-
-                Object.entries(this.gameState.players).forEach(([id, player]) => {
-                    const item = document.createElement('div');
-                    item.className = 'player-item';
-                    const isCurrentPlayer = id === this.playerId;
-                    const label = isCurrentPlayer ? 'YOU' : player.name;
-                    item.innerHTML = `
-                        <span>${label}</span>
-                        <span>${Math.round(player.energy)}</span>
-                    `;
-                    this.playerList.appendChild(item);
-                });
-            }
-
-            updateBases() {
-                // Clear existing bases
-                this.mapCircle.innerHTML = '';
-
-                if (!this.gameState.bases) return;
-
-                Object.entries(this.gameState.bases).forEach(([baseId, baseData]) => {
-                    this.createBaseElement(baseId, baseData);
-                });
-            }
-
-            createBaseElement(baseId, baseData) {
-                const base = document.createElement('div');
-                const isOwnBase = baseData.owner === this.playerId;
-                const ownerData = this.gameState.players[baseData.owner];
-                const isBot = ownerData?.isBot || false;
-
-                let baseClass;
-                if (isOwnBase) {
-                    baseClass = 'player';
-                } else if (isBot) {
-                    baseClass = 'enemy'; // Red for bots
-                } else {
-                    baseClass = 'other-player'; // Orange for other players
-                }
-
-                base.className = `base ${baseClass}`;
-                base.dataset.id = baseId;
-                base.dataset.owner = baseData.owner;
-                base.dataset.energy = baseData.energy;
-
-                // Position the base
-                const centerX = this.mapRadius;
-                const centerY = this.mapRadius;
-                base.style.left = (centerX + baseData.x) + 'px';
-                base.style.top = (centerY + baseData.y) + 'px';
-
-                // Size based on energy
-                const size = Math.max(40, Math.min(120, 40 + (baseData.energy / 10)));
-                base.style.width = size + 'px';
-                base.style.height = size + 'px';
-
-                // Add low energy warning
-                if (baseData.energy < 20) {
-                    base.classList.add('low-energy');
-                }
-
-                // Get player name
-                const ownerName = ownerData?.name || 'Unknown';
-                let displayName;
-                if (isOwnBase) {
-                    displayName = 'YOU';
-                } else if (isBot) {
-                    displayName = `🤖 ${ownerName}`;
-                } else {
-                    displayName = ownerName;
-                }
-
-                base.innerHTML = `
-                    <div class="energy-level">${Math.round(baseData.energy)}</div>
-                    <div class="base-id">${displayName}</div>
-                `;
-
-                this.mapCircle.appendChild(base);
-            }
-
-            startBotAI() {
-                // Run bot AI every 3-7 seconds
-                setInterval(() => {
-                    this.runBotAI();
-                }, 3000 + Math.random() * 4000);
-            }
-
-            async runBotAI() {
-                if (!this.gameState || !this.gameState.players) return;
-
-                const bots = Object.entries(this.gameState.players).filter(([id, player]) => player.isBot);
-
-                for (const [botId, botData] of bots) {
-                    if (botData.energy <= 0) continue;
-
-                    // 70% chance to do something
-                    if (Math.random() > 0.7) continue;
-
-                    try {
-                        // Smart AI decisions based on energy
-                        if (botData.energy > 100) {
-                            // High energy: be aggressive
-                            const action = Math.random();
-                            if (action < 0.4) {
-                                await this.botDeployTroop(botId);
-                            } else if (action < 0.8) {
-                                await this.botAttack(botId);
-                            } else {
-                                await this.botMove(botId);
-                            }
-                        } else if (botData.energy > 50) {
-                            // Medium energy: balanced
-                            const action = Math.random();
-                            if (action < 0.3) {
-                                await this.botUpgrade(botId);
-                            } else if (action < 0.6) {
-                                await this.botAttack(botId);
-                            } else if (action < 0.8) {
-                                await this.botMove(botId);
-                            } else {
-                                this.botCollectOrbs(botId);
-                            }
-                        } else {
-                            // Low energy: defensive
-                            const action = Math.random();
-                            if (action < 0.5) {
-                                this.botCollectOrbs(botId);
-                            } else if (action < 0.8) {
-                                await this.botUpgrade(botId);
-                            } else {
-                                await this.botMove(botId);
-                            }
-                        }
-                    } catch (error) {
-                        console.log('Bot AI error:', error);
-                    }
+                // Sync with other players if needed
+                if (this.gameState && this.gameState.players && this.gameState.players[this.playerId]) {
+                    const playerData = this.gameState.players[this.playerId];
+                    // Sync game state with server if needed
                 }
             }
 
-            async botUpgrade(botId) {
-                const bot = this.gameState.players[botId];
-                if (!bot || bot.energy < 30) return;
-
-                const newEnergy = Math.round(bot.energy + 25); // Smaller upgrade than players
-
-                // Update bot energy
-                const playerRef = ref(database, `rooms/${this.roomCode}/players/${botId}/energy`);
-                await set(playerRef, newEnergy);
-
-                // Update bot base energy
-                const baseRef = ref(database, `rooms/${this.roomCode}/bases/${botId}/energy`);
-                await set(baseRef, newEnergy);
-            }
-
-            async botAttack(botId) {
-                const bot = this.gameState.players[botId];
-                if (!bot || bot.energy < 15) return;
-
-                // Find all non-bot targets
-                const targets = Object.entries(this.gameState.players)
-                    .filter(([id, player]) => !player.isBot && player.energy > 0)
-                    .map(([id]) => id);
-
-                if (targets.length === 0) return;
-
-                // Pick random target
-                const targetId = targets[Math.floor(Math.random() * targets.length)];
-                await this.attackBase(botId, targetId);
-            }
-
-            async botDeployTroop(botId) {
-                const bot = this.gameState.players[botId];
-                if (!bot || bot.energy < 30) return;
-
-                const newEnergy = Math.round(bot.energy - 30);
-
-                // Update bot energy
-                const playerRef = ref(database, `rooms/${this.roomCode}/players/${botId}/energy`);
-                await set(playerRef, newEnergy);
-
-                // Update bot base energy
-                const baseRef = ref(database, `rooms/${this.roomCode}/bases/${botId}/energy`);
-                await set(baseRef, newEnergy);
-
-                // Add troop to local storage
-                const troopId = 'troop_' + botId + '_' + Date.now();
-                const basePos = this.gameState.bases[botId];
-                const angle = Math.random() * 2 * Math.PI;
-                const distance = 40 + Math.random() * 20;
-                const troopX = basePos.x + Math.cos(angle) * distance;
-                const troopY = basePos.y + Math.sin(angle) * distance;
-
-                this.troops.set(troopId, {
-                    owner: botId,
-                    x: troopX,
-                    y: troopY,
-                    health: 50,
-                    target: null
-                });
-
-                this.renderTroop(troopId, troopX, troopY, botId);
-            }
-
-            botCollectOrbs(botId) {
-                const botBase = this.gameState.bases[botId];
-                if (!botBase) return;
-
-                // Move towards nearest orb
-                let nearestOrb = null;
-                let nearestDistance = Infinity;
-
-                for (const [orbId, orb] of this.energyOrbs) {
-                    const distance = Math.sqrt((botBase.x - orb.x) ** 2 + (botBase.y - orb.y) ** 2);
-                    if (distance < nearestDistance) {
-                        nearestDistance = distance;
-                        nearestOrb = orb;
-                    }
-                }
-
-                if (nearestOrb && nearestDistance < 100) {
-                    // Move towards orb
-                    this.botMoveTowards(botId, nearestOrb.x, nearestOrb.y);
-                }
-            }
-
-            async botMoveTowards(botId, targetX, targetY) {
-                if (!this.gameState.bases[botId]) return;
-
-                const currentBase = this.gameState.bases[botId];
-                const dx = targetX - currentBase.x;
-                const dy = targetY - currentBase.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-
-                if (distance < 5) return; // Already there
-
-                // Move a step towards target
-                const speed = 8;
-                const moveX = (dx / distance) * speed;
-                const moveY = (dy / distance) * speed;
-                const newX = currentBase.x + moveX;
-                const newY = currentBase.y + moveY;
-
-                // Keep within bounds
-                const distanceFromCenter = Math.sqrt(newX * newX + newY * newY);
-                const maxDistance = this.mapRadius - 50;
-
-                let finalX = newX;
-                let finalY = newY;
-
-                if (distanceFromCenter > maxDistance) {
-                    const ratio = maxDistance / distanceFromCenter;
-                    finalX = newX * ratio;
-                    finalY = newY * ratio;
-                }
-
-                // Update bot base position
-                const baseRef = ref(database, `rooms/${this.roomCode}/bases/${botId}`);
-                await set(baseRef, {
-                    owner: botId,
-                    energy: currentBase.energy,
-                    x: finalX,
-                    y: finalY,
-                    type: 'bot'
-                });
-            }
-
-            async botMove(botId) {
-                if (!this.gameState.bases[botId]) return;
-
-                const currentBase = this.gameState.bases[botId];
-
-                // Move to a new random position
-                const angle = Math.random() * 2 * Math.PI;
-                const distance = Math.random() * 180 + 50;
-                const newX = Math.cos(angle) * distance;
-                const newY = Math.sin(angle) * distance;
-
-                // Keep within bounds
-                const distanceFromCenter = Math.sqrt(newX * newX + newY * newY);
-                const maxDistance = this.mapRadius - 50;
-
-                let finalX = newX;
-                let finalY = newY;
-
-                if (distanceFromCenter > maxDistance) {
-                    const ratio = maxDistance / distanceFromCenter;
-                    finalX = newX * ratio;
-                    finalY = newY * ratio;
-                }
-
-                // Update bot base position
-                const baseRef = ref(database, `rooms/${this.roomCode}/bases/${botId}`);
-                await set(baseRef, {
-                    owner: botId,
-                    energy: currentBase.energy,
-                    x: finalX,
-                    y: finalY,
-                    type: 'bot'
-                });
-            }
-
-            showAttackEffect(attackerBaseId, targetBaseId) {
-                const attackerBase = document.querySelector(`[data-id="${attackerBaseId}"]`);
-                const targetBase = document.querySelector(`[data-id="${targetBaseId}"]`);
-
-                if (!attackerBase || !targetBase) return;
-
-                // Get positions
-                const attackerRect = attackerBase.getBoundingClientRect();
-                const targetRect = targetBase.getBoundingClientRect();
-
-                // Calculate line properties
-                const startX = attackerRect.left + attackerRect.width / 2;
-                const startY = attackerRect.top + attackerRect.height / 2;
-                const endX = targetRect.left + targetRect.width / 2;
-                const endY = targetRect.top + targetRect.height / 2;
-
-                const length = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2);
-                const angle = Math.atan2(endY - startY, endX - startX) * 180 / Math.PI;
-
-                // Create attack beam
-                const beam = document.createElement('div');
-                beam.className = 'attack-line';
-                beam.style.left = startX + 'px';
-                beam.style.top = startY + 'px';
-                beam.style.width = length + 'px';
-                beam.style.transform = `rotate(${angle}deg)`;
-
-                document.body.appendChild(beam);
-
-                // Add attacking animation to bases
-                attackerBase.classList.add('attacking');
-                targetBase.classList.add('attacking');
-
-                // Clean up after animation
-                setTimeout(() => {
-                    if (beam.parentNode) beam.parentNode.removeChild(beam);
-                    attackerBase.classList.remove('attacking');
-                    targetBase.classList.remove('attacking');
-                }, 1200);
-            }
-
-            async attackBase(attackerBaseId, targetBaseId) {
+            async updatePlayerStats() {
                 try {
-                    const attacker = this.gameState.players[attackerBaseId];
-                    const targetBase = this.gameState.bases[targetBaseId];
-
-                    if (!attacker || !targetBase || attacker.energy < 10) {
-                        if (attackerBaseId === this.playerId) {
-                            this.showNotification('⚠️ Not enough energy to attack! (Minimum: 10)');
-                        }
-                        return;
-                    }
-
-                    const energySpent = Math.min(attacker.energy, 25); // Increased attack energy
-                    const baseDamage = Math.floor(energySpent * 1.2);
-                    const criticalHit = Math.random() < 0.15; // 15% crit chance
-                    const damage = Math.round(criticalHit ? baseDamage * 1.8 : baseDamage);
-
-                    // Update attacker energy
-                    const attackerRef = ref(database, `rooms/${this.roomCode}/players/${attackerBaseId}/energy`);
-                    const newAttackerEnergy = Math.max(0, attacker.energy - energySpent);
-                    await set(attackerRef, newAttackerEnergy);
-
-                    // Update attacker base energy
-                    const attackerBaseRef = ref(database, `rooms/${this.roomCode}/bases/${attackerBaseId}/energy`);
-                    await set(attackerBaseRef, newAttackerEnergy);
-
-                    // Update target base energy
-                    const newTargetEnergy = Math.max(0, targetBase.energy - damage);
-                    const targetBaseRef = ref(database, `rooms/${this.roomCode}/bases/${targetBaseId}/energy`);
-                    await set(targetBaseRef, newTargetEnergy);
-
-                    // Update target player energy
-                    const targetPlayerId = targetBase.owner;
-                    const targetPlayerRef = ref(database, `rooms/${this.roomCode}/players/${targetPlayerId}/energy`);
-                    await set(targetPlayerRef, newTargetEnergy);
-
-                    // Show attack feedback
-                    if (attackerBaseId === this.playerId) {
-                        const message = criticalHit ?
-                            `🎯 CRITICAL HIT! ${damage} damage!` :
-                            `Attack dealt ${damage} damage!`;
-                        this.showNotification(message);
-                    }
-
-                    // Check for destruction
-                    if (newTargetEnergy <= 0) {
-                        const targetRef = ref(database, `rooms/${this.roomCode}/bases/${targetBaseId}`);
-                        await remove(targetRef);
-                        const playerRef = ref(database, `rooms/${this.roomCode}/players/${targetPlayerId}`);
-                        await remove(playerRef);
-
-                        if (attackerBaseId === this.playerId) {
-                            const targetOwner = this.gameState.players[targetPlayerId];
-                        const targetName = targetOwner?.name || 'Enemy';
-                        this.showNotification(`💥 ${targetName}'s base destroyed!`);
-                        }
-                    }
-
-                } catch (error) {
-                    this.showError('Attack failed: ' + error.message);
-                }
-            }
-
-            async deployTroop() {
-                try {
-                    const currentPlayer = this.gameState.players[this.playerId];
-                    if (currentPlayer.energy < 30) {
-                        this.showNotification('⚠️ Not enough energy to deploy troops! (Need 30)');
-                        return;
-                    }
-
-                    const troopId = 'troop_' + this.playerId + '_' + Date.now();
-                    const basePos = this.gameState.bases[this.playerId];
-
-                    // Spawn troop near base
-                    const angle = Math.random() * 2 * Math.PI;
-                    const distance = 40 + Math.random() * 20;
-                    const troopX = basePos.x + Math.cos(angle) * distance;
-                    const troopY = basePos.y + Math.sin(angle) * distance;
-
-                    // Update player energy
-                    const newEnergy = Math.round(currentPlayer.energy - 30);
-                    const playerRef = ref(database, `rooms/${this.roomCode}/players/${this.playerId}/energy`);
-                    await set(playerRef, newEnergy);
-
-                    // Update base energy
-                    const baseRef = ref(database, `rooms/${this.roomCode}/bases/${this.playerId}/energy`);
-                    await set(baseRef, newEnergy);
-
-                    // Add troop to local storage
-                    this.troops.set(troopId, {
-                        owner: this.playerId,
-                        x: troopX,
-                        y: troopY,
-                        health: 50,
-                        target: null
+                    const playerRef = ref(database, `rooms/${this.roomCode}/players/${this.playerId}`);
+                    await set(playerRef, {
+                        name: this.playerName,
+                        gold: this.gold,
+                        lives: this.lives,
+                        wave: this.wave,
+                        connected: true,
+                        joinedAt: serverTimestamp()
                     });
-
-                    this.renderTroop(troopId, troopX, troopY, this.playerId);
-                    this.showNotification('👥 Troop deployed!');
                 } catch (error) {
-                    this.showError('Troop deployment failed: ' + error.message);
+                    console.error('Failed to update player stats:', error);
                 }
             }
 
-            async activateShield() {
-                try {
-                    const currentPlayer = this.gameState.players[this.playerId];
-                    if (currentPlayer.energy < 40) {
-                        this.showNotification('⚠️ Not enough energy for shield! (Need 40)');
-                        return;
-                    }
-
-                    if (this.shieldActive) {
-                        this.showNotification('🛡️ Shield already active!');
-                        return;
-                    }
-
-                    // Update player energy
-                    const newEnergy = Math.round(currentPlayer.energy - 40);
-                    const playerRef = ref(database, `rooms/${this.roomCode}/players/${this.playerId}/energy`);
-                    await set(playerRef, newEnergy);
-
-                    // Update base energy
-                    const baseRef = ref(database, `rooms/${this.roomCode}/bases/${this.playerId}/energy`);
-                    await set(baseRef, newEnergy);
-
-                    // Activate shield
-                    this.shieldActive = true;
-                    const playerBase = document.querySelector(`[data-owner="${this.playerId}"]`);
-                    if (playerBase) {
-                        playerBase.style.boxShadow = '0 0 40px #00f5ff, 0 0 80px #00f5ff';
-                    }
-
-                    this.showNotification('🛡️ Shield activated for 15 seconds!');
-
-                    // Deactivate after 15 seconds
-                    setTimeout(() => {
-                        this.shieldActive = false;
-                        if (playerBase) {
-                            playerBase.style.boxShadow = '0 0 30px rgba(0, 245, 255, 0.4)';
-                        }
-                        this.showNotification('🛡️ Shield deactivated');
-                    }, 15000);
-                } catch (error) {
-                    this.showError('Shield activation failed: ' + error.message);
-                }
-            }
-
-            renderTroop(troopId, x, y, ownerId) {
-                const troop = document.createElement('div');
-                const isPlayerTroop = ownerId === this.playerId;
-
-                troop.className = `troop ${isPlayerTroop ? 'player-troop' : 'enemy-troop'}`;
-                troop.dataset.id = troopId;
-                troop.dataset.owner = ownerId;
-                troop.style.left = (this.mapRadius + x) + 'px';
-                troop.style.top = (this.mapRadius + y) + 'px';
-
-                this.mapCircle.appendChild(troop);
-            }
-
-            moveTroops() {
-                for (const [troopId, troop] of this.troops) {
-                    if (!troop.target) {
-                        // Find nearest enemy
-                        this.findTroopTarget(troopId);
-                    } else {
-                        // Move towards target
-                        this.moveTroopToTarget(troopId);
-                    }
-                }
-            }
-
-            findTroopTarget(troopId) {
-                const troop = this.troops.get(troopId);
-                if (!troop || !this.gameState) return;
-
-                let nearestTarget = null;
-                let nearestDistance = Infinity;
-
-                // Look for enemy bases
-                for (const [baseId, base] of Object.entries(this.gameState.bases || {})) {
-                    if (base.owner !== troop.owner) {
-                        const distance = Math.sqrt((troop.x - base.x) ** 2 + (troop.y - base.y) ** 2);
-                        if (distance < nearestDistance) {
-                            nearestDistance = distance;
-                            nearestTarget = { type: 'base', id: baseId, x: base.x, y: base.y };
-                        }
-                    }
-                }
-
-                if (nearestTarget) {
-                    troop.target = nearestTarget;
-                }
-            }
-
-            moveTroopToTarget(troopId) {
-                const troop = this.troops.get(troopId);
-                if (!troop || !troop.target) return;
-
-                const dx = troop.target.x - troop.x;
-                const dy = troop.target.y - troop.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-
-                if (distance < 20) {
-                    // Attack target
-                    this.troopAttack(troopId);
-                } else {
-                    // Move towards target
-                    const speed = 2;
-                    const moveX = (dx / distance) * speed;
-                    const moveY = (dy / distance) * speed;
-
-                    troop.x += moveX;
-                    troop.y += moveY;
-
-                    // Update visual position
-                    const troopElement = document.querySelector(`[data-id="${troopId}"]`);
-                    if (troopElement) {
-                        troopElement.style.left = (this.mapRadius + troop.x) + 'px';
-                        troopElement.style.top = (this.mapRadius + troop.y) + 'px';
-                    }
-                }
-            }
-
-            async troopAttack(troopId) {
-                const troop = this.troops.get(troopId);
-                if (!troop || !troop.target) return;
-
-                if (troop.target.type === 'base') {
-                    // Attack base
-                    const damage = 15 + Math.random() * 10;
-                    await this.attackBase(troop.owner, troop.target.id, damage);
-                }
-
-                // Remove troop after attack
-                this.troops.delete(troopId);
-                const troopElement = document.querySelector(`[data-id="${troopId}"]`);
-                if (troopElement) {
-                    troopElement.remove();
-                }
-            }
-
-            async upgradeBase() {
-                try {
-                    const currentPlayer = this.gameState.players[this.playerId];
-                    const newEnergy = Math.round(currentPlayer.energy + 50);
-
-                    // Update player energy
-                    const playerRef = ref(database, `rooms/${this.roomCode}/players/${this.playerId}/energy`);
-                    await set(playerRef, newEnergy);
-
-                    // Update base energy
-                    const baseRef = ref(database, `rooms/${this.roomCode}/bases/${this.playerId}/energy`);
-                    await set(baseRef, newEnergy);
-
-                    this.showNotification(`⚡ Base upgraded! Energy: ${newEnergy}`);
-                } catch (error) {
-                    this.showError('Upgrade failed: ' + error.message);
-                }
+            gameOver() {
+                const gameOverDiv = document.createElement('div');
+                gameOverDiv.className = 'game-over';
+                gameOverDiv.innerHTML = `
+                    <h1>GAME OVER</h1>
+                    <p>You reached wave ${this.wave}</p>
+                    <button class="btn btn-primary" onclick="location.reload()">Play Again</button>
+                `;
+                this.gameContainer.appendChild(gameOverDiv);
             }
 
             showNotification(message) {
@@ -1921,7 +1394,7 @@
 
         // Start the game when page loads
         window.addEventListener('load', () => {
-            new SingleRoomBaseCommand();
+            new TowerDefenseGame();
         });
     </script>
 </body>
