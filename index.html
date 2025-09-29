@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Tower Defense - Multiplayer</title>
+    <title>Clash Royale Plus Blooket</title>
     <style>
         * {
             margin: 0;
@@ -368,6 +368,58 @@
             pointer-events: auto;
         }
 
+        .speed-controls {
+            position: fixed;
+            top: 100px;
+            right: 250px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            padding: 1rem;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1001;
+            pointer-events: auto;
+        }
+
+        .speed-btn {
+            padding: 0.5rem 0.75rem;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0.25rem;
+            display: inline-block;
+            min-width: 45px;
+            font-size: 0.8rem;
+        }
+
+        .speed-btn:hover {
+            background: rgba(0, 245, 255, 0.2);
+        }
+
+        .speed-btn.active {
+            background: linear-gradient(135deg, #00f5ff, #0066ff);
+            box-shadow: 0 0 10px rgba(0, 245, 255, 0.5);
+        }
+
+        .free-cam-instructions {
+            position: fixed;
+            bottom: 150px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            padding: 0.75rem;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1001;
+            font-size: 0.7rem;
+            opacity: 0.8;
+            max-width: 200px;
+            display: none;
+        }
+
         .camera-btn {
             padding: 0.5rem 1rem;
             border: none;
@@ -473,7 +525,7 @@
     <!-- Name Prompt Screen -->
     <div class="name-prompt" id="namePrompt">
         <div class="name-card">
-            <h1 class="name-title">3D TOWER DEFENSE</h1>
+            <h1 class="name-title">CLASH ROYALE PLUS BLOOKET</h1>
             <p style="margin-bottom: 2rem; opacity: 0.8;">Multiplayer Strategy Defense</p>
 
             <div class="connection-status" id="connectionStatus">
@@ -497,7 +549,7 @@
     <!-- Game Screen -->
     <div class="game-container" id="gameContainer" style="display: none;">
         <div class="header">
-            <div class="logo">3D TOWER DEFENSE</div>
+            <div class="logo">CLASH ROYALE PLUS BLOOKET</div>
             <div class="stats">
                 <div class="stat-item">
                     <span>💰</span>
@@ -565,10 +617,28 @@
                     </div>
                 </div>
 
+                <div class="speed-controls">
+                    <h4 style="margin-bottom: 0.5rem; color: #00f5ff; font-size: 0.9rem;">⚡ Game Speed</h4>
+                    <div>
+                        <button class="speed-btn active" id="speed1x">1x</button>
+                        <button class="speed-btn" id="speed2x">2x</button>
+                        <button class="speed-btn" id="speed3x">3x</button>
+                        <button class="speed-btn" id="speed5x">5x</button>
+                        <button class="speed-btn" id="speed10x">10x</button>
+                    </div>
+                </div>
+
                 <div class="camera-controls">
                     <button class="camera-btn" id="topViewBtn">Top View</button>
                     <button class="camera-btn" id="angleViewBtn">Angle View</button>
                     <button class="camera-btn" id="freeViewBtn">Free Camera</button>
+                </div>
+
+                <div class="free-cam-instructions" id="freeCamInstructions">
+                    <div style="color: #00f5ff; font-weight: bold; margin-bottom: 0.25rem;">Free Camera:</div>
+                    <div>WASD/Arrows: Move</div>
+                    <div>Mouse: Look around</div>
+                    <div>Scroll: Zoom</div>
                 </div>
             </div>
         </div>
@@ -632,13 +702,28 @@
                     slow: { cost: 30, damage: 10, range: 3, fireRate: 800, color: 0x9b59b6, slow: 0.5 }
                 };
 
-                // Enemy types
+                // Enemy types (slower base speeds)
                 this.enemyTypes = {
-                    basic: { health: 50, speed: 0.02, reward: 5, color: 0xe74c3c },
-                    fast: { health: 30, speed: 0.04, reward: 8, color: 0xf39c12 },
-                    tank: { health: 150, speed: 0.01, reward: 15, color: 0x34495e },
-                    boss: { health: 300, speed: 0.015, reward: 50, color: 0x8e44ad }
+                    basic: { health: 50, speed: 0.005, reward: 5, color: 0xe74c3c },
+                    fast: { health: 30, speed: 0.008, reward: 8, color: 0xf39c12 },
+                    tank: { health: 150, speed: 0.003, reward: 15, color: 0x34495e },
+                    boss: { health: 300, speed: 0.004, reward: 50, color: 0x8e44ad }
                 };
+
+                // Game speed and camera controls
+                this.gameSpeed = 1;
+                this.isFreeCam = false;
+                this.cameraKeys = new Set();
+                this.cameraVelocity = { x: 0, y: 0, z: 0 };
+                this.mouseDown = false;
+                this.lastMouse = { x: 0, y: 0 };
+                this.cameraRotation = { x: 0, y: 0 };
+
+                // Grid system
+                this.gridSize = 1;
+                this.placementGrid = [];
+                this.gridTiles = [];
+                this.hoveredTile = null;
 
                 // Path waypoints (3D coordinates)
                 this.pathPoints = [
@@ -693,6 +778,14 @@
                 this.topViewBtn = document.getElementById('topViewBtn');
                 this.angleViewBtn = document.getElementById('angleViewBtn');
                 this.freeViewBtn = document.getElementById('freeViewBtn');
+                this.freeCamInstructions = document.getElementById('freeCamInstructions');
+
+                // Speed control buttons
+                this.speed1xBtn = document.getElementById('speed1x');
+                this.speed2xBtn = document.getElementById('speed2x');
+                this.speed3xBtn = document.getElementById('speed3x');
+                this.speed5xBtn = document.getElementById('speed5x');
+                this.speed10xBtn = document.getElementById('speed10x');
             }
 
             bindEvents() {
@@ -715,7 +808,15 @@
                 this.angleViewBtn.addEventListener('click', () => this.setCameraView('angle'));
                 this.freeViewBtn.addEventListener('click', () => this.setCameraView('free'));
 
+                // Speed controls
+                this.speed1xBtn.addEventListener('click', () => this.setGameSpeed(1));
+                this.speed2xBtn.addEventListener('click', () => this.setGameSpeed(2));
+                this.speed3xBtn.addEventListener('click', () => this.setGameSpeed(3));
+                this.speed5xBtn.addEventListener('click', () => this.setGameSpeed(5));
+                this.speed10xBtn.addEventListener('click', () => this.setGameSpeed(10));
+
                 document.addEventListener('keydown', (e) => this.handleKeyDown(e));
+                document.addEventListener('keyup', (e) => this.handleKeyUp(e));
             }
 
             async checkConnection() {
@@ -778,6 +879,9 @@
 
                 this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
                 this.canvas.addEventListener('mousemove', (e) => this.handleCanvasMouseMove(e));
+                this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+                this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+                this.canvas.addEventListener('wheel', (e) => this.handleWheel(e));
 
                 // Start render loop
                 this.animate();
@@ -823,11 +927,14 @@
                 this.ground.receiveShadow = true;
                 this.scene.add(this.ground);
 
-                // Grid helper
-                const gridHelper = new THREE.GridHelper(20, 20, 0x444444, 0x444444);
-                gridHelper.material.opacity = 0.3;
+                // Enhanced grid helper for visual reference
+                const gridHelper = new THREE.GridHelper(20, 20, 0x00f5ff, 0x444444);
+                gridHelper.material.opacity = 0.4;
                 gridHelper.material.transparent = true;
                 this.scene.add(gridHelper);
+
+                // Create placement grid system
+                this.createPlacementGrid();
 
                 // Path visualization
                 this.createPath();
@@ -898,7 +1005,25 @@
             }
 
             handleCanvasMouseMove(event) {
-                // Add hover effects here if needed
+                if (!this.selectedTowerType) return;
+
+                const rect = this.canvas.getBoundingClientRect();
+                this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+                this.raycaster.setFromCamera(this.mouse, this.camera);
+                const intersects = this.raycaster.intersectObject(this.ground);
+
+                if (intersects.length > 0) {
+                    const intersect = intersects[0];
+                    const position = intersect.point;
+
+                    // Snap to grid
+                    const gridX = Math.round(position.x);
+                    const gridZ = Math.round(position.z);
+
+                    this.updateHoverTile(gridX, gridZ);
+                }
             }
 
             isValidTowerPosition(position) {
@@ -924,6 +1049,93 @@
                 if (Math.abs(position.x) > 9 || Math.abs(position.z) > 5) return false;
 
                 return true;
+            }
+
+            createPlacementGrid() {
+                // Create visual grid tiles for tower placement
+                const tileGeometry = new THREE.PlaneGeometry(0.9, 0.9);
+                const validTileMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x00ff00,
+                    transparent: true,
+                    opacity: 0.2,
+                    side: THREE.DoubleSide
+                });
+                const invalidTileMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xff0000,
+                    transparent: true,
+                    opacity: 0.3,
+                    side: THREE.DoubleSide
+                });
+                const hoverTileMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x00f5ff,
+                    transparent: true,
+                    opacity: 0.4,
+                    side: THREE.DoubleSide
+                });
+
+                this.gridMaterials = {
+                    valid: validTileMaterial,
+                    invalid: invalidTileMaterial,
+                    hover: hoverTileMaterial
+                };
+
+                // Create grid tiles
+                for (let x = -9; x <= 9; x++) {
+                    for (let z = -5; z <= 5; z++) {
+                        const tile = new THREE.Mesh(tileGeometry, validTileMaterial.clone());
+                        tile.rotation.x = -Math.PI / 2;
+                        tile.position.set(x, 0.01, z);
+                        tile.userData = { gridX: x, gridZ: z };
+                        tile.visible = false; // Initially hidden
+                        this.scene.add(tile);
+                        this.gridTiles.push(tile);
+                    }
+                }
+            }
+
+            updateHoverTile(gridX, gridZ) {
+                // Clear previous hover
+                if (this.hoveredTile) {
+                    this.hoveredTile.visible = false;
+                }
+
+                // Find the tile at this grid position
+                const tile = this.gridTiles.find(t =>
+                    t.userData.gridX === gridX && t.userData.gridZ === gridZ
+                );
+
+                if (tile) {
+                    this.hoveredTile = tile;
+                    const position = new THREE.Vector3(gridX, 0, gridZ);
+
+                    if (this.isValidTowerPosition(position)) {
+                        tile.material = this.gridMaterials.hover;
+                    } else {
+                        tile.material = this.gridMaterials.invalid;
+                    }
+                    tile.visible = true;
+                }
+            }
+
+            showPlacementGrid() {
+                // Show all grid tiles when a tower is selected
+                this.gridTiles.forEach(tile => {
+                    const position = new THREE.Vector3(tile.userData.gridX, 0, tile.userData.gridZ);
+                    if (this.isValidTowerPosition(position)) {
+                        tile.material = this.gridMaterials.valid;
+                    } else {
+                        tile.material = this.gridMaterials.invalid;
+                    }
+                    tile.visible = true;
+                });
+            }
+
+            hidePlacementGrid() {
+                // Hide all grid tiles
+                this.gridTiles.forEach(tile => {
+                    tile.visible = false;
+                });
+                this.hoveredTile = null;
             }
 
             selectTowerType(type) {
@@ -991,6 +1203,7 @@
 
                 this.showNotification(`🏗️ ${type.charAt(0).toUpperCase() + type.slice(1)} tower placed!`);
                 this.selectedTowerType = null;
+                this.hidePlacementGrid();
                 document.querySelectorAll('.tower-btn').forEach(btn => {
                     btn.classList.remove('selected');
                 });
@@ -1112,7 +1325,7 @@
 
                 this.showNotification(`🌊 Wave ${this.wave} starting! ${this.enemiesInWave} enemies incoming!`);
 
-                // Spawn enemies with delay
+                // Spawn enemies with delay (scaled by game speed)
                 const spawnInterval = setInterval(() => {
                     if (this.enemiesSpawned >= this.enemiesInWave) {
                         clearInterval(spawnInterval);
@@ -1121,7 +1334,7 @@
 
                     this.spawnEnemy();
                     this.enemiesSpawned++;
-                }, 1500);
+                }, 1500 / this.gameSpeed);
             }
 
             spawnEnemy() {
@@ -1205,8 +1418,8 @@
 
             moveEnemies() {
                 for (const [enemyId, enemy] of this.enemies) {
-                    // Move along path
-                    enemy.pathProgress += enemy.speed * enemy.slowEffect;
+                    // Move along path (scaled by game speed)
+                    enemy.pathProgress += enemy.speed * enemy.slowEffect * this.gameSpeed;
 
                     if (enemy.pathProgress >= 1) {
                         enemy.pathIndex++;
@@ -1245,8 +1458,8 @@
                     enemy.healthBar.material.color.setRGB(1 - healthPercent, healthPercent, 0);
                     enemy.healthBar.lookAt(this.camera.position);
 
-                    // Reset slow effect
-                    enemy.slowEffect = Math.min(1, enemy.slowEffect + 0.02);
+                    // Reset slow effect (scaled by game speed)
+                    enemy.slowEffect = Math.min(1, enemy.slowEffect + 0.02 * this.gameSpeed);
                 }
             }
 
@@ -1254,7 +1467,7 @@
                 const now = Date.now();
 
                 for (const [towerId, tower] of this.towers) {
-                    if (now - tower.lastFired < tower.fireRate) continue;
+                    if (now - tower.lastFired < tower.fireRate / this.gameSpeed) continue;
 
                     // Find nearest enemy in range
                     let target = null;
@@ -1277,17 +1490,59 @@
             }
 
             fireTower(tower, enemy) {
-                // Create 3D projectile
-                const projectileGeometry = new THREE.SphereGeometry(0.05, 6, 4);
-                const projectileMaterial = new THREE.MeshBasicMaterial({
-                    color: 0x00f5ff,
-                    emissive: 0x004455
-                });
-                const projectile = new THREE.Mesh(projectileGeometry, projectileMaterial);
+                // Create enhanced projectiles based on tower type
+                let projectileGeometry, projectileMaterial, projectileSpeed = 0.3;
 
+                switch (tower.type) {
+                    case 'basic':
+                        projectileGeometry = new THREE.SphereGeometry(0.05, 6, 4);
+                        projectileMaterial = new THREE.MeshBasicMaterial({
+                            color: 0x4a90e2,
+                            emissive: 0x002255
+                        });
+                        break;
+                    case 'sniper':
+                        projectileGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.2, 6);
+                        projectileMaterial = new THREE.MeshBasicMaterial({
+                            color: 0xffff00,
+                            emissive: 0x444400
+                        });
+                        projectileSpeed = 0.8; // Faster sniper bullets
+                        break;
+                    case 'splash':
+                        projectileGeometry = new THREE.SphereGeometry(0.08, 8, 6);
+                        projectileMaterial = new THREE.MeshBasicMaterial({
+                            color: 0xff6600,
+                            emissive: 0x442200
+                        });
+                        projectileSpeed = 0.2; // Slower mortar shells
+                        break;
+                    case 'slow':
+                        projectileGeometry = new THREE.OctahedronGeometry(0.06);
+                        projectileMaterial = new THREE.MeshBasicMaterial({
+                            color: 0x9b59b6,
+                            emissive: 0x441144,
+                            transparent: true,
+                            opacity: 0.8
+                        });
+                        break;
+                    default:
+                        projectileGeometry = new THREE.SphereGeometry(0.05, 6, 4);
+                        projectileMaterial = new THREE.MeshBasicMaterial({
+                            color: 0x00f5ff,
+                            emissive: 0x004455
+                        });
+                }
+
+                const projectile = new THREE.Mesh(projectileGeometry, projectileMaterial);
                 projectile.position.copy(tower.position);
                 projectile.position.y += 1.2; // Fire from tower top
                 this.scene.add(projectile);
+
+                // Add particle trail for enhanced effects
+                if (tower.type === 'sniper' || tower.type === 'splash') {
+                    this.createProjectileTrail(projectile, tower.type);
+                }
 
                 const projectileId = 'proj_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
                 const projectileData = {
@@ -1295,11 +1550,48 @@
                     mesh: projectile,
                     target: enemy,
                     tower: tower,
-                    speed: 0.3,
+                    speed: projectileSpeed,
                     damage: tower.damage
                 };
 
                 this.projectiles.set(projectileId, projectileData);
+            }
+
+            createProjectileTrail(projectile, type) {
+                // Create simple particle trail effect
+                const trailGeometry = new THREE.SphereGeometry(0.02, 4, 3);
+                let trailMaterial;
+
+                if (type === 'sniper') {
+                    trailMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xffff88,
+                        transparent: true,
+                        opacity: 0.6
+                    });
+                } else if (type === 'splash') {
+                    trailMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xff8844,
+                        transparent: true,
+                        opacity: 0.4
+                    });
+                }
+
+                const trail = new THREE.Mesh(trailGeometry, trailMaterial);
+                trail.position.copy(projectile.position);
+                this.scene.add(trail);
+
+                // Animate trail fade out
+                let opacity = 0.6;
+                const fadeTrail = () => {
+                    opacity -= 0.05;
+                    trail.material.opacity = opacity;
+                    if (opacity <= 0) {
+                        this.scene.remove(trail);
+                    } else {
+                        requestAnimationFrame(fadeTrail);
+                    }
+                };
+                setTimeout(fadeTrail, 100);
             }
 
             moveProjectiles() {
@@ -1321,9 +1613,9 @@
                         this.scene.remove(projectile.mesh);
                         this.projectiles.delete(projectileId);
                     } else {
-                        // Move towards target
+                        // Move towards target (scaled by game speed)
                         direction.normalize();
-                        projectile.mesh.position.add(direction.multiplyScalar(projectile.speed));
+                        projectile.mesh.position.add(direction.multiplyScalar(projectile.speed * this.gameSpeed));
                     }
                 }
             }
@@ -1350,7 +1642,10 @@
             }
 
             createExplosion(position) {
-                // Simple explosion effect
+                // Enhanced explosion effect with particles
+                const explosionGroup = new THREE.Group();
+
+                // Main explosion sphere
                 const explosionGeometry = new THREE.SphereGeometry(0.3, 8, 6);
                 const explosionMaterial = new THREE.MeshBasicMaterial({
                     color: 0xff6b35,
@@ -1358,18 +1653,62 @@
                     opacity: 0.8
                 });
                 const explosion = new THREE.Mesh(explosionGeometry, explosionMaterial);
-                explosion.position.copy(position);
-                this.scene.add(explosion);
+                explosionGroup.add(explosion);
 
-                // Animate explosion
+                // Add particle sparks
+                for (let i = 0; i < 8; i++) {
+                    const sparkGeometry = new THREE.SphereGeometry(0.05, 4, 3);
+                    const sparkMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xffaa44,
+                        transparent: true,
+                        opacity: 1
+                    });
+                    const spark = new THREE.Mesh(sparkGeometry, sparkMaterial);
+
+                    // Random direction
+                    const angle = (i / 8) * Math.PI * 2;
+                    spark.position.set(
+                        Math.cos(angle) * 0.2,
+                        Math.random() * 0.2,
+                        Math.sin(angle) * 0.2
+                    );
+                    spark.userData.velocity = {
+                        x: Math.cos(angle) * 0.05,
+                        y: Math.random() * 0.05,
+                        z: Math.sin(angle) * 0.05
+                    };
+                    explosionGroup.add(spark);
+                }
+
+                explosionGroup.position.copy(position);
+                this.scene.add(explosionGroup);
+
+                // Animate explosion with enhanced effects
                 let scale = 0;
+                let time = 0;
                 const animateExplosion = () => {
-                    scale += 0.1;
+                    time += 0.1;
+                    scale += 0.15;
+
+                    // Main explosion scaling and fading
                     explosion.scale.setScalar(scale);
-                    explosion.material.opacity -= 0.05;
+                    explosion.material.opacity = Math.max(0, 0.8 - time * 2);
+
+                    // Animate sparks
+                    explosionGroup.children.forEach((child, index) => {
+                        if (index > 0) { // Skip main explosion
+                            child.position.add(new THREE.Vector3(
+                                child.userData.velocity.x,
+                                child.userData.velocity.y,
+                                child.userData.velocity.z
+                            ));
+                            child.material.opacity = Math.max(0, 1 - time * 3);
+                            child.userData.velocity.y -= 0.002; // Gravity
+                        }
+                    });
 
                     if (explosion.material.opacity <= 0) {
-                        this.scene.remove(explosion);
+                        this.scene.remove(explosionGroup);
                     } else {
                         requestAnimationFrame(animateExplosion);
                     }
@@ -1414,10 +1753,10 @@
             startNextWaveTimer() {
                 setInterval(() => {
                     if (!this.isWaveActive && this.nextWaveTimer > 0) {
-                        this.nextWaveTimer--;
-                        this.nextWaveTime.textContent = this.nextWaveTimer + 's';
+                        this.nextWaveTimer -= this.gameSpeed;
+                        this.nextWaveTime.textContent = Math.ceil(this.nextWaveTimer) + 's';
 
-                        if (this.nextWaveTimer === 0) {
+                        if (this.nextWaveTimer <= 0) {
                             this.startWave();
                             this.nextWaveTimer = 30;
                         }
@@ -1461,6 +1800,9 @@
             }
 
             setCameraView(view) {
+                this.isFreeCam = false;
+                this.freeCamInstructions.style.display = 'none';
+
                 switch (view) {
                     case 'top':
                         this.camera.position.set(0, 15, 0);
@@ -1471,7 +1813,9 @@
                         this.camera.lookAt(0, 0, 0);
                         break;
                     case 'free':
-                        // Enable orbital controls here
+                        this.isFreeCam = true;
+                        this.cameraRotation = { x: 0, y: 0 };
+                        this.freeCamInstructions.style.display = 'block';
                         break;
                 }
             }
@@ -1479,6 +1823,7 @@
             handleKeyDown(e) {
                 if (e.key === 'Escape') {
                     this.selectedTowerType = null;
+                    this.hidePlacementGrid();
                     document.querySelectorAll('.tower-btn').forEach(btn => {
                         btn.classList.remove('selected');
                     });
@@ -1486,11 +1831,107 @@
                     const types = ['basic', 'sniper', 'splash', 'slow'];
                     this.selectTowerType(types[parseInt(e.key) - 1]);
                 }
+
+                // Free camera controls
+                if (this.isFreeCam) {
+                    this.cameraKeys.add(e.key.toLowerCase());
+                }
+            }
+
+            handleKeyUp(e) {
+                if (this.isFreeCam) {
+                    this.cameraKeys.delete(e.key.toLowerCase());
+                }
+            }
+
+            handleMouseDown(e) {
+                if (this.isFreeCam && e.button === 0) {
+                    this.mouseDown = true;
+                    this.lastMouse = { x: e.clientX, y: e.clientY };
+                }
+            }
+
+            handleMouseUp(e) {
+                if (this.isFreeCam) {
+                    this.mouseDown = false;
+                }
+            }
+
+            handleWheel(e) {
+                if (this.isFreeCam) {
+                    e.preventDefault();
+                    const direction = new THREE.Vector3(0, 0, -1);
+                    direction.applyQuaternion(this.camera.quaternion);
+                    direction.multiplyScalar(e.deltaY * 0.01);
+                    this.camera.position.add(direction);
+                }
             }
 
             animate() {
                 requestAnimationFrame(() => this.animate());
+
+                // Update free camera
+                if (this.isFreeCam) {
+                    this.updateFreeCamera();
+                }
+
                 this.renderer.render(this.scene, this.camera);
+            }
+
+            updateFreeCamera() {
+                const moveSpeed = 0.1;
+                const rotateSpeed = 0.002;
+
+                // Movement
+                const direction = new THREE.Vector3();
+                if (this.cameraKeys.has('w') || this.cameraKeys.has('arrowup')) {
+                    direction.z -= 1;
+                }
+                if (this.cameraKeys.has('s') || this.cameraKeys.has('arrowdown')) {
+                    direction.z += 1;
+                }
+                if (this.cameraKeys.has('a') || this.cameraKeys.has('arrowleft')) {
+                    direction.x -= 1;
+                }
+                if (this.cameraKeys.has('d') || this.cameraKeys.has('arrowright')) {
+                    direction.x += 1;
+                }
+
+                if (direction.length() > 0) {
+                    direction.normalize();
+                    direction.applyQuaternion(this.camera.quaternion);
+                    direction.multiplyScalar(moveSpeed);
+                    this.camera.position.add(direction);
+                }
+
+                // Mouse look
+                if (this.mouseDown) {
+                    const deltaX = (event.clientX - this.lastMouse.x) * rotateSpeed;
+                    const deltaY = (event.clientY - this.lastMouse.y) * rotateSpeed;
+
+                    this.cameraRotation.y -= deltaX;
+                    this.cameraRotation.x -= deltaY;
+
+                    // Clamp vertical rotation
+                    this.cameraRotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.cameraRotation.x));
+
+                    // Apply rotation
+                    this.camera.rotation.order = 'YXZ';
+                    this.camera.rotation.y = this.cameraRotation.y;
+                    this.camera.rotation.x = this.cameraRotation.x;
+
+                    this.lastMouse = { x: event.clientX, y: event.clientY };
+                }
+            }
+
+            setGameSpeed(speed) {
+                this.gameSpeed = speed;
+
+                // Update speed button states
+                document.querySelectorAll('.speed-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.getElementById(`speed${speed}x`).classList.add('active');
             }
 
             onWindowResize() {
