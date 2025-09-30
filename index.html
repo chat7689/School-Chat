@@ -17,9 +17,21 @@
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 50%, #2d1b69 100%);
+            background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 30%, #2d1b69 70%, #0f1419 100%);
             color: white;
             overflow: hidden;
+            animation: backgroundGlow 20s ease-in-out infinite;
+        }
+
+        @keyframes backgroundGlow {
+            0%, 100% {
+                background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 30%, #2d1b69 70%, #0f1419 100%);
+                box-shadow: inset 0 0 100px rgba(45, 27, 105, 0.3);
+            }
+            50% {
+                background: linear-gradient(135deg, #1a1f2e 0%, #2d1b69 30%, #0f1419 70%, #1a1f2e 100%);
+                box-shadow: inset 0 0 100px rgba(45, 27, 105, 0.5);
+            }
         }
 
         .game-container {
@@ -424,6 +436,82 @@
             box-shadow: 0 0 10px rgba(0, 245, 255, 0.5);
         }
 
+        .tower-info {
+            position: fixed;
+            top: 280px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #00f5ff;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-width: 200px;
+            max-width: 250px;
+            z-index: 1000;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.4rem;
+            font-size: 0.85rem;
+        }
+
+        .stat-label {
+            color: #00f5ff;
+            font-weight: bold;
+        }
+
+        .tower-actions {
+            margin-top: 15px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .action-btn {
+            padding: 8px 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: bold;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .action-btn.upgrade {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+        }
+
+        .action-btn.downgrade {
+            background: linear-gradient(135deg, #e67e22, #f39c12);
+            color: white;
+        }
+
+        .action-btn.sell {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+
+        .action-btn.move {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+        }
+
+        .action-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 2px 8px rgba(0, 245, 255, 0.3);
+        }
+
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .free-cam-instructions {
             position: fixed;
             bottom: 150px;
@@ -489,14 +577,17 @@
             top: 20%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(10px);
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.85), rgba(0, 30, 60, 0.8));
+            backdrop-filter: blur(15px);
             padding: 1rem 2rem;
-            border-radius: 15px;
+            border-radius: 20px;
             text-align: center;
             z-index: 1001;
             animation: notification-appear 0.3s ease-out;
-            border: 1px solid rgba(0, 245, 255, 0.3);
+            border: 1px solid rgba(0, 245, 255, 0.4);
+            box-shadow: 0 8px 32px rgba(0, 245, 255, 0.15);
+            font-weight: 500;
+            letter-spacing: 0.5px;
         }
 
         @keyframes notification-appear {
@@ -508,6 +599,12 @@
                 opacity: 1;
                 transform: translate(-50%, -50%) scale(1);
             }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
         }
 
         .game-over {
@@ -664,6 +761,50 @@
                     </div>
                 </div>
 
+                <div class="tower-info" id="towerInfoPanel" style="display: none;">
+                    <h4 style="margin-bottom: 0.5rem; color: #00f5ff; font-size: 0.9rem;">🏗️ Tower Info</h4>
+                    <div id="towerStats">
+                        <div class="stat-row">
+                            <span class="stat-label">Type:</span>
+                            <span id="towerTypeStat">-</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Level:</span>
+                            <span id="towerLevelStat">1</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Damage:</span>
+                            <span id="towerDamageStat">-</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Range:</span>
+                            <span id="towerRangeStat">-</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Fire Rate:</span>
+                            <span id="towerFireRateStat">-</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Total Damage:</span>
+                            <span id="towerTotalDamageStat">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Kills:</span>
+                            <span id="towerKillsStat">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Shots Fired:</span>
+                            <span id="towerShotsFiredStat">0</span>
+                        </div>
+                    </div>
+                    <div class="tower-actions">
+                        <button class="action-btn upgrade" id="upgradeTowerBtn">⬆️ Upgrade</button>
+                        <button class="action-btn downgrade" id="downgradeTowerBtn">⬇️ Downgrade</button>
+                        <button class="action-btn sell" id="sellTowerBtn">💰 Sell</button>
+                        <button class="action-btn move" id="moveTowerBtn">📍 Move</button>
+                    </div>
+                </div>
+
                 <div class="camera-controls">
                     <button class="camera-btn" id="topViewBtn">Top View</button>
                     <button class="camera-btn" id="angleViewBtn">Angle View</button>
@@ -727,6 +868,12 @@
                 this.nextWaveTimer = 30;
                 this.leaderboard = [];
 
+                // Fun mechanics
+                this.killCombo = 0;
+                this.comboTimer = 0;
+                this.powerUps = new Map();
+                this.nextPowerUpId = 1;
+
                 // 3D Objects
                 this.towers = new Map();
                 this.enemies = new Map();
@@ -741,24 +888,54 @@
                 this.frameCount = 0;
                 this.lastFrameTime = Date.now();
 
-                // Tower types
-                this.towerTypes = {
-                    basic: { cost: 10, damage: 15, range: 3, fireRate: 1000, color: 0x4a90e2 },
-                    sniper: { cost: 25, damage: 40, range: 6, fireRate: 2000, color: 0x5cb85c },
-                    splash: { cost: 40, damage: 25, range: 2.5, fireRate: 1500, color: 0xf0ad4e, splash: 1.5 },
-                    slow: { cost: 30, damage: 10, range: 3, fireRate: 800, color: 0x9b59b6, slow: 0.5 },
-                    laser: { cost: 50, damage: 8, range: 4, fireRate: 200, color: 0xff0066, continuous: true },
-                    poison: { cost: 35, damage: 12, range: 2.8, fireRate: 1200, color: 0x27ae60, poison: { damage: 3, duration: 5000 } },
-                    electric: { cost: 60, damage: 30, range: 3.5, fireRate: 1800, color: 0xffff00, chain: 3 },
-                    booster: { cost: 45, damage: 0, range: 4, fireRate: 0, color: 0x00ffff, boost: { damage: 1.5, range: 1.2, fireRate: 0.8 } }
+                // Achievement system
+                this.achievements = {
+                    firstTower: { unlocked: false, name: "Builder", description: "Place your first tower" },
+                    tenKills: { unlocked: false, name: "Exterminator", description: "Kill 10 enemies" },
+                    hundredKills: { unlocked: false, name: "Slayer", description: "Kill 100 enemies" },
+                    firstUpgrade: { unlocked: false, name: "Improver", description: "Upgrade a tower" },
+                    maxLevel: { unlocked: false, name: "Maxed Out", description: "Get a tower to max level" },
+                    wave10: { unlocked: false, name: "Veteran", description: "Survive 10 waves" },
+                    wave25: { unlocked: false, name: "Expert", description: "Survive 25 waves" },
+                    millionaire: { unlocked: false, name: "Rich", description: "Have 1000+ gold" },
+                    noLives: { unlocked: false, name: "Close Call", description: "Win with 1 life remaining" },
+                    boosterMaster: { unlocked: false, name: "Support", description: "Place a booster tower" }
+                };
+                this.totalKills = 0;
+
+                // Load saved achievements
+                this.loadAchievements();
+
+                // Sound system (basic structure)
+                this.soundEnabled = localStorage.getItem('soundEnabled') === 'true';
+                this.sounds = {
+                    shoot: null,
+                    explosion: null,
+                    enemyKill: null,
+                    waveStart: null,
+                    achievement: null
                 };
 
-                // Enemy types (slower base speeds)
+                // Tower types
+                this.towerTypes = {
+                    basic: { cost: 12, damage: 18, range: 3.2, fireRate: 1000, color: 0x4a90e2, name: "Cannon" },
+                    sniper: { cost: 28, damage: 65, range: 7, fireRate: 2500, color: 0x5cb85c, name: "Sniper", critical: 0.3 },
+                    splash: { cost: 42, damage: 35, range: 2.8, fireRate: 1800, color: 0xf0ad4e, splash: 1.8, name: "Mortar" },
+                    slow: { cost: 32, damage: 15, range: 3.5, fireRate: 900, color: 0x9b59b6, slow: 0.4, name: "Frost" },
+                    laser: { cost: 55, damage: 12, range: 4.5, fireRate: 250, color: 0xff0066, continuous: true, name: "Laser" },
+                    poison: { cost: 38, damage: 18, range: 3, fireRate: 1400, color: 0x27ae60, poison: { damage: 5, duration: 6000 }, name: "Toxic" },
+                    electric: { cost: 65, damage: 35, range: 3.8, fireRate: 2000, color: 0xffff00, chain: 4, name: "Tesla" },
+                    booster: { cost: 50, damage: 0, range: 4.5, fireRate: 0, color: 0x00ffff, boost: { damage: 1.6, range: 1.3, fireRate: 0.75 }, name: "Amplifier" }
+                };
+
+                // Enemy types - Enhanced with special abilities
                 this.enemyTypes = {
-                    basic: { health: 50, speed: 0.005, reward: 5, color: 0xe74c3c },
-                    fast: { health: 30, speed: 0.008, reward: 8, color: 0xf39c12 },
-                    tank: { health: 150, speed: 0.003, reward: 15, color: 0x34495e },
-                    boss: { health: 300, speed: 0.004, reward: 50, color: 0x8e44ad }
+                    basic: { health: 50, speed: 0.005, reward: 5, color: 0xe74c3c, name: "Scout" },
+                    fast: { health: 30, speed: 0.008, reward: 8, color: 0xf39c12, name: "Runner", dodge: 0.15 },
+                    tank: { health: 150, speed: 0.003, reward: 15, color: 0x34495e, name: "Tank", armor: 0.2 },
+                    boss: { health: 300, speed: 0.004, reward: 50, color: 0x8e44ad, name: "Boss", shield: true, regen: 2 },
+                    stealth: { health: 40, speed: 0.006, reward: 12, color: 0x2c3e50, name: "Ghost", stealth: 0.3 },
+                    swarm: { health: 20, speed: 0.007, reward: 3, color: 0xe67e22, name: "Swarmling", swarm: true }
                 };
 
                 // Game speed and camera controls
@@ -841,6 +1018,22 @@
                 this.speed3xBtn = document.getElementById('speed3x');
                 this.speed5xBtn = document.getElementById('speed5x');
                 this.speed10xBtn = document.getElementById('speed10x');
+
+                // Tower info panel elements
+                this.towerInfoPanel = document.getElementById('towerInfoPanel');
+                this.towerTypeStat = document.getElementById('towerTypeStat');
+                this.towerLevelStat = document.getElementById('towerLevelStat');
+                this.towerDamageStat = document.getElementById('towerDamageStat');
+                this.towerRangeStat = document.getElementById('towerRangeStat');
+                this.towerFireRateStat = document.getElementById('towerFireRateStat');
+                this.towerTotalDamageStat = document.getElementById('towerTotalDamageStat');
+                this.towerKillsStat = document.getElementById('towerKillsStat');
+
+                // Tower action buttons
+                this.upgradeTowerBtn = document.getElementById('upgradeTowerBtn');
+                this.downgradeTowerBtn = document.getElementById('downgradeTowerBtn');
+                this.sellTowerBtn = document.getElementById('sellTowerBtn');
+                this.moveTowerBtn = document.getElementById('moveTowerBtn');
             }
 
             bindEvents() {
@@ -873,6 +1066,12 @@
                 this.speed3xBtn.addEventListener('click', () => this.setGameSpeed(3));
                 this.speed5xBtn.addEventListener('click', () => this.setGameSpeed(5));
                 this.speed10xBtn.addEventListener('click', () => this.setGameSpeed(10));
+
+                // Tower action button events
+                this.upgradeTowerBtn.addEventListener('click', () => this.upgradeTower());
+                this.downgradeTowerBtn.addEventListener('click', () => this.downgradeTower());
+                this.sellTowerBtn.addEventListener('click', () => this.sellTower());
+                this.moveTowerBtn.addEventListener('click', () => this.moveTower());
 
                 document.addEventListener('keydown', (e) => this.handleKeyDown(e));
                 document.addEventListener('keyup', (e) => this.handleKeyUp(e));
@@ -938,6 +1137,7 @@
 
                 this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
                 this.canvas.addEventListener('mousemove', (e) => this.handleCanvasMouseMove(e));
+                this.canvas.addEventListener('contextmenu', (e) => this.handleCanvasRightClick(e));
                 document.addEventListener('mousemove', (e) => this.handleMouseMove(e));
                 this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
                 this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
@@ -1006,8 +1206,7 @@
                 // Enhanced terrain with multiple layers
                 this.createTerrain();
 
-                // Create placement grid system
-                this.createPlacementGrid();
+                // Placement grid disabled - no green rectangles
 
                 // Enhanced path with more detail
                 this.createPath();
@@ -1331,19 +1530,49 @@
 
                 this.raycaster.setFromCamera(this.mouse, this.camera);
 
+                // Handle tower movement mode
+                if (this.movingTower) {
+                    const intersects = this.raycaster.intersectObject(this.ground);
+                    if (intersects.length > 0) {
+                        const intersect = intersects[0];
+                        const position = intersect.point;
+
+                        // Snap to grid centers
+                        position.x = Math.round(position.x - 0.5) + 0.5;
+                        position.z = Math.round(position.z - 0.5) + 0.5;
+                        position.y = 0;
+
+                        // Check if new position is valid
+                        if (this.isValidTowerPosition(position)) {
+                            // Move the tower
+                            this.movingTower.position.copy(position);
+                            this.movingTower.mesh.position.copy(position);
+                            if (this.movingTower.rangeIndicator) {
+                                this.movingTower.rangeIndicator.position.copy(position);
+                            }
+
+                            this.showNotification('✅ Tower moved successfully!');
+                            this.cancelTowerMovement();
+                        } else {
+                            this.showNotification('❌ Invalid position! Choose another spot.');
+                        }
+                    }
+                    return;
+                }
+
                 // Check if clicking on a tower first
                 const towerMeshes = Array.from(this.towers.values()).map(tower => tower.mesh);
                 const towerIntersects = this.raycaster.intersectObjects(towerMeshes, true);
 
                 if (towerIntersects.length > 0) {
-                    // Clicked on a tower - show its range
+                    // Clicked on a tower - select it and show stats
                     const clickedMesh = towerIntersects[0].object;
                     const tower = Array.from(this.towers.values()).find(t =>
                         t.mesh === clickedMesh || t.mesh.children.includes(clickedMesh) ||
                         t.mesh.children.some(child => child.children && child.children.includes(clickedMesh))
                     );
                     if (tower) {
-                        this.showTowerRange(tower);
+                        this.selectTower(tower);
                         return;
                     }
                 }
@@ -1539,6 +1768,23 @@
                             towerGroup.add(ring);
                         }
                         break;
+                    case 'booster':
+                        // Central satellite dish
+                        const dishGeometry = new THREE.ConeGeometry(0.2, 0.1, 8);
+                        const dish = new THREE.Mesh(dishGeometry, weaponMaterial);
+                        dish.position.y = 1.3;
+                        dish.rotation.x = Math.PI;
+                        towerGroup.add(dish);
+                        // Signal transmitters
+                        for (let i = 0; i < 4; i++) {
+                            const transmitterGeometry = new THREE.CylinderGeometry(0.02, 0.04, 0.2, 4);
+                            const transmitter = new THREE.Mesh(transmitterGeometry, weaponMaterial);
+                            transmitter.position.y = 1.1;
+                            transmitter.position.x = Math.cos(i * Math.PI / 2) * 0.15;
+                            transmitter.position.z = Math.sin(i * Math.PI / 2) * 0.15;
+                            towerGroup.add(transmitter);
+                        }
+                        break;
                 }
             }
 
@@ -1701,24 +1947,53 @@
 
                 const towerId = 'tower_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
 
-                // Create 3D tower model
+                // Create enhanced 3D tower model
                 const towerGroup = new THREE.Group();
 
-                // Base
-                const baseGeometry = new THREE.CylinderGeometry(0.4, 0.5, 0.3, 8);
-                const baseMaterial = new THREE.MeshLambertMaterial({ color: 0x555555 });
+                // Enhanced Base with metallic finish
+                const baseGeometry = new THREE.CylinderGeometry(0.45, 0.55, 0.35, 12);
+                const baseMaterial = new THREE.MeshPhongMaterial({
+                    color: 0x333333,
+                    shininess: 80,
+                    specular: 0x111111
+                });
                 const base = new THREE.Mesh(baseGeometry, baseMaterial);
-                base.position.y = 0.15;
+                base.position.y = 0.175;
                 base.castShadow = true;
                 towerGroup.add(base);
 
-                // Tower body
-                const bodyGeometry = new THREE.CylinderGeometry(0.25, 0.35, 0.8, 6);
-                const bodyMaterial = new THREE.MeshLambertMaterial({ color: towerConfig.color });
+                // Base ring detail
+                const ringGeometry = new THREE.TorusGeometry(0.42, 0.03, 6, 16);
+                const ringMaterial = new THREE.MeshPhongMaterial({
+                    color: 0x444444,
+                    shininess: 100
+                });
+                const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                ring.position.y = 0.35;
+                ring.rotation.x = Math.PI / 2;
+                towerGroup.add(ring);
+
+                // Enhanced Tower body with glow effect
+                const bodyGeometry = new THREE.CylinderGeometry(0.28, 0.38, 0.9, 8);
+                const bodyMaterial = new THREE.MeshPhongMaterial({
+                    color: towerConfig.color,
+                    shininess: 60,
+                    emissive: new THREE.Color(towerConfig.color).multiplyScalar(0.1)
+                });
                 const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-                body.position.y = 0.7;
+                body.position.y = 0.8;
                 body.castShadow = true;
                 towerGroup.add(body);
+
+                // Tower top cap
+                const capGeometry = new THREE.CylinderGeometry(0.22, 0.28, 0.1, 8);
+                const capMaterial = new THREE.MeshPhongMaterial({
+                    color: new THREE.Color(towerConfig.color).multiplyScalar(1.3),
+                    shininess: 100
+                });
+                const cap = new THREE.Mesh(capGeometry, capMaterial);
+                cap.position.y = 1.3;
+                towerGroup.add(cap);
 
                 // Weapon (different for each type)
                 this.addTowerWeapon(towerGroup, type);
@@ -1742,12 +2017,18 @@
                     targetBeam: null,
                     lastFired: 0,
                     level: 1,
+                    totalDamage: 0,
+                    kills: 0,
+                    shotsFired: 0,
                     ...towerConfig
                 };
 
                 this.towers.set(towerId, towerData);
                 this.gold -= towerConfig.cost;
                 this.updateUI();
+
+                // Initialize visual upgrades for the tower
+                this.addTowerUpgradeVisuals(towerData);
 
                 this.showNotification(`🏗️ ${type.charAt(0).toUpperCase() + type.slice(1)} tower placed!`);
                 this.selectedTowerType = null;
@@ -1765,7 +2046,7 @@
                 const rangeMaterial = new THREE.MeshBasicMaterial({
                     color: 0x00ff00,
                     transparent: true,
-                    opacity: 0.15,
+                    opacity: 0.08,
                     side: THREE.DoubleSide
                 });
                 const rangeCircle = new THREE.Mesh(rangeGeometry, rangeMaterial);
@@ -1778,7 +2059,7 @@
                 const areaMaterial = new THREE.MeshBasicMaterial({
                     color: 0x00ff00,
                     transparent: true,
-                    opacity: 0.05,
+                    opacity: 0.03,
                     side: THREE.DoubleSide
                 });
                 const rangeArea = new THREE.Mesh(areaGeometry, areaMaterial);
@@ -1805,6 +2086,682 @@
                 this.towers.forEach(tower => {
                     if (tower.rangeIndicator) tower.rangeIndicator.visible = false;
                 });
+                // Hide tower info panel when hiding ranges
+                document.getElementById('towerInfoPanel').style.display = 'none';
+                this.selectedTower = null;
+            }
+
+            selectTower(tower) {
+                this.selectedTower = tower;
+                this.hideTowerRanges();
+
+                // Show this tower's range
+                if (tower.rangeIndicator) {
+                    tower.rangeIndicator.visible = true;
+                }
+
+                // Populate and show tower info panel
+                this.updateTowerInfoPanel(tower);
+                document.getElementById('towerInfoPanel').style.display = 'block';
+            }
+
+            updateTowerInfoPanel(tower) {
+                const boostedStats = this.getBoostedTowerStats(tower);
+                const isBoosted = boostedStats.damage !== tower.damage || boostedStats.range !== tower.range || boostedStats.fireRate !== tower.fireRate;
+
+                document.getElementById('towerTypeStat').textContent = tower.type.charAt(0).toUpperCase() + tower.type.slice(1);
+                document.getElementById('towerLevelStat').textContent = tower.level || 1;
+
+                // Show boosted stats with indication if boosted
+                document.getElementById('towerDamageStat').textContent = isBoosted ?
+                    `${tower.damage} → ${boostedStats.damage}` : (tower.damage || 0);
+                document.getElementById('towerRangeStat').textContent = isBoosted ?
+                    `${tower.range.toFixed(1)} → ${boostedStats.range.toFixed(1)}` : (tower.range || 0).toFixed(1);
+
+                const baseFireRate = tower.fireRate ? (1000 / tower.fireRate).toFixed(1) + '/s' : '-';
+                const boostedFireRate = boostedStats.fireRate ? (1000 / boostedStats.fireRate).toFixed(1) + '/s' : '-';
+                document.getElementById('towerFireRateStat').textContent = isBoosted ?
+                    `${baseFireRate} → ${boostedFireRate}` : baseFireRate;
+
+                document.getElementById('towerTotalDamageStat').textContent = tower.totalDamage || 0;
+                document.getElementById('towerKillsStat').textContent = tower.kills || 0;
+                document.getElementById('towerShotsFiredStat').textContent = tower.shotsFired || 0;
+
+                // Update button states and text based on tower level
+                const currentLevel = tower.level || 1;
+                const upgradeCost = Math.floor(tower.cost * 0.75 * currentLevel);
+                const sellPrice = Math.floor(tower.cost * 0.5 * currentLevel);
+
+                const upgradeBtn = document.getElementById('upgradeTowerBtn');
+                const downgradeBtn = document.getElementById('downgradeTowerBtn');
+                const sellBtn = document.getElementById('sellTowerBtn');
+
+                upgradeBtn.disabled = currentLevel >= 5;
+                downgradeBtn.disabled = currentLevel <= 1;
+
+                // Update button text with prices
+                upgradeBtn.textContent = currentLevel >= 5 ? '⬆️ MAX LEVEL' : `⬆️ Upgrade ($${upgradeCost})`;
+                sellBtn.textContent = `💰 Sell ($${sellPrice})`;
+            }
+
+            upgradeTower() {
+                if (!this.selectedTower) return;
+
+                const tower = this.selectedTower;
+                const currentLevel = tower.level || 1;
+                const upgradeCost = Math.floor(tower.cost * 0.75 * currentLevel);
+
+                if (currentLevel >= 5) {
+                    alert('Tower is already at maximum level!');
+                    return;
+                }
+
+                if (this.gold < upgradeCost) {
+                    alert(`Not enough gold! Need $${upgradeCost}`);
+                    return;
+                }
+
+                // Deduct gold and upgrade tower
+                this.gold -= upgradeCost;
+                tower.level = currentLevel + 1;
+
+                // Improve tower stats
+                tower.damage = Math.floor(tower.damage * 1.5);
+                tower.range = tower.range * 1.2;
+                tower.fireRate = Math.max(tower.fireRate * 0.8, 100); // Faster firing, min 100ms
+
+                // Check achievements
+                if (!this.achievements.firstUpgrade.unlocked) {
+                    this.unlockAchievement('firstUpgrade');
+                }
+                if (tower.level >= 5 && !this.achievements.maxLevel.unlocked) {
+                    this.unlockAchievement('maxLevel');
+                }
+
+                // Update range indicator
+                if (tower.rangeIndicator) {
+                    tower.rangeIndicator.scale.setScalar(tower.range * 2);
+                }
+
+                // Add visual upgrade indicators
+                this.addTowerUpgradeVisuals(tower);
+
+                // Update UI
+                this.updateUI();
+                this.updateTowerInfoPanel(tower);
+
+                console.log(`Tower upgraded to level ${tower.level} for $${upgradeCost}`);
+            }
+
+            downgradeTower() {
+                if (!this.selectedTower) return;
+
+                const tower = this.selectedTower;
+                const currentLevel = tower.level || 1;
+
+                if (currentLevel <= 1) {
+                    alert('Tower is already at minimum level!');
+                    return;
+                }
+
+                // Refund partial gold
+                const refund = Math.floor(tower.cost * 0.5 * (currentLevel - 1));
+                this.gold += refund;
+                tower.level = currentLevel - 1;
+
+                // Reduce tower stats
+                tower.damage = Math.ceil(tower.damage / 1.5);
+                tower.range = tower.range / 1.2;
+                tower.fireRate = Math.min(tower.fireRate * 1.25, 2000); // Slower firing, max 2000ms
+
+                // Update range indicator
+                if (tower.rangeIndicator) {
+                    tower.rangeIndicator.scale.setScalar(tower.range * 2);
+                }
+
+                // Update visual upgrade indicators
+                this.addTowerUpgradeVisuals(tower);
+
+                // Update UI
+                this.updateUI();
+                this.updateTowerInfoPanel(tower);
+
+                console.log(`Tower downgraded to level ${tower.level}, refunded $${refund}`);
+            }
+
+            sellTower() {
+                if (!this.selectedTower) return;
+
+                const tower = this.selectedTower;
+                const sellPrice = Math.floor(tower.cost * 0.5 * (tower.level || 1));
+
+                // Refund gold
+                this.gold += sellPrice;
+
+                // Remove tower from scene and arrays
+                this.scene.remove(tower.mesh);
+                if (tower.rangeIndicator) {
+                    this.scene.remove(tower.rangeIndicator);
+                }
+
+                // Remove from towers array
+                const index = this.towers.findIndex(t => t.id === tower.id);
+                if (index !== -1) {
+                    this.towers.splice(index, 1);
+                }
+
+                // Hide tower info panel
+                document.getElementById('towerInfoPanel').style.display = 'none';
+                this.selectedTower = null;
+
+                // Update UI
+                this.updateUI();
+
+                console.log(`Tower sold for $${sellPrice}`);
+            }
+
+            moveTower() {
+                if (!this.selectedTower) return;
+
+                this.movingTower = this.selectedTower;
+                this.movingTowerOriginalPosition = this.selectedTower.position.clone();
+
+                // Change cursor and show instructions
+                document.body.style.cursor = 'move';
+                this.showNotification('🏗️ Click a new position to move the tower, right-click to cancel');
+
+                // Hide tower info panel temporarily
+                document.getElementById('towerInfoPanel').style.display = 'none';
+            }
+
+            addTowerUpgradeVisuals(tower) {
+                // Remove existing upgrade visuals
+                if (tower.upgradeVisuals) {
+                    tower.upgradeVisuals.forEach(visual => {
+                        tower.mesh.remove(visual);
+                    });
+                }
+
+                tower.upgradeVisuals = [];
+                const level = tower.level || 1;
+
+                if (level <= 1) return; // No visuals for level 1
+
+                // Add level indicators - small spheres around the tower
+                for (let i = 1; i < level; i++) {
+                    const indicatorGeometry = new THREE.SphereGeometry(0.08, 6, 4);
+                    const indicatorMaterial = new THREE.MeshBasicMaterial({
+                        color: this.getLevelColor(level),
+                        emissive: this.getLevelColor(level),
+                        emissiveIntensity: 0.3
+                    });
+                    const indicator = new THREE.Mesh(indicatorGeometry, indicatorMaterial);
+
+                    // Position indicators in a circle around the tower
+                    const angle = (i - 1) * (Math.PI * 2 / (level - 1));
+                    indicator.position.set(
+                        Math.cos(angle) * 0.6,
+                        1.4 + (i - 1) * 0.15, // Stack them vertically
+                        Math.sin(angle) * 0.6
+                    );
+
+                    tower.mesh.add(indicator);
+                    tower.upgradeVisuals.push(indicator);
+
+                    // Add floating animation
+                    indicator.userData = {
+                        originalY: indicator.position.y,
+                        floatOffset: Math.random() * Math.PI * 2
+                    };
+                }
+
+                // Add crown for max level towers
+                if (level >= 5) {
+                    const crownGeometry = new THREE.ConeGeometry(0.2, 0.3, 6);
+                    const crownMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xffd700,
+                        emissive: 0xffd700,
+                        emissiveIntensity: 0.4
+                    });
+                    const crown = new THREE.Mesh(crownGeometry, crownMaterial);
+                    crown.position.set(0, 1.8, 0);
+
+                    tower.mesh.add(crown);
+                    tower.upgradeVisuals.push(crown);
+
+                    crown.userData = {
+                        originalY: crown.position.y,
+                        floatOffset: 0
+                    };
+                }
+            }
+
+            getLevelColor(level) {
+                const colors = [
+                    0x888888, // Level 1 - Gray (not used)
+                    0x00ff00, // Level 2 - Green
+                    0x0088ff, // Level 3 - Blue
+                    0xff8800, // Level 4 - Orange
+                    0xffd700  // Level 5 - Gold
+                ];
+                return colors[Math.min(level - 1, colors.length - 1)];
+            }
+
+            cancelTowerMovement() {
+                this.movingTower = null;
+                this.movingTowerOriginalPosition = null;
+                document.body.style.cursor = 'default';
+
+                // Show tower info panel again if we had a selected tower
+                if (this.selectedTower) {
+                    document.getElementById('towerInfoPanel').style.display = 'block';
+                }
+            }
+
+            handleCanvasRightClick(event) {
+                event.preventDefault();
+
+                // Cancel tower movement if in progress
+                if (this.movingTower) {
+                    this.showNotification('❌ Tower movement cancelled');
+                    this.cancelTowerMovement();
+                    return;
+                }
+
+                // Cancel tower selection if any tower type is selected
+                if (this.selectedTowerType) {
+                    this.selectedTowerType = null;
+                    this.clearTowerPreview();
+                    document.querySelectorAll('.tower-btn').forEach(btn => {
+                        btn.classList.remove('selected');
+                    });
+                    this.showNotification('❌ Tower placement cancelled');
+                }
+            }
+
+            animateTowerUpgrades() {
+                const time = Date.now() * 0.002;
+
+                for (const [towerId, tower] of this.towers) {
+                    // Animate upgrade visuals
+                    if (tower.upgradeVisuals && tower.upgradeVisuals.length > 0) {
+                        tower.upgradeVisuals.forEach(visual => {
+                            if (visual.userData && visual.userData.originalY !== undefined) {
+                                visual.position.y = visual.userData.originalY + Math.sin(time + visual.userData.floatOffset) * 0.05;
+                                visual.rotation.y += 0.02;
+                            }
+                        });
+                    }
+
+                    // Check if tower is boosted and add glow effect
+                    if (tower.type !== 'booster') {
+                        const boostedStats = this.getBoostedTowerStats(tower);
+                        const isBoosted = boostedStats.damage !== tower.damage || boostedStats.range !== tower.range;
+
+                        if (isBoosted && !tower.boostGlow) {
+                            this.addBoostGlow(tower);
+                        } else if (!isBoosted && tower.boostGlow) {
+                            this.removeBoostGlow(tower);
+                        }
+
+                        // Animate boost glow
+                        if (tower.boostGlow) {
+                            tower.boostGlow.material.opacity = 0.3 + Math.sin(time * 2) * 0.1;
+                        }
+                    }
+                }
+            }
+
+            getBoostedTowerStats(tower) {
+                let boostedStats = {
+                    damage: tower.damage,
+                    range: tower.range,
+                    fireRate: tower.fireRate
+                };
+
+                // Check for nearby booster towers
+                for (const [boosterId, booster] of this.towers) {
+                    if (booster.type === 'booster' && booster.id !== tower.id) {
+                        const distance = tower.position.distanceTo(booster.position);
+                        if (distance <= booster.range) {
+                            // Apply booster effects
+                            boostedStats.damage = Math.floor(boostedStats.damage * booster.boost.damage);
+                            boostedStats.range = boostedStats.range * booster.boost.range;
+                            boostedStats.fireRate = boostedStats.fireRate * booster.boost.fireRate;
+                        }
+                    }
+                }
+
+                return boostedStats;
+            }
+
+            addBoostGlow(tower) {
+                const glowGeometry = new THREE.RingGeometry(0.8, 1.0, 16);
+                const glowMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x00ffff,
+                    transparent: true,
+                    opacity: 0.3,
+                    side: THREE.DoubleSide
+                });
+                const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+                glow.rotation.x = -Math.PI / 2;
+                glow.position.y = 0.1;
+
+                tower.mesh.add(glow);
+                tower.boostGlow = glow;
+            }
+
+            removeBoostGlow(tower) {
+                if (tower.boostGlow) {
+                    tower.mesh.remove(tower.boostGlow);
+                    tower.boostGlow = null;
+                }
+            }
+
+            cleanupOldObjects() {
+                try {
+                    // Enhanced cleanup for better memory management
+                    const projectilesToRemove = [];
+                    for (const [projectileId, projectile] of this.projectiles) {
+                        if (!projectile || !projectile.mesh || !projectile.target ||
+                            !projectile.mesh.parent ||
+                            !this.enemies.has(projectile.target.id) ||
+                            projectile.mesh.position.distanceTo(projectile.target.mesh.position) > 50) {
+
+                            if (projectile && projectile.mesh) {
+                                this.scene.remove(projectile.mesh);
+                            }
+                            projectilesToRemove.push(projectileId);
+                        }
+                    }
+
+                    // Remove marked projectiles
+                    projectilesToRemove.forEach(id => {
+                        this.projectiles.delete(id);
+                    });
+
+                    // Clean up expired power-ups
+                    const powerUpsToRemove = [];
+                    for (const [id, powerUp] of this.powerUps) {
+                        if (powerUp.collected || (Date.now() - powerUp.spawnTime) > 30000) {
+                            if (powerUp.mesh) {
+                                this.scene.remove(powerUp.mesh);
+                            }
+                            powerUpsToRemove.push(id);
+                        }
+                    }
+
+                    powerUpsToRemove.forEach(id => {
+                        this.powerUps.delete(id);
+                    });
+
+                    // Monitor performance less frequently for better optimization
+                    this.frameCount = (this.frameCount || 0) + 1;
+                    if (this.frameCount % 120 === 0) { // Check every 120 frames (2 seconds at 60fps)
+                        const currentTime = performance.now();
+                        if (this.lastFrameTime) {
+                            const fps = 120000 / (currentTime - this.lastFrameTime);
+                            if (fps < 25 && !this.performanceMode) {
+                                this.reduceEffects();
+                            }
+                        }
+                        this.lastFrameTime = currentTime;
+                    }
+                } catch (error) {
+                    console.error('Cleanup error:', error);
+                }
+            }
+
+            reduceEffects() {
+                this.performanceMode = true;
+                this.showNotification('🔧 Performance mode enabled');
+                console.log('Performance mode activated due to low FPS');
+            }
+
+            checkAchievements() {
+                // Check for new achievements
+                if (!this.achievements.firstTower.unlocked && this.towers.size > 0) {
+                    this.unlockAchievement('firstTower');
+                }
+
+                if (!this.achievements.tenKills.unlocked && this.totalKills >= 10) {
+                    this.unlockAchievement('tenKills');
+                }
+
+                if (!this.achievements.hundredKills.unlocked && this.totalKills >= 100) {
+                    this.unlockAchievement('hundredKills');
+                }
+
+                if (!this.achievements.wave10.unlocked && this.wave >= 10) {
+                    this.unlockAchievement('wave10');
+                }
+
+                if (!this.achievements.wave25.unlocked && this.wave >= 25) {
+                    this.unlockAchievement('wave25');
+                }
+
+                if (!this.achievements.millionaire.unlocked && this.gold >= 1000) {
+                    this.unlockAchievement('millionaire');
+                }
+
+                // Check for booster tower
+                if (!this.achievements.boosterMaster.unlocked) {
+                    for (const [towerId, tower] of this.towers) {
+                        if (tower.type === 'booster') {
+                            this.unlockAchievement('boosterMaster');
+                            break;
+                        }
+                    }
+                }
+            }
+
+            unlockAchievement(achievementKey) {
+                if (!this.achievements[achievementKey].unlocked) {
+                    this.achievements[achievementKey].unlocked = true;
+                    const achievement = this.achievements[achievementKey];
+                    this.showNotification(`🏆 Achievement: ${achievement.name}! ${achievement.description}`);
+
+                    // Save achievements to localStorage
+                    localStorage.setItem('towerDefenseAchievements', JSON.stringify(this.achievements));
+                }
+            }
+
+            saveGame() {
+                try {
+                    const gameState = {
+                        gold: this.gold,
+                        lives: this.lives,
+                        wave: this.wave,
+                        currentScore: this.currentScore,
+                        totalKills: this.totalKills,
+                        achievements: this.achievements,
+                        isWaveActive: this.isWaveActive,
+                        towers: Array.from(this.towers.entries()).map(([id, tower]) => ({
+                            id: id,
+                            type: tower.type,
+                            position: { x: tower.position.x, y: tower.position.y, z: tower.position.z },
+                            level: tower.level || 1,
+                            totalDamage: tower.totalDamage || 0,
+                            kills: tower.kills || 0,
+                            shotsFired: tower.shotsFired || 0
+                        })),
+                        timestamp: Date.now()
+                    };
+
+                    localStorage.setItem('towerDefenseGameState', JSON.stringify(gameState));
+                    this.showNotification('💾 Game saved successfully!');
+                    return true;
+                } catch (error) {
+                    console.error('Save failed:', error);
+                    this.showNotification('❌ Save failed!');
+                    return false;
+                }
+            }
+
+            loadGame() {
+                try {
+                    const savedState = localStorage.getItem('towerDefenseGameState');
+                    if (!savedState) {
+                        this.showNotification('❌ No saved game found!');
+                        return false;
+                    }
+
+                    const gameState = JSON.parse(savedState);
+
+                    // Restore basic game state
+                    this.gold = gameState.gold || 100;
+                    this.lives = gameState.lives || 20;
+                    this.wave = gameState.wave || 1;
+                    this.currentScore = gameState.currentScore || 0;
+                    this.totalKills = gameState.totalKills || 0;
+                    this.achievements = { ...this.achievements, ...gameState.achievements };
+
+                    // Clear existing towers
+                    for (const [towerId, tower] of this.towers) {
+                        this.scene.remove(tower.mesh);
+                        if (tower.rangeIndicator) this.scene.remove(tower.rangeIndicator);
+                    }
+                    this.towers.clear();
+
+                    // Restore towers
+                    if (gameState.towers) {
+                        gameState.towers.forEach(towerData => {
+                            const position = new THREE.Vector3(towerData.position.x, towerData.position.y, towerData.position.z);
+                            this.placeTowerFromSave(position, towerData.type, towerData);
+                        });
+                    }
+
+                    this.updateUI();
+                    this.showNotification('✅ Game loaded successfully!');
+                    return true;
+                } catch (error) {
+                    console.error('Load failed:', error);
+                    this.showNotification('❌ Load failed!');
+                    return false;
+                }
+            }
+
+            placeTowerFromSave(position, type, savedData) {
+                const towerConfig = this.towerTypes[type];
+                const towerId = savedData.id;
+
+                // Create tower (simplified version of placeTower)
+                const towerGroup = new THREE.Group();
+
+                // Base
+                const baseGeometry = new THREE.CylinderGeometry(0.4, 0.5, 0.3, 8);
+                const baseMaterial = new THREE.MeshLambertMaterial({ color: 0x555555 });
+                const base = new THREE.Mesh(baseGeometry, baseMaterial);
+                base.position.y = 0.15;
+                base.castShadow = true;
+                towerGroup.add(base);
+
+                // Tower body
+                const bodyGeometry = new THREE.CylinderGeometry(0.25, 0.35, 0.8, 6);
+                const bodyMaterial = new THREE.MeshLambertMaterial({ color: towerConfig.color });
+                const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                body.position.y = 0.7;
+                body.castShadow = true;
+                towerGroup.add(body);
+
+                // Weapon
+                this.addTowerWeapon(towerGroup, type);
+
+                towerGroup.position.copy(position);
+                this.scene.add(towerGroup);
+
+                // Create range indicator
+                const rangeIndicator = this.createRangeIndicator(towerConfig.range);
+                rangeIndicator.position.copy(position);
+                rangeIndicator.visible = false;
+                this.scene.add(rangeIndicator);
+
+                // Store tower data with saved stats
+                const towerData = {
+                    id: towerId,
+                    type: type,
+                    position: position.clone(),
+                    mesh: towerGroup,
+                    rangeIndicator: rangeIndicator,
+                    targetBeam: null,
+                    lastFired: 0,
+                    level: savedData.level || 1,
+                    totalDamage: savedData.totalDamage || 0,
+                    kills: savedData.kills || 0,
+                    shotsFired: savedData.shotsFired || 0,
+                    ...towerConfig
+                };
+
+                // Apply upgrades to match saved level
+                for (let i = 1; i < towerData.level; i++) {
+                    towerData.damage = Math.floor(towerData.damage * 1.5);
+                    towerData.range = towerData.range * 1.2;
+                    towerData.fireRate = Math.max(towerData.fireRate * 0.8, 100);
+                }
+
+                // Update range indicator for upgraded towers
+                if (towerData.rangeIndicator) {
+                    towerData.rangeIndicator.scale.setScalar(towerData.range * 2);
+                }
+
+                this.towers.set(towerId, towerData);
+                this.addTowerUpgradeVisuals(towerData);
+            }
+
+            loadAchievements() {
+                try {
+                    const savedAchievements = localStorage.getItem('towerDefenseAchievements');
+                    if (savedAchievements) {
+                        const achievements = JSON.parse(savedAchievements);
+                        this.achievements = { ...this.achievements, ...achievements };
+                    }
+                } catch (error) {
+                    console.error('Failed to load achievements:', error);
+                }
+            }
+
+            showHelpMessage() {
+                const helpText = `
+🎮 TOWER DEFENSE CONTROLS 🎮
+
+🏗️ Building:
+• 1-8: Select tower types
+• Click: Place selected tower
+• Right-click: Cancel
+
+🏯 Tower Management:
+• Click tower: Select and view stats
+• U: Upgrade selected tower
+• D: Downgrade selected tower
+• S: Sell selected tower
+• M: Move selected tower
+
+🌊 Game Controls:
+• Space/Enter: Start wave
+• P: Pause/Unpause
+• F5/Ctrl+S: Save game
+• F9/Ctrl+L: Load game
+• H/?: Show this help
+
+📷 Camera:
+• Free Camera: WASD + Mouse
+• +/-: Zoom in/out
+• Mouse wheel: Zoom
+
+🏆 Achievement system included!
+💾 Auto-save every 5 waves!
+                `;
+                this.showNotification(helpText);
+            }
+
+            togglePause() {
+                this.gameRunning = !this.gameRunning;
+                if (this.gameRunning) {
+                    this.showNotification('▶️ Game resumed');
+                    this.startGameLoop();
+                } else {
+                    this.showNotification('⏸️ Game paused');
+                }
             }
 
             addTowerWeapon(towerGroup, type) {
@@ -1908,6 +2865,25 @@
                             towerGroup.add(ring);
                         }
                         break;
+                    case 'booster':
+                        // Central satellite dish
+                        const dishGeometry = new THREE.ConeGeometry(0.2, 0.1, 8);
+                        const dishMaterial = new THREE.MeshLambertMaterial({ color: 0x00ffff });
+                        const dish = new THREE.Mesh(dishGeometry, dishMaterial);
+                        dish.position.y = 1.3;
+                        dish.rotation.x = Math.PI;
+                        towerGroup.add(dish);
+                        // Signal transmitters
+                        for (let i = 0; i < 4; i++) {
+                            const transmitterGeometry = new THREE.CylinderGeometry(0.02, 0.04, 0.2, 4);
+                            const transmitterMaterial = new THREE.MeshLambertMaterial({ color: 0x00cccc });
+                            const transmitter = new THREE.Mesh(transmitterGeometry, transmitterMaterial);
+                            transmitter.position.y = 1.1;
+                            transmitter.position.x = Math.cos(i * Math.PI / 2) * 0.15;
+                            transmitter.position.z = Math.sin(i * Math.PI / 2) * 0.15;
+                            towerGroup.add(transmitter);
+                        }
+                        break;
                 }
             }
 
@@ -1970,12 +2946,45 @@
                 if (this.isWaveActive) return;
 
                 this.isWaveActive = true;
-                this.enemiesInWave = Math.min(5 + this.wave * 2, 30);
                 this.enemiesSpawned = 0;
                 this.startWaveBtn.disabled = true;
                 this.startWaveBtn.textContent = 'Wave Active';
 
-                this.showNotification(`🌊 Wave ${this.wave} starting! ${this.enemiesInWave} enemies incoming!`);
+                // Enhanced wave progression with special waves
+                const baseEnemies = Math.min(5 + this.wave * 2, 40);
+                const waveType = this.getWaveType(this.wave);
+
+                switch (waveType) {
+                    case 'speed':
+                        this.enemiesInWave = baseEnemies + 8;
+                        this.showNotification(`💨 Speed Wave ${this.wave}! Fast enemies incoming!`);
+                        break;
+                    case 'tank':
+                        this.enemiesInWave = Math.floor(baseEnemies * 0.6);
+                        this.showNotification(`🛡️ Tank Wave ${this.wave}! Armored enemies!`);
+                        break;
+                    case 'boss':
+                        this.enemiesInWave = Math.floor(baseEnemies * 0.4) + 1;
+                        this.showNotification(`👹 Boss Wave ${this.wave}! Elite enemies!`);
+                        break;
+                    case 'swarm':
+                        this.enemiesInWave = Math.floor(baseEnemies * 1.5);
+                        this.showNotification(`🐜 Swarm Wave ${this.wave}! Massive numbers!`);
+                        break;
+                    default:
+                        this.enemiesInWave = baseEnemies;
+                        this.showNotification(`🌊 Wave ${this.wave} starting! ${this.enemiesInWave} enemies incoming!`);
+                }
+
+                this.currentWaveType = waveType;
+
+                // Dynamic spawn rate based on wave type
+                let spawnDelay = 1500;
+                if (waveType === 'speed' || waveType === 'swarm') {
+                    spawnDelay = 800; // Faster spawning
+                } else if (waveType === 'tank' || waveType === 'boss') {
+                    spawnDelay = 2200; // Slower spawning
+                }
 
                 // Spawn enemies with delay (scaled by game speed)
                 const spawnInterval = setInterval(() => {
@@ -1986,29 +2995,62 @@
 
                     this.spawnEnemy();
                     this.enemiesSpawned++;
-                }, 1500 / this.gameSpeed);
+                }, spawnDelay / this.gameSpeed);
+            }
+
+            getWaveType(wave) {
+                // Special wave types every few waves
+                if (wave % 10 === 0) return 'boss';
+                if (wave % 7 === 0) return 'tank';
+                if (wave % 5 === 0) return 'speed';
+                if (wave % 8 === 0) return 'swarm';
+                return 'normal';
+            }
+
+            selectEnemyType(wave, waveType) {
+                let enemyType = 'basic';
+
+                switch (waveType) {
+                    case 'speed':
+                        enemyType = Math.random() < 0.8 ? 'fast' : 'basic';
+                        break;
+                    case 'tank':
+                        enemyType = Math.random() < 0.7 ? 'tank' : (Math.random() < 0.5 ? 'basic' : 'fast');
+                        break;
+                    case 'boss':
+                        enemyType = Math.random() < 0.4 ? 'boss' : (Math.random() < 0.7 ? 'tank' : 'fast');
+                        break;
+                    case 'swarm':
+                        enemyType = Math.random() < 0.85 ? 'basic' : 'fast';
+                        break;
+                    default:
+                        // Normal wave progression
+                        if (wave < 3) {
+                            enemyType = 'basic';
+                        } else if (wave < 6) {
+                            enemyType = Math.random() < 0.7 ? 'basic' : 'fast';
+                        } else if (wave < 10) {
+                            const rand = Math.random();
+                            if (rand < 0.5) enemyType = 'basic';
+                            else if (rand < 0.8) enemyType = 'fast';
+                            else enemyType = 'tank';
+                        } else {
+                            // Advanced waves include new enemy types
+                            const rand = Math.random();
+                            if (rand < 0.25) enemyType = 'basic';
+                            else if (rand < 0.45) enemyType = 'fast';
+                            else if (rand < 0.65) enemyType = 'tank';
+                            else if (rand < 0.8) enemyType = 'boss';
+                            else if (rand < 0.92) enemyType = 'stealth';
+                            else enemyType = 'swarm';
+                        }
+                }
+
+                return enemyType;
             }
 
             spawnEnemy() {
-                let enemyType;
-
-                // Different enemy types based on wave
-                if (this.wave < 3) {
-                    enemyType = 'basic';
-                } else if (this.wave < 6) {
-                    enemyType = Math.random() < 0.7 ? 'basic' : 'fast';
-                } else if (this.wave < 10) {
-                    const rand = Math.random();
-                    if (rand < 0.5) enemyType = 'basic';
-                    else if (rand < 0.8) enemyType = 'fast';
-                    else enemyType = 'tank';
-                } else {
-                    const rand = Math.random();
-                    if (rand < 0.3) enemyType = 'basic';
-                    else if (rand < 0.6) enemyType = 'fast';
-                    else if (rand < 0.9) enemyType = 'tank';
-                    else enemyType = 'boss';
-                }
+                let enemyType = this.selectEnemyType(this.wave, this.currentWaveType || 'normal');
 
                 const enemyId = 'enemy_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
                 const enemyConfig = this.enemyTypes[enemyType];
@@ -2030,6 +3072,14 @@
                     case 'boss':
                         mainMesh = this.createBossEnemyModel(enemyConfig.color);
                         break;
+                    case 'stealth':
+                        mainMesh = this.createStealthEnemyModel(enemyConfig.color);
+                        break;
+                    case 'swarm':
+                        mainMesh = this.createSwarmEnemyModel(enemyConfig.color);
+                        break;
+                    default:
+                        mainMesh = this.createBasicEnemyModel(enemyConfig.color);
                 }
 
                 enemyGroup.add(mainMesh);
@@ -2052,10 +3102,11 @@
                 enemyGroup.position.set(startPos.x, startPos.y + 0.2, startPos.z);
                 this.scene.add(enemyGroup);
 
-                // Store enemy data
+                // Store enemy data with special abilities
                 const enemyData = {
                     id: enemyId,
                     type: enemyType,
+                    name: enemyConfig.name,
                     mesh: enemyGroup,
                     healthBar: healthBar,
                     healthBarBackground: healthBarBackground,
@@ -2065,7 +3116,15 @@
                     maxHealth: enemyConfig.health * (1 + this.wave * 0.1),
                     speed: enemyConfig.speed,
                     reward: enemyConfig.reward,
-                    slowEffect: 1
+                    slowEffect: 1,
+                    // Copy special abilities from config
+                    dodge: enemyConfig.dodge,
+                    armor: enemyConfig.armor,
+                    shield: enemyConfig.shield,
+                    shieldActive: enemyConfig.shield || false,
+                    regen: enemyConfig.regen,
+                    stealth: enemyConfig.stealth,
+                    swarm: enemyConfig.swarm
                 };
 
                 this.enemies.set(enemyId, enemyData);
@@ -2252,55 +3311,145 @@
                 return group;
             }
 
+            createStealthEnemyModel(color) {
+                const group = new THREE.Group();
+
+                // Sleek, low-profile design
+                const bodyGeometry = new THREE.ConeGeometry(0.15, 0.25, 6);
+                const bodyMaterial = new THREE.MeshLambertMaterial({
+                    color: color,
+                    transparent: true,
+                    opacity: 0.7
+                });
+                const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                body.rotation.x = Math.PI;
+                group.add(body);
+
+                // Stealth field effect
+                const fieldGeometry = new THREE.SphereGeometry(0.3, 8, 8);
+                const fieldMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x202040,
+                    transparent: true,
+                    opacity: 0.2,
+                    wireframe: true
+                });
+                const field = new THREE.Mesh(fieldGeometry, fieldMaterial);
+                group.add(field);
+
+                return group;
+            }
+
+            createSwarmEnemyModel(color) {
+                const group = new THREE.Group();
+
+                // Small, simple design for swarm units
+                const bodyGeometry = new THREE.TetrahedronGeometry(0.12, 0);
+                const bodyMaterial = new THREE.MeshLambertMaterial({
+                    color: color,
+                    emissive: new THREE.Color(color).multiplyScalar(0.3)
+                });
+                const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                group.add(body);
+
+                // Small energy trail
+                const trailGeometry = new THREE.SphereGeometry(0.05, 4, 4);
+                const trailMaterial = new THREE.MeshBasicMaterial({
+                    color: new THREE.Color(color).multiplyScalar(1.5),
+                    transparent: true,
+                    opacity: 0.6
+                });
+                const trail = new THREE.Mesh(trailGeometry, trailMaterial);
+                trail.position.z = -0.2;
+                group.add(trail);
+
+                return group;
+            }
+
             moveEnemies() {
-                for (const [enemyId, enemy] of this.enemies) {
-                    // Move along path (scaled by game speed)
-                    enemy.pathProgress += enemy.speed * enemy.slowEffect * this.gameSpeed;
+                try {
+                    const enemiesToRemove = [];
 
-                    if (enemy.pathProgress >= 1) {
-                        enemy.pathIndex++;
-                        enemy.pathProgress = 0;
-                    }
+                    for (const [enemyId, enemy] of this.enemies) {
+                        try {
+                            // Safety checks
+                            if (!enemy || !enemy.mesh || enemy.pathIndex === undefined) {
+                                enemiesToRemove.push(enemyId);
+                                continue;
+                            }
 
-                    if (enemy.pathIndex >= this.pathPoints.length - 1) {
-                        // Enemy reached the end
-                        this.lives--;
-                        this.enemies.delete(enemyId);
-                        this.scene.remove(enemy.mesh);
-                        this.showNotification(`💔 Enemy reached base! Lives: ${this.lives}`);
+                            // Move along path (scaled by game speed)
+                            enemy.pathProgress += (enemy.speed || 0.01) * (enemy.slowEffect || 1) * this.gameSpeed;
 
-                        if (this.lives <= 0) {
-                            this.gameOver();
+                            if (enemy.pathProgress >= 1) {
+                                enemy.pathIndex++;
+                                enemy.pathProgress = 0;
+                            }
+
+                            if (enemy.pathIndex >= this.pathPoints.length - 1) {
+                                // Enemy reached the end
+                                this.lives--;
+                                enemiesToRemove.push(enemyId);
+                                if (enemy.mesh.parent) {
+                                    this.scene.remove(enemy.mesh);
+                                }
+                                this.showNotification(`💔 Enemy reached base! Lives: ${this.lives}`);
+
+                                if (this.lives <= 0) {
+                                    this.gameOver();
+                                }
+                                continue;
+                            }
+
+                            // Interpolate position between path points
+                            const currentPoint = this.pathPoints[enemy.pathIndex];
+                            const nextPoint = this.pathPoints[enemy.pathIndex + 1];
+
+                            if (!currentPoint || !nextPoint) {
+                                enemiesToRemove.push(enemyId);
+                                continue;
+                            }
+
+                            const position = new THREE.Vector3();
+                            position.lerpVectors(
+                                new THREE.Vector3(currentPoint.x, currentPoint.y + 0.2, currentPoint.z),
+                                new THREE.Vector3(nextPoint.x, nextPoint.y + 0.2, nextPoint.z),
+                                enemy.pathProgress
+                            );
+
+                            enemy.mesh.position.copy(position);
+
+                            // Update health bar safely
+                            if (enemy.healthBar && enemy.maxHealth > 0) {
+                                const healthPercent = Math.max(0, enemy.health / enemy.maxHealth);
+                                enemy.healthBar.scale.x = healthPercent;
+                                enemy.healthBar.position.x = (1 - healthPercent) * 0.24;
+                                enemy.healthBar.material.color.setRGB(1 - healthPercent, healthPercent, 0);
+
+                                if (this.camera && enemy.healthBar.lookAt) {
+                                    enemy.healthBar.lookAt(this.camera.position);
+                                    if (enemy.healthBarBackground) {
+                                        enemy.healthBarBackground.lookAt(this.camera.position);
+                                    }
+                                }
+                            }
+
+                            // Animate enemy models safely
+                            this.animateEnemyModel(enemy);
+
+                            // Reset slow effect (scaled by game speed)
+                            enemy.slowEffect = Math.min(1, (enemy.slowEffect || 1) + 0.02 * this.gameSpeed);
+                        } catch (error) {
+                            console.warn('Enemy movement error:', error);
+                            enemiesToRemove.push(enemyId);
                         }
-                        continue;
                     }
 
-                    // Interpolate position between path points
-                    const currentPoint = this.pathPoints[enemy.pathIndex];
-                    const nextPoint = this.pathPoints[enemy.pathIndex + 1];
-
-                    const position = new THREE.Vector3();
-                    position.lerpVectors(
-                        new THREE.Vector3(currentPoint.x, currentPoint.y + 0.2, currentPoint.z),
-                        new THREE.Vector3(nextPoint.x, nextPoint.y + 0.2, nextPoint.z),
-                        enemy.pathProgress
-                    );
-
-                    enemy.mesh.position.copy(position);
-
-                    // Update health bar (right to left direction)
-                    const healthPercent = enemy.health / enemy.maxHealth;
-                    enemy.healthBar.scale.x = healthPercent;
-                    enemy.healthBar.position.x = (1 - healthPercent) * 0.24; // Shift left as health decreases
-                    enemy.healthBar.material.color.setRGB(1 - healthPercent, healthPercent, 0);
-                    enemy.healthBar.lookAt(this.camera.position);
-                    enemy.healthBarBackground.lookAt(this.camera.position);
-
-                    // Animate enemy models
-                    this.animateEnemyModel(enemy);
-
-                    // Reset slow effect (scaled by game speed)
-                    enemy.slowEffect = Math.min(1, enemy.slowEffect + 0.02 * this.gameSpeed);
+                    // Clean up enemies marked for removal
+                    enemiesToRemove.forEach(id => {
+                        this.enemies.delete(id);
+                    });
+                } catch (error) {
+                    console.error('moveEnemies error:', error);
                 }
             }
 
@@ -2352,31 +3501,55 @@
             }
 
             towerShooting() {
-                const now = Date.now();
+                try {
+                    const now = Date.now();
 
-                for (const [towerId, tower] of this.towers) {
-                    if (now - tower.lastFired < tower.fireRate / this.gameSpeed) continue;
+                    for (const [towerId, tower] of this.towers) {
+                        try {
+                            // Safety checks
+                            if (!tower || !tower.position || !tower.mesh) continue;
 
-                    // Find nearest enemy in range
-                    let target = null;
-                    let nearestDistance = Infinity;
+                            // Skip booster towers as they don't shoot
+                            if (tower.type === 'booster') continue;
 
-                    for (const [enemyId, enemy] of this.enemies) {
-                        const distance = tower.position.distanceTo(enemy.mesh.position);
+                            // Get boosted stats for this tower
+                            const boostedStats = this.getBoostedTowerStats(tower);
+                            if (!boostedStats) continue;
 
-                        if (distance <= tower.range && distance < nearestDistance) {
-                            nearestDistance = distance;
-                            target = enemy;
+                            if (now - (tower.lastFired || 0) < (boostedStats.fireRate || 1000) / this.gameSpeed) continue;
+
+                            // Find nearest enemy in range
+                            let target = null;
+                            let nearestDistance = Infinity;
+
+                            for (const [enemyId, enemy] of this.enemies) {
+                                try {
+                                    if (!enemy || !enemy.mesh || !enemy.mesh.position) continue;
+
+                                    const distance = tower.position.distanceTo(enemy.mesh.position);
+
+                                    if (distance <= (boostedStats.range || 3) && distance < nearestDistance) {
+                                        nearestDistance = distance;
+                                        target = enemy;
+                                    }
+                                } catch (error) {
+                                    console.warn('Enemy targeting error:', error);
+                                }
+                            }
+
+                            if (target) {
+                                this.createTargetingBeam(tower, target);
+                                this.fireTower(tower, target);
+                                tower.lastFired = now;
+                            } else {
+                                this.removeTargetingBeam(tower);
+                            }
+                        } catch (error) {
+                            console.warn('Tower shooting error:', error);
                         }
                     }
-
-                    if (target) {
-                        this.createTargetingBeam(tower, target);
-                        this.fireTower(tower, target);
-                        tower.lastFired = now;
-                    } else {
-                        this.removeTargetingBeam(tower);
-                    }
+                } catch (error) {
+                    console.error('towerShooting error:', error);
                 }
             }
 
@@ -2426,6 +3599,9 @@
             }
 
             fireTower(tower, enemy) {
+                // Track shots fired
+                tower.shotsFired = (tower.shotsFired || 0) + 1;
+
                 // Create muzzle flash effect
                 this.createMuzzleFlash(tower);
 
@@ -2458,13 +3634,16 @@
                 this.scene.add(projectileGroup);
 
                 const projectileId = 'proj_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+                // Get boosted damage for this tower
+                const boostedStats = this.getBoostedTowerStats(tower);
+
                 const projectileData = {
                     id: projectileId,
                     mesh: projectileGroup,
                     target: enemy,
                     tower: tower,
                     speed: projectileSpeed,
-                    damage: tower.damage,
+                    damage: boostedStats.damage,
                     trailParticles: []
                 };
 
@@ -2651,34 +3830,62 @@
             }
 
             moveProjectiles() {
-                for (const [projectileId, projectile] of this.projectiles) {
-                    if (!this.enemies.has(projectile.target.id)) {
-                        // Target is gone, remove projectile
-                        this.scene.remove(projectile.mesh);
-                        this.projectiles.delete(projectileId);
-                        continue;
+                try {
+                    const projectilesToRemove = [];
+
+                    for (const [projectileId, projectile] of this.projectiles) {
+                        try {
+                            // Safety checks
+                            if (!projectile || !projectile.mesh || !projectile.target) {
+                                projectilesToRemove.push(projectileId);
+                                continue;
+                            }
+
+                            if (!this.enemies.has(projectile.target.id)) {
+                                // Target is gone, remove projectile
+                                if (projectile.mesh.parent) {
+                                    this.scene.remove(projectile.mesh);
+                                }
+                                projectilesToRemove.push(projectileId);
+                                continue;
+                            }
+
+                            // Animate special projectile effects
+                            this.animateProjectileEffects(projectile);
+
+                            const target = projectile.target.mesh.position;
+                            const direction = new THREE.Vector3().subVectors(target, projectile.mesh.position);
+                            const distance = direction.length();
+
+                            if (distance < 0.3) {
+                                // Hit target
+                                this.projectileHit(projectile);
+                                if (projectile.mesh.parent) {
+                                    this.scene.remove(projectile.mesh);
+                                }
+                                projectilesToRemove.push(projectileId);
+                            } else {
+                                // Move towards target (scaled by game speed)
+                                direction.normalize();
+                                projectile.mesh.position.add(direction.multiplyScalar(projectile.speed * this.gameSpeed));
+
+                                // Create trail particles for moving projectiles
+                                if (Math.random() < 0.3) { // Reduce frequency to prevent errors
+                                    this.createProjectileParticleTrail(projectile);
+                                }
+                            }
+                        } catch (error) {
+                            console.warn('Projectile error:', error);
+                            projectilesToRemove.push(projectileId);
+                        }
                     }
 
-                    // Animate special projectile effects
-                    this.animateProjectileEffects(projectile);
-
-                    const target = projectile.target.mesh.position;
-                    const direction = new THREE.Vector3().subVectors(target, projectile.mesh.position);
-                    const distance = direction.length();
-
-                    if (distance < 0.3) {
-                        // Hit target
-                        this.projectileHit(projectile);
-                        this.scene.remove(projectile.mesh);
-                        this.projectiles.delete(projectileId);
-                    } else {
-                        // Move towards target (scaled by game speed)
-                        direction.normalize();
-                        projectile.mesh.position.add(direction.multiplyScalar(projectile.speed * this.gameSpeed));
-
-                        // Create trail particles for moving projectiles
-                        this.createProjectileParticleTrail(projectile);
-                    }
+                    // Clean up projectiles marked for removal
+                    projectilesToRemove.forEach(id => {
+                        this.projectiles.delete(id);
+                    });
+                } catch (error) {
+                    console.error('moveProjectiles error:', error);
                 }
             }
 
@@ -2850,7 +4057,32 @@
             }
 
             damageEnemy(enemy, damage, tower) {
-                enemy.health -= damage;
+                // Apply power-up damage boost
+                let finalDamage = damage;
+                if (this.activePowerUps && this.activePowerUps.damageBoost && Date.now() < this.activePowerUps.damageBoost) {
+                    finalDamage = Math.floor(damage * 1.5);
+                }
+
+                // Apply enemy special abilities
+                if (enemy.dodge && Math.random() < enemy.dodge) {
+                    this.showNotification(`💨 ${enemy.name || 'Enemy'} dodged!`);
+                    return; // Attack missed
+                }
+
+                if (enemy.armor) {
+                    finalDamage = Math.floor(finalDamage * (1 - enemy.armor));
+                }
+
+                if (enemy.shield && enemy.shieldActive) {
+                    enemy.shieldActive = false;
+                    this.showNotification(`🛡️ ${enemy.name || 'Enemy'} shield broken!`);
+                    return; // Shield absorbed the hit
+                }
+
+                enemy.health -= finalDamage;
+
+                // Update tower stats
+                tower.totalDamage = (tower.totalDamage || 0) + finalDamage;
 
                 // Apply slow effect
                 if (tower.slow) {
@@ -2859,18 +4091,52 @@
                 }
 
                 // Create damage effect
-                this.createDamageEffect(enemy.mesh.position, damage);
+                this.createDamageEffect(enemy.mesh.position, finalDamage);
 
                 if (enemy.health <= 0) {
+                    // Update tower kill count
+                    tower.kills = (tower.kills || 0) + 1;
+                    this.totalKills++;
+
                     // Create death effect before removing enemy
                     this.createDeathEffect(enemy);
 
-                    // Enemy killed
-                    this.gold += enemy.reward;
-                    this.currentScore += enemy.reward * 10;
+                    // Enemy killed - check for power-up drop
+                    const shouldDropPowerUp = Math.random() < 0.15; // 15% chance
+                    if (shouldDropPowerUp) {
+                        this.createPowerUp(enemy.mesh.position.clone());
+                    }
+
+                    // Bonus rewards for combo kills
+                    let goldBonus = enemy.reward;
+                    let scoreBonus = enemy.reward * 10;
+
+                    if (this.killCombo > 0) {
+                        const comboMultiplier = Math.min(1 + (this.killCombo * 0.1), 3.0);
+                        goldBonus = Math.floor(enemy.reward * comboMultiplier);
+                        scoreBonus = Math.floor(enemy.reward * 10 * comboMultiplier);
+                        this.showNotification(`🔥 ${this.killCombo}x COMBO! +$${goldBonus}`);
+                    } else {
+                        this.showNotification(`💰 +$${goldBonus}`);
+                    }
+
+                    this.killCombo++;
+                    this.comboTimer = 3000; // 3 seconds to maintain combo
+
+                    // Apply power-up modifiers
+                    if (this.activePowerUps && this.activePowerUps.goldBoost && Date.now() < this.activePowerUps.goldBoost) {
+                        goldBonus *= 2;
+                    }
+
+                    this.gold += goldBonus;
+                    this.currentScore += scoreBonus;
                     this.enemies.delete(enemy.id);
                     this.scene.remove(enemy.mesh);
-                    this.showNotification(`💰 +$${enemy.reward}`);
+                }
+
+                // Update tower info panel if this tower is selected
+                if (this.selectedTower && this.selectedTower.id === tower.id) {
+                    this.updateTowerInfoPanel(tower);
                 }
             }
 
@@ -2915,50 +4181,19 @@
                 const position = enemy.mesh.position.clone();
                 const deathGroup = new THREE.Group();
 
-                // Optimized death explosion based on enemy type and performance
+                // Simple particle-only death effect that doesn't block anything
                 const isBoss = enemy.type === 'boss';
-                const baseSize = isBoss ? 0.6 : 0.4;
-                const particleCount = this.performanceMode ? (isBoss ? 6 : 4) : (isBoss ? 12 : 8);
+                const particleCount = this.performanceMode ? (isBoss ? 8 : 5) : (isBoss ? 12 : 8);
 
-                // Multiple explosion rings
-                for (let ring = 0; ring < 3; ring++) {
-                    const ringGeometry = new THREE.SphereGeometry(baseSize * (1 + ring * 0.3), 8, 6);
-                    const ringMaterial = new THREE.MeshBasicMaterial({
-                        color: isBoss ? (ring === 0 ? 0x8e44ad : ring === 1 ? 0xe74c3c : 0xf39c12) :
-                               (ring === 0 ? 0xff4444 : ring === 1 ? 0xff8844 : 0xffaa44),
-                        transparent: true,
-                        opacity: 0.9 - ring * 0.2
-                    });
-                    const ringMesh = new THREE.Mesh(ringGeometry, ringMaterial);
-                    ringMesh.userData.ringIndex = ring;
-                    deathGroup.add(ringMesh);
-                }
-
-                // Enhanced particle fragments with different types
+                // Tiny particle sparks that don't block visibility
                 for (let i = 0; i < particleCount; i++) {
-                    const fragmentType = Math.floor(Math.random() * 4);
-                    let fragmentGeometry, fragmentMaterial;
-
-                    switch (fragmentType) {
-                        case 0: // Sphere fragments
-                            fragmentGeometry = new THREE.SphereGeometry(0.04 + Math.random() * 0.06, 4, 3);
-                            break;
-                        case 1: // Cube fragments
-                            fragmentGeometry = new THREE.BoxGeometry(0.08, 0.08, 0.08);
-                            break;
-                        case 2: // Cone shards
-                            fragmentGeometry = new THREE.ConeGeometry(0.04, 0.12, 4);
-                            break;
-                        case 3: // Tetrahedron
-                            fragmentGeometry = new THREE.TetrahedronGeometry(0.06);
-                            break;
-                    }
-
-                    fragmentMaterial = new THREE.MeshBasicMaterial({
+                    // Use very small spheres as particles
+                    const fragmentGeometry = new THREE.SphereGeometry(0.015, 3, 3);
+                    const fragmentMaterial = new THREE.MeshBasicMaterial({
                         color: new THREE.Color().setHSL(
                             Math.random() * 0.1 + (isBoss ? 0.7 : 0.0), // Purple for boss, red-orange for normal
-                            0.8,
-                            0.4 + Math.random() * 0.4
+                            0.9,
+                            0.6 + Math.random() * 0.3
                         ),
                         transparent: true,
                         opacity: 1
@@ -2966,15 +4201,15 @@
 
                     const fragment = new THREE.Mesh(fragmentGeometry, fragmentMaterial);
 
-                    // Enhanced random direction with more variation
-                    const angle = (i / particleCount) * Math.PI * 2 + Math.random() * 0.5;
-                    const elevation = Math.random() * Math.PI / 3 - Math.PI / 6;
-                    const speed = 0.1 + Math.random() * 0.15;
-                    const radius = 0.1 + Math.random() * 0.4;
+                    // Compact particle spread - keeps effects localized
+                    const angle = (i / particleCount) * Math.PI * 2 + Math.random() * 0.3;
+                    const elevation = Math.random() * Math.PI / 6 - Math.PI / 12;
+                    const speed = 0.05 + Math.random() * 0.08;
+                    const radius = 0.05 + Math.random() * 0.15;
 
                     fragment.position.set(
                         Math.cos(angle) * radius,
-                        Math.random() * 0.4,
+                        Math.random() * 0.2,
                         Math.sin(angle) * radius
                     );
 
@@ -3217,6 +4452,11 @@
                     this.showNotification(`🎉 Wave ${this.wave - 1} completed! +$20 bonus`);
                     this.nextWaveTimer = 30;
                     this.updateLeaderboardEntry();
+
+                    // Auto-save progress every 5 waves
+                    if ((this.wave - 1) % 5 === 0) {
+                        setTimeout(() => this.saveGame(), 2000);
+                    }
                 }
             }
 
@@ -3236,14 +4476,92 @@
 
             startGameLoop() {
                 const gameLoop = () => {
-                    this.moveEnemies();
-                    this.towerShooting();
-                    this.moveProjectiles();
-                    this.checkWaveCompletion();
-                    this.updateUI();
-                    requestAnimationFrame(gameLoop);
+                    try {
+                        if (this.gameRunning) {
+                            this.moveEnemies();
+                            this.towerShooting();
+                            this.moveProjectiles();
+                            this.animateTowerUpgrades();
+                            this.checkWaveCompletion();
+                            this.checkAchievements();
+                            this.updateUI();
+                            this.cleanupOldObjects();
+                            this.updateSpecialEffects(); // New optimization
+                        }
+                    } catch (error) {
+                        console.error('Game loop error:', error);
+                        // Enhanced error recovery - less intrusive notifications
+                        if (this.errorCount < 3) {
+                            this.errorCount = (this.errorCount || 0) + 1;
+                        } else {
+                            this.showNotification('⚠️ Multiple errors detected - consider refreshing');
+                        }
+                    }
+
+                    if (this.gameRunning) {
+                        requestAnimationFrame(gameLoop);
+                    }
                 };
+                this.gameRunning = true;
                 gameLoop();
+            }
+
+            updateSpecialEffects() {
+                // Consolidated special effects update for better performance
+                try {
+                    // Update enemy regeneration for boss types
+                    for (const [id, enemy] of this.enemies) {
+                        if (enemy.regen && Math.random() < 0.02) { // 2% chance per frame
+                            enemy.health = Math.min(enemy.maxHealth, enemy.health + enemy.regen);
+                        }
+
+                        // Handle stealth effects
+                        if (enemy.stealth && enemy.mesh) {
+                            const stealthActive = Math.random() < enemy.stealth;
+                            enemy.mesh.material.opacity = stealthActive ? 0.3 : 1.0;
+                        }
+
+                        // Reset shield for boss enemies periodically
+                        if (enemy.shield && !enemy.shieldActive && Math.random() < 0.005) { // 0.5% chance
+                            enemy.shieldActive = true;
+                            this.createShieldEffect(enemy);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Special effects update error:', error);
+                }
+            }
+
+            createShieldEffect(enemy) {
+                // Simple shield visual effect
+                if (!enemy.mesh) return;
+
+                const shieldGeometry = new THREE.SphereGeometry(0.6, 8, 8);
+                const shieldMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x4444ff,
+                    transparent: true,
+                    opacity: 0.3,
+                    wireframe: true
+                });
+
+                const shield = new THREE.Mesh(shieldGeometry, shieldMaterial);
+                shield.position.copy(enemy.mesh.position);
+                this.scene.add(shield);
+
+                // Animate shield appearance
+                let opacity = 0.3;
+                const animateShield = () => {
+                    opacity -= 0.01;
+                    shield.material.opacity = opacity;
+                    shield.rotation.y += 0.1;
+
+                    if (opacity <= 0) {
+                        this.scene.remove(shield);
+                    } else {
+                        requestAnimationFrame(animateShield);
+                    }
+                };
+                animateShield();
             }
 
             updateUI() {
@@ -3300,6 +4618,26 @@
                 } else if (e.key >= '1' && e.key <= '8') {
                     const types = ['basic', 'sniper', 'splash', 'slow', 'laser', 'poison', 'electric', 'booster'];
                     this.selectTowerType(types[parseInt(e.key) - 1]);
+                } else if (e.key === 'u' && this.selectedTower) {
+                    this.upgradeTower();
+                } else if (e.key === 'd' && this.selectedTower) {
+                    this.downgradeTower();
+                } else if (e.key === 's' && this.selectedTower) {
+                    this.sellTower();
+                } else if (e.key === 'm' && this.selectedTower) {
+                    this.moveTower();
+                } else if (e.key === 'Enter' || e.key === ' ') {
+                    this.startWave();
+                } else if (e.key === 'F5' || (e.ctrlKey && e.key === 's')) {
+                    e.preventDefault();
+                    this.saveGame();
+                } else if (e.key === 'F9' || (e.ctrlKey && e.key === 'l')) {
+                    e.preventDefault();
+                    this.loadGame();
+                } else if (e.key === 'h' || e.key === '?') {
+                    this.showHelpMessage();
+                } else if (e.key === 'p') {
+                    this.togglePause();
                 }
 
                 // Free camera controls
@@ -3375,6 +4713,17 @@
                     this.lastFrameTime = now;
                 }
 
+                // Update combo timer
+                if (this.comboTimer > 0) {
+                    this.comboTimer -= 16; // Assuming ~60fps, 16ms per frame
+                    if (this.comboTimer <= 0) {
+                        this.killCombo = 0;
+                    }
+                }
+
+                // Update power-ups
+                this.updatePowerUps();
+
                 // Update free camera
                 if (this.isFreeCam) {
                     this.updateFreeCamera();
@@ -3445,6 +4794,155 @@
                 this.camera.aspect = width / height;
                 this.camera.updateProjectionMatrix();
                 this.renderer.setSize(width, height);
+            }
+
+            createPowerUp(position) {
+                const powerUpTypes = [
+                    { type: 'goldBoost', color: 0xffd700, duration: 15000, effect: '💰 Double Gold' },
+                    { type: 'speedBoost', color: 0x00ffff, duration: 10000, effect: '⚡ Speed Boost' },
+                    { type: 'damageBoost', color: 0xff4444, duration: 12000, effect: '🔥 Damage Boost' },
+                    { type: 'shield', color: 0x4444ff, duration: 8000, effect: '🛡️ Shield' }
+                ];
+
+                const powerUpType = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
+                const powerUpId = this.nextPowerUpId++;
+
+                // Create power-up visual
+                const geometry = new THREE.OctahedronGeometry(0.2);
+                const material = new THREE.MeshPhongMaterial({
+                    color: powerUpType.color,
+                    emissive: powerUpType.color,
+                    emissiveIntensity: 0.3,
+                    transparent: true,
+                    opacity: 0.8
+                });
+
+                const powerUpMesh = new THREE.Mesh(geometry, material);
+                powerUpMesh.position.copy(position);
+                powerUpMesh.position.y += 0.5;
+
+                // Add floating animation data
+                powerUpMesh.userData.floatOffset = Math.random() * Math.PI * 2;
+                powerUpMesh.userData.rotationSpeed = (Math.random() - 0.5) * 0.1;
+
+                this.scene.add(powerUpMesh);
+
+                // Store power-up data
+                this.powerUps.set(powerUpId, {
+                    id: powerUpId,
+                    mesh: powerUpMesh,
+                    type: powerUpType.type,
+                    effect: powerUpType.effect,
+                    duration: powerUpType.duration,
+                    spawnTime: Date.now(),
+                    collected: false
+                });
+
+                // Auto-remove after 30 seconds if not collected
+                setTimeout(() => {
+                    if (this.powerUps.has(powerUpId)) {
+                        const powerUp = this.powerUps.get(powerUpId);
+                        if (!powerUp.collected) {
+                            this.scene.remove(powerUp.mesh);
+                            this.powerUps.delete(powerUpId);
+                        }
+                    }
+                }, 30000);
+            }
+
+            updatePowerUps() {
+                const time = Date.now() * 0.001;
+
+                for (const [id, powerUp] of this.powerUps) {
+                    if (powerUp.collected) continue;
+
+                    // Floating animation
+                    powerUp.mesh.position.y = powerUp.mesh.position.y + Math.sin(time * 2 + powerUp.mesh.userData.floatOffset) * 0.002;
+                    powerUp.mesh.rotation.y += powerUp.mesh.userData.rotationSpeed;
+
+                    // Check for player collision (simplified)
+                    const distance = powerUp.mesh.position.distanceTo(new THREE.Vector3(0, 0, 0));
+                    if (distance < 1.0) {
+                        this.collectPowerUp(powerUp);
+                    }
+                }
+            }
+
+            collectPowerUp(powerUp) {
+                if (powerUp.collected) return;
+
+                powerUp.collected = true;
+                this.showNotification(`✨ ${powerUp.effect} collected!`);
+
+                // Apply power-up effect
+                switch (powerUp.type) {
+                    case 'goldBoost':
+                        this.activePowerUps = this.activePowerUps || {};
+                        this.activePowerUps.goldBoost = Date.now() + powerUp.duration;
+                        break;
+                    case 'speedBoost':
+                        this.gameSpeed = Math.min(this.gameSpeed * 1.5, 10);
+                        setTimeout(() => {
+                            this.gameSpeed = Math.max(this.gameSpeed / 1.5, 1);
+                        }, powerUp.duration);
+                        break;
+                    case 'damageBoost':
+                        this.activePowerUps = this.activePowerUps || {};
+                        this.activePowerUps.damageBoost = Date.now() + powerUp.duration;
+                        break;
+                    case 'shield':
+                        this.activePowerUps = this.activePowerUps || {};
+                        this.activePowerUps.shield = Date.now() + powerUp.duration;
+                        break;
+                }
+
+                // Create collection effect
+                this.createPowerUpCollectionEffect(powerUp.mesh.position);
+
+                // Remove from scene
+                this.scene.remove(powerUp.mesh);
+                this.powerUps.delete(powerUp.id);
+            }
+
+            createPowerUpCollectionEffect(position) {
+                // Create sparkle effect
+                for (let i = 0; i < 8; i++) {
+                    const sparkGeometry = new THREE.SphereGeometry(0.03);
+                    const sparkMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xffffff,
+                        transparent: true,
+                        opacity: 1
+                    });
+                    const spark = new THREE.Mesh(sparkGeometry, sparkMaterial);
+
+                    const angle = (i / 8) * Math.PI * 2;
+                    spark.position.copy(position);
+                    spark.userData.velocity = {
+                        x: Math.cos(angle) * 0.1,
+                        y: Math.random() * 0.15 + 0.05,
+                        z: Math.sin(angle) * 0.1
+                    };
+
+                    this.scene.add(spark);
+
+                    // Animate spark
+                    let time = 0;
+                    const animateSpark = () => {
+                        time += 0.05;
+                        spark.position.x += spark.userData.velocity.x;
+                        spark.position.y += spark.userData.velocity.y;
+                        spark.position.z += spark.userData.velocity.z;
+                        spark.userData.velocity.y -= 0.005; // Gravity
+                        spark.material.opacity = Math.max(0, 1 - time);
+
+                        if (spark.material.opacity <= 0) {
+                            this.scene.remove(spark);
+                        } else {
+                            requestAnimationFrame(animateSpark);
+                        }
+                    };
+                    animateSpark();
+                }
             }
 
             // Leaderboard functions (simplified)
@@ -3533,9 +5031,23 @@
             }
 
             showNotification(message) {
+                // Enhanced notification system with different types
                 const notification = document.createElement('div');
                 notification.className = 'notification';
-                notification.textContent = message;
+                notification.innerHTML = message; // Use innerHTML to support emojis and formatting
+
+                // Add special styling for different notification types
+                if (message.includes('COMBO')) {
+                    notification.style.background = 'linear-gradient(135deg, #ff6b6b, #ffa500)';
+                    notification.style.animation = 'pulse 0.5s ease-in-out';
+                } else if (message.includes('Achievement') || message.includes('🏆')) {
+                    notification.style.background = 'linear-gradient(135deg, #ffd700, #ffed4e)';
+                    notification.style.color = '#333';
+                    notification.style.fontWeight = 'bold';
+                } else if (message.includes('✨') || message.includes('collected')) {
+                    notification.style.background = 'linear-gradient(135deg, #00f5ff, #0080ff)';
+                }
+
                 document.body.appendChild(notification);
 
                 setTimeout(() => {
