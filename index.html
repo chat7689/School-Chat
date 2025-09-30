@@ -3084,18 +3084,37 @@
 
                 enemyGroup.add(mainMesh);
 
-                // Enhanced health bar with background
-                const healthBarBg = new THREE.PlaneGeometry(0.5, 0.08);
-                const healthBarBgMaterial = new THREE.MeshBasicMaterial({ color: 0x333333 });
+                // Enhanced health bar with better visibility and border
+                const healthBarBg = new THREE.PlaneGeometry(0.7, 0.15);
+                const healthBarBgMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x222222,
+                    transparent: true,
+                    opacity: 0.9
+                });
                 const healthBarBackground = new THREE.Mesh(healthBarBg, healthBarBgMaterial);
-                healthBarBackground.position.y = 0.6;
-                enemyGroup.add(healthBarBackground);
+                healthBarBackground.position.y = 0.8;
+                this.scene.add(healthBarBackground); // Add to scene directly for better control
 
-                const healthBarGeometry = new THREE.PlaneGeometry(0.48, 0.06);
-                const healthBarMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+                // Health bar border
+                const borderGeometry = new THREE.PlaneGeometry(0.65, 0.12);
+                const borderMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xffffff,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const healthBarBorder = new THREE.Mesh(borderGeometry, borderMaterial);
+                healthBarBorder.position.set(0, 0.8, 0.001);
+                this.scene.add(healthBarBorder);
+
+                const healthBarGeometry = new THREE.PlaneGeometry(0.6, 0.1);
+                const healthBarMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x00ff00,
+                    transparent: true,
+                    opacity: 1.0
+                });
                 const healthBar = new THREE.Mesh(healthBarGeometry, healthBarMaterial);
-                healthBar.position.set(0, 0.6, 0.001); // Slightly in front of background
-                enemyGroup.add(healthBar);
+                healthBar.position.set(0, 0.8, 0.002); // Slightly in front of border
+                this.scene.add(healthBar); // Add to scene directly for better control
 
                 // Position at start of path
                 const startPos = this.pathPoints[0];
@@ -3110,6 +3129,7 @@
                     mesh: enemyGroup,
                     healthBar: healthBar,
                     healthBarBackground: healthBarBackground,
+                    healthBarBorder: healthBarBorder,
                     pathIndex: 0,
                     pathProgress: 0,
                     health: enemyConfig.health * (1 + this.wave * 0.1),
@@ -3386,12 +3406,24 @@
                             }
 
                             if (enemy.pathIndex >= this.pathPoints.length - 1) {
-                                // Enemy reached the end
+                                // Enemy reached the end - properly clean up
                                 this.lives--;
                                 enemiesToRemove.push(enemyId);
-                                if (enemy.mesh.parent) {
+
+                                // Remove enemy and health bars
+                                if (enemy.mesh) {
                                     this.scene.remove(enemy.mesh);
                                 }
+                                if (enemy.healthBar) {
+                                    this.scene.remove(enemy.healthBar);
+                                }
+                                if (enemy.healthBarBackground) {
+                                    this.scene.remove(enemy.healthBarBackground);
+                                }
+                                if (enemy.healthBarBorder) {
+                                    this.scene.remove(enemy.healthBarBorder);
+                                }
+
                                 this.showNotification(`💔 Enemy reached base! Lives: ${this.lives}`);
 
                                 if (this.lives <= 0) {
@@ -3418,17 +3450,32 @@
 
                             enemy.mesh.position.copy(position);
 
-                            // Update health bar safely
+                            // Update health bar safely with better positioning
                             if (enemy.healthBar && enemy.maxHealth > 0) {
                                 const healthPercent = Math.max(0, enemy.health / enemy.maxHealth);
-                                enemy.healthBar.scale.x = healthPercent;
-                                enemy.healthBar.position.x = (1 - healthPercent) * 0.24;
-                                enemy.healthBar.material.color.setRGB(1 - healthPercent, healthPercent, 0);
 
-                                if (this.camera && enemy.healthBar.lookAt) {
+                                // Update health bar position to follow enemy
+                                const enemyPos = enemy.mesh.position;
+                                enemy.healthBar.position.set(enemyPos.x, enemyPos.y + 0.8, enemyPos.z + 0.002);
+                                enemy.healthBarBackground.position.set(enemyPos.x, enemyPos.y + 0.8, enemyPos.z - 0.001);
+                                if (enemy.healthBarBorder) {
+                                    enemy.healthBarBorder.position.set(enemyPos.x, enemyPos.y + 0.8, enemyPos.z + 0.001);
+                                }
+
+                                // Scale health bar based on current health
+                                enemy.healthBar.scale.x = healthPercent;
+
+                                // Color transition from green to red with better visibility
+                                const red = Math.min(1, 2 * (1 - healthPercent));
+                                const green = Math.min(1, 2 * healthPercent);
+                                enemy.healthBar.material.color.setRGB(red, green, 0);
+
+                                // Make health bars face the camera
+                                if (this.camera) {
                                     enemy.healthBar.lookAt(this.camera.position);
-                                    if (enemy.healthBarBackground) {
-                                        enemy.healthBarBackground.lookAt(this.camera.position);
+                                    enemy.healthBarBackground.lookAt(this.camera.position);
+                                    if (enemy.healthBarBorder) {
+                                        enemy.healthBarBorder.lookAt(this.camera.position);
                                     }
                                 }
                             }
@@ -3444,8 +3491,21 @@
                         }
                     }
 
-                    // Clean up enemies marked for removal
+                    // Clean up enemies marked for removal with proper cleanup
                     enemiesToRemove.forEach(id => {
+                        const enemy = this.enemies.get(id);
+                        if (enemy) {
+                            // Clean up health bars if they weren't already removed
+                            if (enemy.healthBar && enemy.healthBar.parent) {
+                                this.scene.remove(enemy.healthBar);
+                            }
+                            if (enemy.healthBarBackground && enemy.healthBarBackground.parent) {
+                                this.scene.remove(enemy.healthBarBackground);
+                            }
+                            if (enemy.healthBarBorder && enemy.healthBarBorder.parent) {
+                                this.scene.remove(enemy.healthBarBorder);
+                            }
+                        }
                         this.enemies.delete(id);
                     });
                 } catch (error) {
@@ -3860,7 +3920,8 @@
                             if (distance < 0.3) {
                                 // Hit target
                                 this.projectileHit(projectile);
-                                if (projectile.mesh.parent) {
+                                // Double-check projectile removal
+                                if (projectile.mesh && projectile.mesh.parent) {
                                     this.scene.remove(projectile.mesh);
                                 }
                                 projectilesToRemove.push(projectileId);
@@ -3882,6 +3943,10 @@
 
                     // Clean up projectiles marked for removal
                     projectilesToRemove.forEach(id => {
+                        const projectile = this.projectiles.get(id);
+                        if (projectile && projectile.mesh && projectile.mesh.parent) {
+                            this.scene.remove(projectile.mesh);
+                        }
                         this.projectiles.delete(id);
                     });
                 } catch (error) {
@@ -3961,23 +4026,33 @@
             }
 
             projectileHit(projectile) {
-                // Create explosion effect
-                this.createExplosion(projectile.mesh.position);
+                try {
+                    // Create explosion effect
+                    this.createExplosion(projectile.mesh.position);
 
-                // Apply damage
-                if (projectile.tower.splash) {
-                    // Splash damage
-                    for (const [enemyId, enemy] of this.enemies) {
-                        const distance = projectile.mesh.position.distanceTo(enemy.mesh.position);
-                        if (distance <= projectile.tower.splash) {
-                            this.damageEnemy(enemy, projectile.damage, projectile.tower);
+                    // Apply damage
+                    if (projectile.tower.splash) {
+                        // Splash damage
+                        for (const [enemyId, enemy] of this.enemies) {
+                            if (!enemy || !enemy.mesh) continue;
+                            const distance = projectile.mesh.position.distanceTo(enemy.mesh.position);
+                            if (distance <= projectile.tower.splash) {
+                                this.damageEnemy(enemy, projectile.damage, projectile.tower);
+                            }
+                        }
+                    } else {
+                        // Single target damage
+                        if (projectile.target && this.enemies.has(projectile.target.id)) {
+                            this.damageEnemy(projectile.target, projectile.damage, projectile.tower);
                         }
                     }
-                } else {
-                    // Single target damage
-                    if (this.enemies.has(projectile.target.id)) {
-                        this.damageEnemy(projectile.target, projectile.damage, projectile.tower);
+
+                    // Ensure projectile is properly removed
+                    if (projectile.mesh && projectile.mesh.parent) {
+                        this.scene.remove(projectile.mesh);
                     }
+                } catch (error) {
+                    console.error('Projectile hit error:', error);
                 }
             }
 
@@ -4130,8 +4205,21 @@
 
                     this.gold += goldBonus;
                     this.currentScore += scoreBonus;
+
+                    // Properly remove enemy and all its components
+                    if (enemy.mesh) {
+                        this.scene.remove(enemy.mesh);
+                    }
+                    if (enemy.healthBar) {
+                        this.scene.remove(enemy.healthBar);
+                    }
+                    if (enemy.healthBarBackground) {
+                        this.scene.remove(enemy.healthBarBackground);
+                    }
+                    if (enemy.healthBarBorder) {
+                        this.scene.remove(enemy.healthBarBorder);
+                    }
                     this.enemies.delete(enemy.id);
-                    this.scene.remove(enemy.mesh);
                 }
 
                 // Update tower info panel if this tower is selected
