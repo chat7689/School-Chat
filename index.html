@@ -247,6 +247,21 @@
             color: white;
         }
 
+        .tower-btn.laser {
+            background: linear-gradient(135deg, #ff0066, #cc0044);
+            color: white;
+        }
+
+        .tower-btn.poison {
+            background: linear-gradient(135deg, #27ae60, #229954);
+            color: white;
+        }
+
+        .tower-btn.electric {
+            background: linear-gradient(135deg, #ffff00, #e6e600);
+            color: black;
+        }
+
         .tower-btn.selected {
             transform: scale(1.1);
             box-shadow: 0 0 20px rgba(0, 245, 255, 0.5);
@@ -596,6 +611,18 @@
                         <span>❄️ Slow</span>
                         <span class="tower-cost">$30</span>
                     </button>
+                    <button class="tower-btn laser" id="laserTowerBtn">
+                        <span>🔴 Laser</span>
+                        <span class="tower-cost">$50</span>
+                    </button>
+                    <button class="tower-btn poison" id="poisonTowerBtn">
+                        <span>☢️ Poison</span>
+                        <span class="tower-cost">$35</span>
+                    </button>
+                    <button class="tower-btn electric" id="electricTowerBtn">
+                        <span>⚡ Electric</span>
+                        <span class="tower-cost">$60</span>
+                    </button>
                 </div>
 
                 <div class="wave-info">
@@ -638,6 +665,7 @@
                     <div style="color: #00f5ff; font-weight: bold; margin-bottom: 0.25rem;">Free Camera:</div>
                     <div>WASD/Arrows: Move</div>
                     <div>Mouse: Look around</div>
+                    <div>Space/Shift: Up/Down</div>
                     <div>Scroll: Zoom</div>
                     <div>+/-: Change FOV</div>
                 </div>
@@ -694,13 +722,20 @@
                 this.towers = new Map();
                 this.enemies = new Map();
                 this.projectiles = new Map();
+                this.environmentObjects = [];
+                this.previewTower = null;
+                this.previewRange = null;
+                this.selectedTower = null;
 
                 // Tower types
                 this.towerTypes = {
                     basic: { cost: 10, damage: 15, range: 3, fireRate: 1000, color: 0x4a90e2 },
                     sniper: { cost: 25, damage: 40, range: 6, fireRate: 2000, color: 0x5cb85c },
                     splash: { cost: 40, damage: 25, range: 2.5, fireRate: 1500, color: 0xf0ad4e, splash: 1.5 },
-                    slow: { cost: 30, damage: 10, range: 3, fireRate: 800, color: 0x9b59b6, slow: 0.5 }
+                    slow: { cost: 30, damage: 10, range: 3, fireRate: 800, color: 0x9b59b6, slow: 0.5 },
+                    laser: { cost: 50, damage: 8, range: 4, fireRate: 200, color: 0xff0066, continuous: true },
+                    poison: { cost: 35, damage: 12, range: 2.8, fireRate: 1200, color: 0x27ae60, poison: { damage: 3, duration: 5000 } },
+                    electric: { cost: 60, damage: 30, range: 3.5, fireRate: 1800, color: 0xffff00, chain: 3 }
                 };
 
                 // Enemy types (slower base speeds)
@@ -775,6 +810,9 @@
                 this.sniperTowerBtn = document.getElementById('sniperTowerBtn');
                 this.splashTowerBtn = document.getElementById('splashTowerBtn');
                 this.slowTowerBtn = document.getElementById('slowTowerBtn');
+                this.laserTowerBtn = document.getElementById('laserTowerBtn');
+                this.poisonTowerBtn = document.getElementById('poisonTowerBtn');
+                this.electricTowerBtn = document.getElementById('electricTowerBtn');
 
                 this.topViewBtn = document.getElementById('topViewBtn');
                 this.angleViewBtn = document.getElementById('angleViewBtn');
@@ -802,6 +840,9 @@
                 this.sniperTowerBtn.addEventListener('click', () => this.selectTowerType('sniper'));
                 this.splashTowerBtn.addEventListener('click', () => this.selectTowerType('splash'));
                 this.slowTowerBtn.addEventListener('click', () => this.selectTowerType('slow'));
+                this.laserTowerBtn.addEventListener('click', () => this.selectTowerType('laser'));
+                this.poisonTowerBtn.addEventListener('click', () => this.selectTowerType('poison'));
+                this.electricTowerBtn.addEventListener('click', () => this.selectTowerType('electric'));
 
                 this.startWaveBtn.addEventListener('click', () => this.startWave());
 
@@ -880,6 +921,7 @@
 
                 this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
                 this.canvas.addEventListener('mousemove', (e) => this.handleCanvasMouseMove(e));
+                document.addEventListener('mousemove', (e) => this.handleMouseMove(e));
                 this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
                 this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
                 this.canvas.addEventListener('wheel', (e) => this.handleWheel(e));
@@ -1051,6 +1093,7 @@
                 ));
                 if (distanceToPath > 2) {
                     this.scene.add(treeGroup);
+                    this.environmentObjects.push({ x: x, z: z, type: 'tree', radius: 0.8 });
                 }
             }
 
@@ -1068,6 +1111,7 @@
                 );
                 rock.castShadow = true;
                 this.scene.add(rock);
+                this.environmentObjects.push({ x: x, z: z, type: 'rock', radius: 0.5 });
             }
 
             createEnergyCrystal(x, z) {
@@ -1100,8 +1144,8 @@
             }
 
             createPath() {
-                // Create a wider, more detailed path
-                const pathWidth = 0.8;
+                // Create a detailed, multi-layered path
+                const pathWidth = 1.0;
 
                 for (let i = 0; i < this.pathPoints.length - 1; i++) {
                     const current = this.pathPoints[i];
@@ -1112,25 +1156,77 @@
                     const distance = direction.length();
                     direction.normalize();
 
-                    // Create path segment
+                    // Main path base (stone)
+                    const baseGeometry = new THREE.PlaneGeometry(pathWidth + 0.4, distance);
+                    const baseMaterial = new THREE.MeshLambertMaterial({
+                        color: 0x444444,
+                        transparent: true,
+                        opacity: 0.8
+                    });
+                    const base = new THREE.Mesh(baseGeometry, baseMaterial);
+                    base.position.set(
+                        (current.x + next.x) / 2,
+                        0.01,
+                        (current.z + next.z) / 2
+                    );
+                    base.rotation.x = -Math.PI / 2;
+                    base.rotation.z = Math.atan2(direction.x, direction.z);
+                    this.scene.add(base);
+
+                    // Main path surface (dirt road)
                     const segmentGeometry = new THREE.PlaneGeometry(pathWidth, distance);
                     const segmentMaterial = new THREE.MeshLambertMaterial({
-                        color: 0x654321,
+                        color: 0x8b6914,
                         transparent: true,
-                        opacity: 0.9
+                        opacity: 0.95
                     });
                     const segment = new THREE.Mesh(segmentGeometry, segmentMaterial);
-
-                    // Position and rotate segment
                     segment.position.set(
                         (current.x + next.x) / 2,
-                        0.02,
+                        0.03,
                         (current.z + next.z) / 2
                     );
                     segment.rotation.x = -Math.PI / 2;
                     segment.rotation.z = Math.atan2(direction.x, direction.z);
-
                     this.scene.add(segment);
+
+                    // Path center line (worn track)
+                    const centerGeometry = new THREE.PlaneGeometry(pathWidth * 0.3, distance);
+                    const centerMaterial = new THREE.MeshLambertMaterial({
+                        color: 0x5d4e37,
+                        transparent: true,
+                        opacity: 0.7
+                    });
+                    const center = new THREE.Mesh(centerGeometry, centerMaterial);
+                    center.position.set(
+                        (current.x + next.x) / 2,
+                        0.04,
+                        (current.z + next.z) / 2
+                    );
+                    center.rotation.x = -Math.PI / 2;
+                    center.rotation.z = Math.atan2(direction.x, direction.z);
+                    this.scene.add(center);
+
+                    // Add path decorations (small stones)
+                    for (let j = 0; j < 3; j++) {
+                        const stoneGeometry = new THREE.DodecahedronGeometry(0.05 + Math.random() * 0.03);
+                        const stoneMaterial = new THREE.MeshLambertMaterial({
+                            color: new THREE.Color().setHSL(0, 0, 0.2 + Math.random() * 0.3)
+                        });
+                        const stone = new THREE.Mesh(stoneGeometry, stoneMaterial);
+                        stone.position.set(
+                            (current.x + next.x) / 2 + (Math.random() - 0.5) * pathWidth * 0.8,
+                            0.08,
+                            (current.z + next.z) / 2 + (Math.random() - 0.5) * distance * 0.8
+                        );
+                        stone.rotation.set(
+                            Math.random() * Math.PI,
+                            Math.random() * Math.PI,
+                            Math.random() * Math.PI
+                        );
+                        stone.castShadow = true;
+                        this.scene.add(stone);
+                    }
                 }
 
                 // Enhanced path markers
@@ -1255,7 +1351,10 @@
             }
 
             handleCanvasMouseMove(event) {
-                if (!this.selectedTowerType) return;
+                if (!this.selectedTowerType) {
+                    this.clearTowerPreview();
+                    return;
+                }
 
                 const rect = this.canvas.getBoundingClientRect();
                 this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -1271,8 +1370,165 @@
                     // Snap to grid centers
                     const gridX = Math.round(position.x - 0.5) + 0.5;
                     const gridZ = Math.round(position.z - 0.5) + 0.5;
+                    const snapPosition = new THREE.Vector3(gridX, 0, gridZ);
 
                     this.updateHoverTile(gridX, gridZ);
+                    this.updateTowerPreview(snapPosition);
+                }
+            }
+
+            updateTowerPreview(position) {
+                // Clear existing preview
+                this.clearTowerPreview();
+
+                if (this.isValidTowerPosition(position)) {
+                    // Create tower preview
+                    this.previewTower = this.createTowerPreview(this.selectedTowerType);
+                    this.previewTower.position.copy(position);
+                    this.scene.add(this.previewTower);
+
+                    // Create range preview
+                    const towerConfig = this.towerTypes[this.selectedTowerType];
+                    this.previewRange = this.createRangeIndicator(towerConfig.range);
+                    this.previewRange.position.copy(position);
+                    this.previewRange.visible = true;
+                    // Make range preview more visible
+                    this.previewRange.children.forEach(child => {
+                        child.material.opacity *= 0.8;
+                        child.material.color.setHex(0x00ff00);
+                    });
+                    this.scene.add(this.previewRange);
+                }
+            }
+
+            createTowerPreview(type) {
+                const towerGroup = new THREE.Group();
+
+                // Base
+                const baseGeometry = new THREE.CylinderGeometry(0.4, 0.5, 0.3, 8);
+                const baseMaterial = new THREE.MeshLambertMaterial({
+                    color: 0x555555,
+                    transparent: true,
+                    opacity: 0.6
+                });
+                const base = new THREE.Mesh(baseGeometry, baseMaterial);
+                base.position.y = 0.15;
+                towerGroup.add(base);
+
+                // Tower body
+                const towerConfig = this.towerTypes[type];
+                const bodyGeometry = new THREE.CylinderGeometry(0.25, 0.35, 0.8, 6);
+                const bodyMaterial = new THREE.MeshLambertMaterial({
+                    color: towerConfig.color,
+                    transparent: true,
+                    opacity: 0.6
+                });
+                const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                body.position.y = 0.7;
+                towerGroup.add(body);
+
+                // Add weapon preview
+                this.addTowerWeaponPreview(towerGroup, type);
+
+                return towerGroup;
+            }
+
+            addTowerWeaponPreview(towerGroup, type) {
+                let weaponMaterial = new THREE.MeshLambertMaterial({
+                    color: 0x333333,
+                    transparent: true,
+                    opacity: 0.6
+                });
+
+                switch (type) {
+                    case 'basic':
+                        const cannonGeometry = new THREE.CylinderGeometry(0.05, 0.08, 0.6, 6);
+                        const cannon = new THREE.Mesh(cannonGeometry, weaponMaterial);
+                        cannon.position.y = 1.2;
+                        cannon.rotation.z = Math.PI / 2;
+                        towerGroup.add(cannon);
+                        break;
+                    case 'sniper':
+                        const barrelGeometry = new THREE.CylinderGeometry(0.03, 0.04, 1.0, 8);
+                        const barrel = new THREE.Mesh(barrelGeometry, weaponMaterial);
+                        barrel.position.y = 1.3;
+                        barrel.rotation.z = Math.PI / 2;
+                        towerGroup.add(barrel);
+                        break;
+                    case 'splash':
+                        const mortarGeometry = new THREE.CylinderGeometry(0.15, 0.12, 0.4, 6);
+                        const mortar = new THREE.Mesh(mortarGeometry, weaponMaterial);
+                        mortar.position.y = 1.3;
+                        towerGroup.add(mortar);
+                        break;
+                    case 'slow':
+                        for (let i = 0; i < 4; i++) {
+                            const crystalGeometry = new THREE.ConeGeometry(0.05, 0.3, 4);
+                            const crystalMaterial = new THREE.MeshLambertMaterial({
+                                color: 0x9b59b6,
+                                transparent: true,
+                                opacity: 0.4
+                            });
+                            const crystal = new THREE.Mesh(crystalGeometry, crystalMaterial);
+                            crystal.position.y = 1.2;
+                            crystal.position.x = Math.cos(i * Math.PI / 2) * 0.2;
+                            crystal.position.z = Math.sin(i * Math.PI / 2) * 0.2;
+                            towerGroup.add(crystal);
+                        }
+                        break;
+                    case 'laser':
+                        const focusGeometry = new THREE.CylinderGeometry(0.15, 0.2, 0.1, 8);
+                        const focus = new THREE.Mesh(focusGeometry, weaponMaterial);
+                        focus.position.y = 1.3;
+                        towerGroup.add(focus);
+                        for (let i = 0; i < 6; i++) {
+                            const laserGeometry = new THREE.CylinderGeometry(0.02, 0.04, 0.4, 6);
+                            const laser = new THREE.Mesh(laserGeometry, weaponMaterial);
+                            laser.position.y = 1.1;
+                            laser.position.x = Math.cos(i * Math.PI / 3) * 0.15;
+                            laser.position.z = Math.sin(i * Math.PI / 3) * 0.15;
+                            towerGroup.add(laser);
+                        }
+                        break;
+                    case 'poison':
+                        const tankGeometry = new THREE.SphereGeometry(0.2, 8, 6);
+                        const tank = new THREE.Mesh(tankGeometry, weaponMaterial);
+                        tank.position.y = 1.2;
+                        towerGroup.add(tank);
+                        for (let i = 0; i < 3; i++) {
+                            const nozzleGeometry = new THREE.CylinderGeometry(0.03, 0.06, 0.3, 6);
+                            const nozzle = new THREE.Mesh(nozzleGeometry, weaponMaterial);
+                            nozzle.position.y = 1.4;
+                            nozzle.position.x = Math.cos(i * Math.PI * 2 / 3) * 0.12;
+                            nozzle.position.z = Math.sin(i * Math.PI * 2 / 3) * 0.12;
+                            nozzle.rotation.z = Math.PI / 2;
+                            towerGroup.add(nozzle);
+                        }
+                        break;
+                    case 'electric':
+                        const coilGeometry = new THREE.CylinderGeometry(0.08, 0.12, 0.6, 8);
+                        const coil = new THREE.Mesh(coilGeometry, weaponMaterial);
+                        coil.position.y = 1.3;
+                        towerGroup.add(coil);
+                        for (let i = 0; i < 3; i++) {
+                            const ringGeometry = new THREE.TorusGeometry(0.15 + i * 0.05, 0.02, 4, 8);
+                            const ring = new THREE.Mesh(ringGeometry, weaponMaterial);
+                            ring.position.y = 1.1 + i * 0.15;
+                            ring.rotation.x = Math.PI / 2;
+                            towerGroup.add(ring);
+                        }
+                        break;
+                }
+            }
+
+            clearTowerPreview() {
+                if (this.previewTower) {
+                    this.scene.remove(this.previewTower);
+                    this.previewTower = null;
+                }
+                if (this.previewRange) {
+                    this.scene.remove(this.previewRange);
+                    this.previewRange = null;
                 }
             }
 
@@ -1295,8 +1551,17 @@
                     if (distance < 1) return false;
                 }
 
-                // Check bounds
-                if (Math.abs(position.x) > 9 || Math.abs(position.z) > 5) return false;
+                // Check bounds (extended area)
+                if (Math.abs(position.x) > 11 || Math.abs(position.z) > 7) return false;
+
+                // Check if position overlaps with environment objects (trees/rocks)
+                for (const obj of this.environmentObjects) {
+                    const distance = Math.sqrt(
+                        (position.x - obj.x) ** 2 +
+                        (position.z - obj.z) ** 2
+                    );
+                    if (distance < obj.radius + 0.5) return false; // Add some buffer
+                }
 
                 return true;
             }
@@ -1329,9 +1594,9 @@
                     hover: hoverTileMaterial
                 };
 
-                // Create grid tiles at square centers
-                for (let x = -9; x <= 8; x++) {
-                    for (let z = -5; z <= 4; z++) {
+                // Create grid tiles at square centers (extended area)
+                for (let x = -11; x <= 10; x++) {
+                    for (let z = -7; z <= 6; z++) {
                         const tile = new THREE.Mesh(tileGeometry, validTileMaterial.clone());
                         tile.rotation.x = -Math.PI / 2;
                         tile.position.set(x + 0.5, 0.01, z + 0.5);
@@ -1393,6 +1658,9 @@
                 document.querySelectorAll('.tower-btn').forEach(btn => {
                     btn.classList.remove('selected');
                 });
+
+                // Clear any existing tower preview
+                this.clearTowerPreview();
 
                 if (this.selectedTowerType === type) {
                     this.selectedTowerType = null;
@@ -1565,6 +1833,60 @@
                             towerGroup.add(crystal);
                         }
                         break;
+                    case 'laser':
+                        // Laser array with focusing lens
+                        const focusGeometry = new THREE.CylinderGeometry(0.15, 0.2, 0.1, 8);
+                        const focusMaterial = new THREE.MeshLambertMaterial({ color: 0xff0066 });
+                        const focus = new THREE.Mesh(focusGeometry, focusMaterial);
+                        focus.position.y = 1.3;
+                        towerGroup.add(focus);
+
+                        for (let i = 0; i < 6; i++) {
+                            const laserGeometry = new THREE.CylinderGeometry(0.02, 0.04, 0.4, 6);
+                            const laserMaterial = new THREE.MeshLambertMaterial({ color: 0xff3388 });
+                            const laser = new THREE.Mesh(laserGeometry, laserMaterial);
+                            laser.position.y = 1.1;
+                            laser.position.x = Math.cos(i * Math.PI / 3) * 0.15;
+                            laser.position.z = Math.sin(i * Math.PI / 3) * 0.15;
+                            towerGroup.add(laser);
+                        }
+                        break;
+                    case 'poison':
+                        // Poison tank with nozzles
+                        const tankGeometry = new THREE.SphereGeometry(0.2, 8, 6);
+                        const tankMaterial = new THREE.MeshLambertMaterial({ color: 0x27ae60 });
+                        const tank = new THREE.Mesh(tankGeometry, tankMaterial);
+                        tank.position.y = 1.2;
+                        towerGroup.add(tank);
+
+                        for (let i = 0; i < 3; i++) {
+                            const nozzleGeometry = new THREE.CylinderGeometry(0.03, 0.06, 0.3, 6);
+                            const nozzleMaterial = new THREE.MeshLambertMaterial({ color: 0x229954 });
+                            const nozzle = new THREE.Mesh(nozzleGeometry, nozzleMaterial);
+                            nozzle.position.y = 1.4;
+                            nozzle.position.x = Math.cos(i * Math.PI * 2 / 3) * 0.12;
+                            nozzle.position.z = Math.sin(i * Math.PI * 2 / 3) * 0.12;
+                            nozzle.rotation.z = Math.PI / 2;
+                            towerGroup.add(nozzle);
+                        }
+                        break;
+                    case 'electric':
+                        // Tesla coil with electric rings
+                        const coilGeometry = new THREE.CylinderGeometry(0.08, 0.12, 0.6, 8);
+                        const coilMaterial = new THREE.MeshLambertMaterial({ color: 0xffff00 });
+                        const coil = new THREE.Mesh(coilGeometry, coilMaterial);
+                        coil.position.y = 1.3;
+                        towerGroup.add(coil);
+
+                        for (let i = 0; i < 3; i++) {
+                            const ringGeometry = new THREE.TorusGeometry(0.15 + i * 0.05, 0.02, 4, 8);
+                            const ringMaterial = new THREE.MeshLambertMaterial({ color: 0xe6e600 });
+                            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                            ring.position.y = 1.1 + i * 0.15;
+                            ring.rotation.x = Math.PI / 2;
+                            towerGroup.add(ring);
+                        }
+                        break;
                 }
             }
 
@@ -1731,23 +2053,41 @@
             createBasicEnemyModel(color) {
                 const group = new THREE.Group();
 
-                // Main body
-                const bodyGeometry = new THREE.SphereGeometry(0.15, 12, 8);
-                const bodyMaterial = new THREE.MeshLambertMaterial({ color: color });
+                // Enhanced main body with metallic sheen
+                const bodyGeometry = new THREE.SphereGeometry(0.18, 16, 12);
+                const bodyMaterial = new THREE.MeshLambertMaterial({
+                    color: color,
+                    emissive: new THREE.Color(color).multiplyScalar(0.1)
+                });
                 const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
                 body.castShadow = true;
                 group.add(body);
 
-                // Spikes for detail
-                for (let i = 0; i < 6; i++) {
-                    const spikeGeometry = new THREE.ConeGeometry(0.03, 0.1, 4);
-                    const spikeMaterial = new THREE.MeshLambertMaterial({ color: color });
+                // Enhanced spikes with glow effect
+                for (let i = 0; i < 8; i++) {
+                    const spikeGeometry = new THREE.ConeGeometry(0.04, 0.15, 6);
+                    const spikeMaterial = new THREE.MeshLambertMaterial({
+                        color: new THREE.Color(color).multiplyScalar(0.8),
+                        emissive: new THREE.Color(color).multiplyScalar(0.2)
+                    });
                     const spike = new THREE.Mesh(spikeGeometry, spikeMaterial);
-                    const angle = (i / 6) * Math.PI * 2;
-                    spike.position.set(Math.cos(angle) * 0.12, 0, Math.sin(angle) * 0.12);
+                    const angle = (i / 8) * Math.PI * 2;
+                    spike.position.set(Math.cos(angle) * 0.14, 0, Math.sin(angle) * 0.14);
                     spike.rotation.z = -angle + Math.PI / 2;
+                    spike.castShadow = true;
                     group.add(spike);
                 }
+
+                // Core glow effect
+                const coreGeometry = new THREE.SphereGeometry(0.08, 8, 6);
+                const coreMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xff4444,
+                    emissive: 0xff2222,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const core = new THREE.Mesh(coreGeometry, coreMaterial);
+                group.add(core);
 
                 return group;
             }
@@ -1755,25 +2095,43 @@
             createFastEnemyModel(color) {
                 const group = new THREE.Group();
 
-                // Main body (cone)
-                const bodyGeometry = new THREE.ConeGeometry(0.12, 0.3, 8);
-                const bodyMaterial = new THREE.MeshLambertMaterial({ color: color });
+                // Enhanced sleek body
+                const bodyGeometry = new THREE.ConeGeometry(0.15, 0.4, 12);
+                const bodyMaterial = new THREE.MeshLambertMaterial({
+                    color: color,
+                    emissive: new THREE.Color(color).multiplyScalar(0.2)
+                });
                 const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-                body.position.y = 0.15;
+                body.position.y = 0.2;
                 body.castShadow = true;
                 group.add(body);
 
-                // Speed trails
-                for (let i = 0; i < 3; i++) {
-                    const trailGeometry = new THREE.ConeGeometry(0.05, 0.2, 4);
+                // Aerodynamic fins
+                for (let i = 0; i < 4; i++) {
+                    const finGeometry = new THREE.ConeGeometry(0.03, 0.12, 3);
+                    const finMaterial = new THREE.MeshLambertMaterial({
+                        color: new THREE.Color(color).multiplyScalar(0.7)
+                    });
+                    const fin = new THREE.Mesh(finGeometry, finMaterial);
+                    const angle = (i / 4) * Math.PI * 2;
+                    fin.position.set(Math.cos(angle) * 0.1, 0.1, Math.sin(angle) * 0.1);
+                    fin.rotation.z = angle;
+                    fin.castShadow = true;
+                    group.add(fin);
+                }
+
+                // Enhanced speed trails with energy effect
+                for (let i = 0; i < 5; i++) {
+                    const trailGeometry = new THREE.ConeGeometry(0.06 - i * 0.01, 0.25, 6);
                     const trailMaterial = new THREE.MeshBasicMaterial({
-                        color: color,
+                        color: new THREE.Color().setHSL(0.1 + i * 0.05, 1, 0.5),
                         transparent: true,
-                        opacity: 0.5 - i * 0.1
+                        opacity: 0.8 - i * 0.15,
+                        emissive: new THREE.Color().setHSL(0.1 + i * 0.05, 1, 0.3)
                     });
                     const trail = new THREE.Mesh(trailGeometry, trailMaterial);
-                    trail.position.y = -0.1 - i * 0.15;
-                    trail.scale.setScalar(0.8 - i * 0.2);
+                    trail.position.y = -0.15 - i * 0.12;
+                    trail.scale.setScalar(0.9 - i * 0.15);
                     group.add(trail);
                 }
 
@@ -1783,28 +2141,57 @@
             createTankEnemyModel(color) {
                 const group = new THREE.Group();
 
-                // Main body (box)
-                const bodyGeometry = new THREE.BoxGeometry(0.3, 0.2, 0.25);
-                const bodyMaterial = new THREE.MeshLambertMaterial({ color: color });
+                // Enhanced main body with battle damage
+                const bodyGeometry = new THREE.BoxGeometry(0.35, 0.25, 0.3);
+                const bodyMaterial = new THREE.MeshLambertMaterial({
+                    color: color,
+                    emissive: new THREE.Color(color).multiplyScalar(0.1)
+                });
                 const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
                 body.castShadow = true;
                 group.add(body);
 
-                // Armor plates
-                const plateGeometry = new THREE.BoxGeometry(0.32, 0.05, 0.27);
-                const plateMaterial = new THREE.MeshLambertMaterial({ color: 0x555555 });
+                // Heavy armor plates
+                const plateGeometry = new THREE.BoxGeometry(0.37, 0.08, 0.32);
+                const plateMaterial = new THREE.MeshLambertMaterial({
+                    color: 0x333333,
+                    emissive: 0x111111
+                });
                 const topPlate = new THREE.Mesh(plateGeometry, plateMaterial);
-                topPlate.position.y = 0.125;
+                topPlate.position.y = 0.165;
+                topPlate.castShadow = true;
                 group.add(topPlate);
 
-                // Side armor
+                // Enhanced side armor with detail
                 for (let i = 0; i < 2; i++) {
-                    const sideGeometry = new THREE.BoxGeometry(0.05, 0.25, 0.3);
-                    const sideMaterial = new THREE.MeshLambertMaterial({ color: 0x666666 });
+                    const sideGeometry = new THREE.BoxGeometry(0.08, 0.3, 0.35);
+                    const sideMaterial = new THREE.MeshLambertMaterial({
+                        color: 0x444444,
+                        emissive: 0x111111
+                    });
                     const side = new THREE.Mesh(sideGeometry, sideMaterial);
-                    side.position.x = i === 0 ? -0.175 : 0.175;
+                    side.position.x = i === 0 ? -0.215 : 0.215;
+                    side.castShadow = true;
                     group.add(side);
                 }
+
+                // Tank treads/tracks
+                for (let i = 0; i < 2; i++) {
+                    const trackGeometry = new THREE.BoxGeometry(0.06, 0.12, 0.4);
+                    const trackMaterial = new THREE.MeshLambertMaterial({ color: 0x222222 });
+                    const track = new THREE.Mesh(trackGeometry, trackMaterial);
+                    track.position.x = i === 0 ? -0.25 : 0.25;
+                    track.position.y = -0.18;
+                    track.castShadow = true;
+                    group.add(track);
+                }
+
+                // Command antenna
+                const antennaGeometry = new THREE.CylinderGeometry(0.01, 0.01, 0.15, 4);
+                const antennaMaterial = new THREE.MeshLambertMaterial({ color: 0x888888 });
+                const antenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
+                antenna.position.y = 0.32;
+                group.add(antenna);
 
                 return group;
             }
@@ -2122,27 +2509,67 @@
             createMortarShell() {
                 const group = new THREE.Group();
 
-                // Shell body
-                const geometry = new THREE.SphereGeometry(0.12, 8, 6);
-                const material = new THREE.MeshBasicMaterial({
-                    color: 0xff4400,
-                    emissive: 0x441100
+                // Enhanced shell body with metallic look
+                const shellGeometry = new THREE.SphereGeometry(0.15, 12, 8);
+                const shellMaterial = new THREE.MeshLambertMaterial({
+                    color: 0x333333,
+                    emissive: 0x110000
                 });
-                const shell = new THREE.Mesh(geometry, material);
+                const shell = new THREE.Mesh(shellGeometry, shellMaterial);
                 group.add(shell);
 
-                // Flame trail
-                const flameGeometry = new THREE.ConeGeometry(0.08, 0.3, 6);
-                const flameMaterial = new THREE.MeshBasicMaterial({
+                // Explosive tip
+                const tipGeometry = new THREE.ConeGeometry(0.08, 0.2, 8);
+                const tipMaterial = new THREE.MeshBasicMaterial({
                     color: 0xff6600,
-                    emissive: 0xff3300,
-                    transparent: true,
-                    opacity: 0.7
+                    emissive: 0x442200
                 });
-                const flame = new THREE.Mesh(flameGeometry, flameMaterial);
-                flame.position.y = -0.2;
-                flame.rotation.x = Math.PI;
-                group.add(flame);
+                const tip = new THREE.Mesh(tipGeometry, tipMaterial);
+                tip.position.y = 0.12;
+                group.add(tip);
+
+                // Enhanced flame trail with multiple layers
+                const flameGeometry1 = new THREE.ConeGeometry(0.1, 0.4, 8);
+                const flameMaterial1 = new THREE.MeshBasicMaterial({
+                    color: 0xff3300,
+                    emissive: 0xff1100,
+                    transparent: true,
+                    opacity: 0.9
+                });
+                const flame1 = new THREE.Mesh(flameGeometry1, flameMaterial1);
+                flame1.position.y = -0.25;
+                flame1.rotation.x = Math.PI;
+                group.add(flame1);
+
+                // Outer flame layer
+                const flameGeometry2 = new THREE.ConeGeometry(0.15, 0.5, 8);
+                const flameMaterial2 = new THREE.MeshBasicMaterial({
+                    color: 0xff6600,
+                    emissive: 0x442200,
+                    transparent: true,
+                    opacity: 0.6
+                });
+                const flame2 = new THREE.Mesh(flameGeometry2, flameMaterial2);
+                flame2.position.y = -0.3;
+                flame2.rotation.x = Math.PI;
+                group.add(flame2);
+
+                // Smoke trail particles
+                for (let i = 0; i < 4; i++) {
+                    const smokeGeometry = new THREE.SphereGeometry(0.03, 6, 4);
+                    const smokeMaterial = new THREE.MeshBasicMaterial({
+                        color: 0x666666,
+                        transparent: true,
+                        opacity: 0.4 - i * 0.1
+                    });
+                    const smoke = new THREE.Mesh(smokeGeometry, smokeMaterial);
+                    smoke.position.set(
+                        (Math.random() - 0.5) * 0.1,
+                        -0.4 - i * 0.1,
+                        (Math.random() - 0.5) * 0.1
+                    );
+                    group.add(smoke);
+                }
 
                 return group;
             }
@@ -2449,6 +2876,7 @@
                 // Apply slow effect
                 if (tower.slow) {
                     enemy.slowEffect = tower.slow;
+                    this.createSlowEffect(enemy);
                 }
 
                 // Create damage effect
@@ -2506,82 +2934,300 @@
 
             createDeathEffect(enemy) {
                 const position = enemy.mesh.position.clone();
-
-                // Create death explosion based on enemy type
                 const deathGroup = new THREE.Group();
 
-                // Main death burst
-                const burstGeometry = new THREE.SphereGeometry(0.4, 8, 6);
-                const burstMaterial = new THREE.MeshBasicMaterial({
-                    color: enemy.type === 'boss' ? 0x8e44ad : 0xff4444,
-                    transparent: true,
-                    opacity: 0.8
-                });
-                const burst = new THREE.Mesh(burstGeometry, burstMaterial);
-                deathGroup.add(burst);
+                // Enhanced death explosion based on enemy type
+                const isBoss = enemy.type === 'boss';
+                const baseSize = isBoss ? 0.8 : 0.5;
+                const particleCount = isBoss ? 30 : 20;
 
-                // Particle fragments
-                for (let i = 0; i < 12; i++) {
-                    const fragmentGeometry = new THREE.SphereGeometry(0.05, 4, 3);
-                    const fragmentMaterial = new THREE.MeshBasicMaterial({
-                        color: Math.random() > 0.5 ? 0xff6666 : 0xffaa44,
+                // Multiple explosion rings
+                for (let ring = 0; ring < 3; ring++) {
+                    const ringGeometry = new THREE.SphereGeometry(baseSize * (1 + ring * 0.3), 8, 6);
+                    const ringMaterial = new THREE.MeshBasicMaterial({
+                        color: isBoss ? (ring === 0 ? 0x8e44ad : ring === 1 ? 0xe74c3c : 0xf39c12) :
+                               (ring === 0 ? 0xff4444 : ring === 1 ? 0xff8844 : 0xffaa44),
+                        transparent: true,
+                        opacity: 0.9 - ring * 0.2
+                    });
+                    const ringMesh = new THREE.Mesh(ringGeometry, ringMaterial);
+                    ringMesh.userData.ringIndex = ring;
+                    deathGroup.add(ringMesh);
+                }
+
+                // Enhanced particle fragments with different types
+                for (let i = 0; i < particleCount; i++) {
+                    const fragmentType = Math.floor(Math.random() * 4);
+                    let fragmentGeometry, fragmentMaterial;
+
+                    switch (fragmentType) {
+                        case 0: // Sphere fragments
+                            fragmentGeometry = new THREE.SphereGeometry(0.04 + Math.random() * 0.06, 4, 3);
+                            break;
+                        case 1: // Cube fragments
+                            fragmentGeometry = new THREE.BoxGeometry(0.08, 0.08, 0.08);
+                            break;
+                        case 2: // Cone shards
+                            fragmentGeometry = new THREE.ConeGeometry(0.04, 0.12, 4);
+                            break;
+                        case 3: // Tetrahedron
+                            fragmentGeometry = new THREE.TetrahedronGeometry(0.06);
+                            break;
+                    }
+
+                    fragmentMaterial = new THREE.MeshBasicMaterial({
+                        color: new THREE.Color().setHSL(
+                            Math.random() * 0.1 + (isBoss ? 0.7 : 0.0), // Purple for boss, red-orange for normal
+                            0.8,
+                            0.4 + Math.random() * 0.4
+                        ),
                         transparent: true,
                         opacity: 1
                     });
+
                     const fragment = new THREE.Mesh(fragmentGeometry, fragmentMaterial);
 
-                    // Random direction
-                    const angle = (i / 12) * Math.PI * 2;
-                    const radius = 0.2 + Math.random() * 0.3;
+                    // Enhanced random direction with more variation
+                    const angle = (i / particleCount) * Math.PI * 2 + Math.random() * 0.5;
+                    const elevation = Math.random() * Math.PI / 3 - Math.PI / 6;
+                    const speed = 0.1 + Math.random() * 0.15;
+                    const radius = 0.1 + Math.random() * 0.4;
+
                     fragment.position.set(
                         Math.cos(angle) * radius,
-                        Math.random() * 0.3,
+                        Math.random() * 0.4,
                         Math.sin(angle) * radius
                     );
+
                     fragment.userData.velocity = {
-                        x: Math.cos(angle) * 0.08,
-                        y: Math.random() * 0.1 + 0.05,
-                        z: Math.sin(angle) * 0.08
+                        x: Math.cos(angle) * Math.cos(elevation) * speed,
+                        y: Math.sin(elevation) * speed + Math.random() * 0.1,
+                        z: Math.sin(angle) * Math.cos(elevation) * speed
                     };
+                    fragment.userData.angularVelocity = {
+                        x: (Math.random() - 0.5) * 0.3,
+                        y: (Math.random() - 0.5) * 0.3,
+                        z: (Math.random() - 0.5) * 0.3
+                    };
+                    fragment.userData.startTime = Math.random() * 0.3; // Stagger appearance
                     deathGroup.add(fragment);
+                }
+
+                // Add energy shockwave
+                const shockwaveGeometry = new THREE.RingGeometry(0.1, baseSize * 2, 16);
+                const shockwaveMaterial = new THREE.MeshBasicMaterial({
+                    color: isBoss ? 0xffffff : 0xffff88,
+                    transparent: true,
+                    opacity: 0.6,
+                    side: THREE.DoubleSide
+                });
+                const shockwave = new THREE.Mesh(shockwaveGeometry, shockwaveMaterial);
+                shockwave.rotation.x = -Math.PI / 2;
+                shockwave.position.y = 0.1;
+                deathGroup.add(shockwave);
+
+                // Add electrical sparks for boss
+                if (isBoss) {
+                    for (let i = 0; i < 8; i++) {
+                        const sparkGeometry = new THREE.CylinderGeometry(0.01, 0.02, 0.6, 4);
+                        const sparkMaterial = new THREE.MeshBasicMaterial({
+                            color: 0x88ddff,
+                            transparent: true,
+                            opacity: 0.8
+                        });
+                        const spark = new THREE.Mesh(sparkGeometry, sparkMaterial);
+                        spark.position.set(
+                            (Math.random() - 0.5) * 1.5,
+                            Math.random() * 0.8,
+                            (Math.random() - 0.5) * 1.5
+                        );
+                        spark.rotation.set(
+                            Math.random() * Math.PI,
+                            Math.random() * Math.PI,
+                            Math.random() * Math.PI
+                        );
+                        spark.userData.sparkDelay = Math.random() * 0.5;
+                        deathGroup.add(spark);
+                    }
                 }
 
                 deathGroup.position.copy(position);
                 this.scene.add(deathGroup);
 
-                // Animate death effect
-                let scale = 0;
+                // Enhanced animation
                 let time = 0;
                 const animateDeath = () => {
-                    time += 0.08;
-                    scale += 0.2;
+                    time += 0.05;
 
-                    // Main burst animation
-                    burst.scale.setScalar(scale);
-                    burst.material.opacity = Math.max(0, 0.8 - time * 2);
-
-                    // Fragment animation
+                    // Animate explosion rings
                     deathGroup.children.forEach((child, index) => {
-                        if (index > 0) { // Skip main burst
+                        if (child.userData.ringIndex !== undefined) {
+                            const ringDelay = child.userData.ringIndex * 0.15;
+                            const ringTime = Math.max(0, time - ringDelay);
+                            child.scale.setScalar(1 + ringTime * 4);
+                            child.material.opacity = Math.max(0, (0.9 - child.userData.ringIndex * 0.2) - ringTime * 2);
+                        }
+                    });
+
+                    // Animate shockwave
+                    if (shockwave) {
+                        shockwave.scale.setScalar(1 + time * 8);
+                        shockwave.material.opacity = Math.max(0, 0.6 - time * 1.5);
+                    }
+
+                    // Enhanced fragment animation
+                    deathGroup.children.forEach((child) => {
+                        if (child.userData.velocity && time > child.userData.startTime) {
+                            const effectiveTime = time - child.userData.startTime;
+
+                            // Movement with physics
                             child.position.add(new THREE.Vector3(
                                 child.userData.velocity.x,
                                 child.userData.velocity.y,
                                 child.userData.velocity.z
                             ));
-                            child.material.opacity = Math.max(0, 1 - time * 1.5);
-                            child.userData.velocity.y -= 0.005; // Gravity
-                            child.rotation.x += 0.1;
-                            child.rotation.y += 0.1;
+
+                            // Apply gravity and air resistance
+                            child.userData.velocity.y -= 0.008;
+                            child.userData.velocity.x *= 0.995;
+                            child.userData.velocity.z *= 0.995;
+
+                            // Rotation
+                            child.rotation.x += child.userData.angularVelocity.x;
+                            child.rotation.y += child.userData.angularVelocity.y;
+                            child.rotation.z += child.userData.angularVelocity.z;
+
+                            // Fade and shrink
+                            child.material.opacity = Math.max(0, 1 - effectiveTime * 1.2);
+                            child.scale.setScalar(Math.max(0.1, 1 - effectiveTime * 0.8));
+                        }
+
+                        // Animate sparks
+                        if (child.userData.sparkDelay !== undefined && time > child.userData.sparkDelay) {
+                            child.material.opacity = Math.max(0, 0.8 - (time - child.userData.sparkDelay) * 3);
+                            child.rotation.z += 0.2;
                         }
                     });
 
-                    if (burst.material.opacity <= 0) {
+                    // Remove when done
+                    if (time > 3.0) {
                         this.scene.remove(deathGroup);
                     } else {
                         requestAnimationFrame(animateDeath);
                     }
                 };
                 animateDeath();
+            }
+
+            createSlowEffect(enemy) {
+                // Remove any existing slow effect
+                if (enemy.slowIndicator) {
+                    enemy.mesh.remove(enemy.slowIndicator);
+                }
+
+                // Create ice/frost visual effect
+                const slowGroup = new THREE.Group();
+
+                // Ice crystals around the enemy
+                for (let i = 0; i < 8; i++) {
+                    const crystalGeometry = new THREE.ConeGeometry(0.05, 0.15, 4);
+                    const crystalMaterial = new THREE.MeshBasicMaterial({
+                        color: 0x88ccff,
+                        transparent: true,
+                        opacity: 0.7
+                    });
+                    const crystal = new THREE.Mesh(crystalGeometry, crystalMaterial);
+
+                    const angle = (i / 8) * Math.PI * 2;
+                    crystal.position.set(
+                        Math.cos(angle) * 0.6,
+                        0.2 + Math.random() * 0.4,
+                        Math.sin(angle) * 0.6
+                    );
+                    crystal.rotation.y = angle;
+                    crystal.userData.floatOffset = Math.random() * Math.PI * 2;
+                    slowGroup.add(crystal);
+                }
+
+                // Frost aura ring
+                const auraGeometry = new THREE.RingGeometry(0.4, 0.7, 16);
+                const auraMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x66aaff,
+                    transparent: true,
+                    opacity: 0.3,
+                    side: THREE.DoubleSide
+                });
+                const aura = new THREE.Mesh(auraGeometry, auraMaterial);
+                aura.rotation.x = -Math.PI / 2;
+                aura.position.y = 0.05;
+                slowGroup.add(aura);
+
+                // Swirling snow particles
+                for (let i = 0; i < 12; i++) {
+                    const snowGeometry = new THREE.SphereGeometry(0.02, 4, 3);
+                    const snowMaterial = new THREE.MeshBasicMaterial({
+                        color: 0xffffff,
+                        transparent: true,
+                        opacity: 0.8
+                    });
+                    const snow = new THREE.Mesh(snowGeometry, snowMaterial);
+
+                    const radius = 0.3 + Math.random() * 0.4;
+                    const angle = Math.random() * Math.PI * 2;
+                    snow.position.set(
+                        Math.cos(angle) * radius,
+                        0.1 + Math.random() * 0.6,
+                        Math.sin(angle) * radius
+                    );
+                    snow.userData.orbitAngle = angle;
+                    snow.userData.orbitRadius = radius;
+                    snow.userData.orbitSpeed = 0.02 + Math.random() * 0.02;
+                    slowGroup.add(snow);
+                }
+
+                enemy.mesh.add(slowGroup);
+                enemy.slowIndicator = slowGroup;
+
+                // Animate the slow effect
+                let time = 0;
+                const animateSlowEffect = () => {
+                    if (!enemy.slowIndicator || enemy.slowEffect >= 0.9) {
+                        // Remove effect when enemy is no longer slowed
+                        if (enemy.slowIndicator) {
+                            enemy.mesh.remove(enemy.slowIndicator);
+                            enemy.slowIndicator = null;
+                        }
+                        return;
+                    }
+
+                    time += 0.05;
+
+                    // Animate crystals
+                    slowGroup.children.forEach((child, index) => {
+                        if (child.userData.floatOffset !== undefined) {
+                            // Ice crystals bob up and down
+                            child.position.y = 0.2 + Math.sin(time * 3 + child.userData.floatOffset) * 0.1;
+                            child.rotation.y += 0.01;
+                        }
+
+                        if (child.userData.orbitAngle !== undefined) {
+                            // Snow particles orbit
+                            child.userData.orbitAngle += child.userData.orbitSpeed;
+                            child.position.x = Math.cos(child.userData.orbitAngle) * child.userData.orbitRadius;
+                            child.position.z = Math.sin(child.userData.orbitAngle) * child.userData.orbitRadius;
+                            child.position.y = 0.1 + Math.sin(time * 2 + child.userData.orbitAngle) * 0.2;
+                        }
+                    });
+
+                    // Pulse the aura
+                    if (aura) {
+                        aura.material.opacity = 0.2 + Math.sin(time * 4) * 0.15;
+                        aura.rotation.z += 0.005;
+                    }
+
+                    requestAnimationFrame(animateSlowEffect);
+                };
+                animateSlowEffect();
             }
 
             checkWaveCompletion() {
@@ -2677,8 +3323,8 @@
                     document.querySelectorAll('.tower-btn').forEach(btn => {
                         btn.classList.remove('selected');
                     });
-                } else if (e.key >= '1' && e.key <= '4') {
-                    const types = ['basic', 'sniper', 'splash', 'slow'];
+                } else if (e.key >= '1' && e.key <= '7') {
+                    const types = ['basic', 'sniper', 'splash', 'slow', 'laser', 'poison', 'electric'];
                     this.selectTowerType(types[parseInt(e.key) - 1]);
                 }
 
@@ -2707,6 +3353,7 @@
                 if (this.isFreeCam && e.button === 0) {
                     this.mouseDown = true;
                     this.lastMouse = { x: e.clientX, y: e.clientY };
+                    this.canvas.requestPointerLock();
                 }
             }
 
@@ -2716,12 +3363,28 @@
                 }
             }
 
+            handleMouseMove(e) {
+                if (this.isFreeCam && document.pointerLockElement === this.canvas) {
+                    const sensitivity = 0.002;
+                    this.cameraRotation.y -= e.movementX * sensitivity;
+                    this.cameraRotation.x -= e.movementY * sensitivity;
+
+                    // Clamp vertical rotation
+                    this.cameraRotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.cameraRotation.x));
+
+                    // Apply rotation to camera
+                    this.camera.rotation.order = 'YXZ';
+                    this.camera.rotation.y = this.cameraRotation.y;
+                    this.camera.rotation.x = this.cameraRotation.x;
+                }
+            }
+
             handleWheel(e) {
                 if (this.isFreeCam) {
                     e.preventDefault();
                     const direction = new THREE.Vector3(0, 0, -1);
                     direction.applyQuaternion(this.camera.quaternion);
-                    direction.multiplyScalar(e.deltaY * 0.01);
+                    direction.multiplyScalar(-e.deltaY * 0.01); // Inverted for natural zoom
                     this.camera.position.add(direction);
                 }
             }
@@ -2738,48 +3401,47 @@
             }
 
             updateFreeCamera() {
-                const moveSpeed = 0.1;
-                const rotateSpeed = 0.002;
+                const moveSpeed = 0.15;
 
-                // Movement
-                const direction = new THREE.Vector3();
+                // Get camera direction vectors
+                const forward = new THREE.Vector3(0, 0, -1);
+                const right = new THREE.Vector3(1, 0, 0);
+                const up = new THREE.Vector3(0, 1, 0);
+
+                forward.applyQuaternion(this.camera.quaternion);
+                right.applyQuaternion(this.camera.quaternion);
+
+                const movement = new THREE.Vector3();
+
+                // Forward/Backward movement (W/S and Arrow Up/Down)
                 if (this.cameraKeys.has('w') || this.cameraKeys.has('arrowup')) {
-                    direction.z -= 1;
+                    movement.add(forward);
                 }
                 if (this.cameraKeys.has('s') || this.cameraKeys.has('arrowdown')) {
-                    direction.z += 1;
+                    movement.add(forward.clone().negate());
                 }
+
+                // Left/Right movement (A/D and Arrow Left/Right)
                 if (this.cameraKeys.has('a') || this.cameraKeys.has('arrowleft')) {
-                    direction.x -= 1;
+                    movement.add(right.clone().negate());
                 }
                 if (this.cameraKeys.has('d') || this.cameraKeys.has('arrowright')) {
-                    direction.x += 1;
+                    movement.add(right);
                 }
 
-                if (direction.length() > 0) {
-                    direction.normalize();
-                    direction.applyQuaternion(this.camera.quaternion);
-                    direction.multiplyScalar(moveSpeed);
-                    this.camera.position.add(direction);
+                // Up/Down movement (Space/Shift)
+                if (this.cameraKeys.has(' ')) {
+                    movement.add(up);
+                }
+                if (this.cameraKeys.has('shift')) {
+                    movement.add(up.clone().negate());
                 }
 
-                // Mouse look
-                if (this.mouseDown) {
-                    const deltaX = (event.clientX - this.lastMouse.x) * rotateSpeed;
-                    const deltaY = (event.clientY - this.lastMouse.y) * rotateSpeed;
-
-                    this.cameraRotation.y -= deltaX;
-                    this.cameraRotation.x -= deltaY;
-
-                    // Clamp vertical rotation
-                    this.cameraRotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.cameraRotation.x));
-
-                    // Apply rotation
-                    this.camera.rotation.order = 'YXZ';
-                    this.camera.rotation.y = this.cameraRotation.y;
-                    this.camera.rotation.x = this.cameraRotation.x;
-
-                    this.lastMouse = { x: event.clientX, y: event.clientY };
+                // Apply movement
+                if (movement.length() > 0) {
+                    movement.normalize();
+                    movement.multiplyScalar(moveSpeed);
+                    this.camera.position.add(movement);
                 }
             }
 
