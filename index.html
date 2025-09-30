@@ -262,6 +262,11 @@
             color: black;
         }
 
+        .tower-btn.booster {
+            background: linear-gradient(135deg, #00ffff, #00cccc);
+            color: black;
+        }
+
         .tower-btn.selected {
             transform: scale(1.1);
             box-shadow: 0 0 20px rgba(0, 245, 255, 0.5);
@@ -623,6 +628,10 @@
                         <span>⚡ Electric</span>
                         <span class="tower-cost">$60</span>
                     </button>
+                    <button class="tower-btn booster" id="boosterTowerBtn">
+                        <span>🚀 Booster</span>
+                        <span class="tower-cost">$45</span>
+                    </button>
                 </div>
 
                 <div class="wave-info">
@@ -727,6 +736,11 @@
                 this.previewRange = null;
                 this.selectedTower = null;
 
+                // Performance optimization
+                this.performanceMode = false;
+                this.frameCount = 0;
+                this.lastFrameTime = Date.now();
+
                 // Tower types
                 this.towerTypes = {
                     basic: { cost: 10, damage: 15, range: 3, fireRate: 1000, color: 0x4a90e2 },
@@ -735,7 +749,8 @@
                     slow: { cost: 30, damage: 10, range: 3, fireRate: 800, color: 0x9b59b6, slow: 0.5 },
                     laser: { cost: 50, damage: 8, range: 4, fireRate: 200, color: 0xff0066, continuous: true },
                     poison: { cost: 35, damage: 12, range: 2.8, fireRate: 1200, color: 0x27ae60, poison: { damage: 3, duration: 5000 } },
-                    electric: { cost: 60, damage: 30, range: 3.5, fireRate: 1800, color: 0xffff00, chain: 3 }
+                    electric: { cost: 60, damage: 30, range: 3.5, fireRate: 1800, color: 0xffff00, chain: 3 },
+                    booster: { cost: 45, damage: 0, range: 4, fireRate: 0, color: 0x00ffff, boost: { damage: 1.5, range: 1.2, fireRate: 0.8 } }
                 };
 
                 // Enemy types (slower base speeds)
@@ -813,6 +828,7 @@
                 this.laserTowerBtn = document.getElementById('laserTowerBtn');
                 this.poisonTowerBtn = document.getElementById('poisonTowerBtn');
                 this.electricTowerBtn = document.getElementById('electricTowerBtn');
+                this.boosterTowerBtn = document.getElementById('boosterTowerBtn');
 
                 this.topViewBtn = document.getElementById('topViewBtn');
                 this.angleViewBtn = document.getElementById('angleViewBtn');
@@ -843,6 +859,7 @@
                 this.laserTowerBtn.addEventListener('click', () => this.selectTowerType('laser'));
                 this.poisonTowerBtn.addEventListener('click', () => this.selectTowerType('poison'));
                 this.electricTowerBtn.addEventListener('click', () => this.selectTowerType('electric'));
+                this.boosterTowerBtn.addEventListener('click', () => this.selectTowerType('booster'));
 
                 this.startWaveBtn.addEventListener('click', () => this.startWave());
 
@@ -962,11 +979,15 @@
                 atmosphereLight.position.set(0, 12, 0);
                 this.scene.add(atmosphereLight);
 
-                // Animate atmospheric light
+                // Animate atmospheric light - optimized with frame skipping
+                let atmosphereFrameCount = 0;
                 const animateAtmosphere = () => {
-                    const time = Date.now() * 0.001;
-                    atmosphereLight.intensity = 0.4 + Math.sin(time * 0.5) * 0.2;
-                    atmosphereLight.color.setHSL(0.55 + Math.sin(time * 0.3) * 0.1, 0.8, 0.6);
+                    atmosphereFrameCount++;
+                    if (atmosphereFrameCount % 3 === 0) { // Update every 3rd frame
+                        const time = Date.now() * 0.001;
+                        atmosphereLight.intensity = 0.4 + Math.sin(time * 0.5) * 0.2;
+                        atmosphereLight.color.setHSL(0.55 + Math.sin(time * 0.3) * 0.1, 0.8, 0.6);
+                    }
                     requestAnimationFrame(animateAtmosphere);
                 };
                 animateAtmosphere();
@@ -1740,11 +1761,11 @@
                 const rangeGroup = new THREE.Group();
 
                 // Range circle
-                const rangeGeometry = new THREE.RingGeometry(range - 0.1, range + 0.1, 32);
+                const rangeGeometry = new THREE.RingGeometry(range - 0.1, range + 0.1, 16);
                 const rangeMaterial = new THREE.MeshBasicMaterial({
                     color: 0x00ff00,
                     transparent: true,
-                    opacity: 0.3,
+                    opacity: 0.15,
                     side: THREE.DoubleSide
                 });
                 const rangeCircle = new THREE.Mesh(rangeGeometry, rangeMaterial);
@@ -1753,11 +1774,11 @@
                 rangeGroup.add(rangeCircle);
 
                 // Range area
-                const areaGeometry = new THREE.CircleGeometry(range, 32);
+                const areaGeometry = new THREE.CircleGeometry(range, 16);
                 const areaMaterial = new THREE.MeshBasicMaterial({
                     color: 0x00ff00,
                     transparent: true,
-                    opacity: 0.1,
+                    opacity: 0.05,
                     side: THREE.DoubleSide
                 });
                 const rangeArea = new THREE.Mesh(areaGeometry, areaMaterial);
@@ -2054,7 +2075,7 @@
                 const group = new THREE.Group();
 
                 // Enhanced main body with metallic sheen
-                const bodyGeometry = new THREE.SphereGeometry(0.18, 16, 12);
+                const bodyGeometry = new THREE.SphereGeometry(0.18, 8, 6);
                 const bodyMaterial = new THREE.MeshLambertMaterial({
                     color: color,
                     emissive: new THREE.Color(color).multiplyScalar(0.1)
@@ -2509,67 +2530,25 @@
             createMortarShell() {
                 const group = new THREE.Group();
 
-                // Enhanced shell body with metallic look
-                const shellGeometry = new THREE.SphereGeometry(0.15, 12, 8);
+                // Simpler shell body - reduced complexity
+                const shellGeometry = new THREE.SphereGeometry(0.12, 8, 6);
                 const shellMaterial = new THREE.MeshLambertMaterial({
-                    color: 0x333333,
-                    emissive: 0x110000
+                    color: 0x444444
                 });
                 const shell = new THREE.Mesh(shellGeometry, shellMaterial);
                 group.add(shell);
 
-                // Explosive tip
-                const tipGeometry = new THREE.ConeGeometry(0.08, 0.2, 8);
-                const tipMaterial = new THREE.MeshBasicMaterial({
-                    color: 0xff6600,
-                    emissive: 0x442200
-                });
-                const tip = new THREE.Mesh(tipGeometry, tipMaterial);
-                tip.position.y = 0.12;
-                group.add(tip);
-
-                // Enhanced flame trail with multiple layers
-                const flameGeometry1 = new THREE.ConeGeometry(0.1, 0.4, 8);
-                const flameMaterial1 = new THREE.MeshBasicMaterial({
-                    color: 0xff3300,
-                    emissive: 0xff1100,
+                // Simple flame trail - single layer
+                const flameGeometry = new THREE.ConeGeometry(0.08, 0.3, 6);
+                const flameMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xff4400,
                     transparent: true,
-                    opacity: 0.9
+                    opacity: 0.8
                 });
-                const flame1 = new THREE.Mesh(flameGeometry1, flameMaterial1);
-                flame1.position.y = -0.25;
-                flame1.rotation.x = Math.PI;
-                group.add(flame1);
-
-                // Outer flame layer
-                const flameGeometry2 = new THREE.ConeGeometry(0.15, 0.5, 8);
-                const flameMaterial2 = new THREE.MeshBasicMaterial({
-                    color: 0xff6600,
-                    emissive: 0x442200,
-                    transparent: true,
-                    opacity: 0.6
-                });
-                const flame2 = new THREE.Mesh(flameGeometry2, flameMaterial2);
-                flame2.position.y = -0.3;
-                flame2.rotation.x = Math.PI;
-                group.add(flame2);
-
-                // Smoke trail particles
-                for (let i = 0; i < 4; i++) {
-                    const smokeGeometry = new THREE.SphereGeometry(0.03, 6, 4);
-                    const smokeMaterial = new THREE.MeshBasicMaterial({
-                        color: 0x666666,
-                        transparent: true,
-                        opacity: 0.4 - i * 0.1
-                    });
-                    const smoke = new THREE.Mesh(smokeGeometry, smokeMaterial);
-                    smoke.position.set(
-                        (Math.random() - 0.5) * 0.1,
-                        -0.4 - i * 0.1,
-                        (Math.random() - 0.5) * 0.1
-                    );
-                    group.add(smoke);
-                }
+                const flame = new THREE.Mesh(flameGeometry, flameMaterial);
+                flame.position.y = -0.2;
+                flame.rotation.x = Math.PI;
+                group.add(flame);
 
                 return group;
             }
@@ -2936,10 +2915,10 @@
                 const position = enemy.mesh.position.clone();
                 const deathGroup = new THREE.Group();
 
-                // Enhanced death explosion based on enemy type
+                // Optimized death explosion based on enemy type and performance
                 const isBoss = enemy.type === 'boss';
-                const baseSize = isBoss ? 0.8 : 0.5;
-                const particleCount = isBoss ? 30 : 20;
+                const baseSize = isBoss ? 0.6 : 0.4;
+                const particleCount = this.performanceMode ? (isBoss ? 6 : 4) : (isBoss ? 12 : 8);
 
                 // Multiple explosion rings
                 for (let ring = 0; ring < 3; ring++) {
@@ -3026,10 +3005,10 @@
                 shockwave.position.y = 0.1;
                 deathGroup.add(shockwave);
 
-                // Add electrical sparks for boss
+                // Add simple electrical sparks for boss
                 if (isBoss) {
-                    for (let i = 0; i < 8; i++) {
-                        const sparkGeometry = new THREE.CylinderGeometry(0.01, 0.02, 0.6, 4);
+                    for (let i = 0; i < 4; i++) {
+                        const sparkGeometry = new THREE.SphereGeometry(0.04, 4, 3);
                         const sparkMaterial = new THREE.MeshBasicMaterial({
                             color: 0x88ddff,
                             transparent: true,
@@ -3037,16 +3016,11 @@
                         });
                         const spark = new THREE.Mesh(sparkGeometry, sparkMaterial);
                         spark.position.set(
-                            (Math.random() - 0.5) * 1.5,
-                            Math.random() * 0.8,
-                            (Math.random() - 0.5) * 1.5
+                            (Math.random() - 0.5) * 1.0,
+                            Math.random() * 0.6,
+                            (Math.random() - 0.5) * 1.0
                         );
-                        spark.rotation.set(
-                            Math.random() * Math.PI,
-                            Math.random() * Math.PI,
-                            Math.random() * Math.PI
-                        );
-                        spark.userData.sparkDelay = Math.random() * 0.5;
+                        spark.userData.sparkDelay = Math.random() * 0.3;
                         deathGroup.add(spark);
                     }
                 }
@@ -3128,8 +3102,8 @@
                 // Create ice/frost visual effect
                 const slowGroup = new THREE.Group();
 
-                // Ice crystals around the enemy
-                for (let i = 0; i < 8; i++) {
+                // Ice crystals around the enemy - reduced count
+                for (let i = 0; i < 4; i++) {
                     const crystalGeometry = new THREE.ConeGeometry(0.05, 0.15, 4);
                     const crystalMaterial = new THREE.MeshBasicMaterial({
                         color: 0x88ccff,
@@ -3138,7 +3112,7 @@
                     });
                     const crystal = new THREE.Mesh(crystalGeometry, crystalMaterial);
 
-                    const angle = (i / 8) * Math.PI * 2;
+                    const angle = (i / 4) * Math.PI * 2;
                     crystal.position.set(
                         Math.cos(angle) * 0.6,
                         0.2 + Math.random() * 0.4,
@@ -3162,8 +3136,8 @@
                 aura.position.y = 0.05;
                 slowGroup.add(aura);
 
-                // Swirling snow particles
-                for (let i = 0; i < 12; i++) {
+                // Swirling snow particles - reduced count
+                for (let i = 0; i < 6; i++) {
                     const snowGeometry = new THREE.SphereGeometry(0.02, 4, 3);
                     const snowMaterial = new THREE.MeshBasicMaterial({
                         color: 0xffffff,
@@ -3323,8 +3297,8 @@
                     document.querySelectorAll('.tower-btn').forEach(btn => {
                         btn.classList.remove('selected');
                     });
-                } else if (e.key >= '1' && e.key <= '7') {
-                    const types = ['basic', 'sniper', 'splash', 'slow', 'laser', 'poison', 'electric'];
+                } else if (e.key >= '1' && e.key <= '8') {
+                    const types = ['basic', 'sniper', 'splash', 'slow', 'laser', 'poison', 'electric', 'booster'];
                     this.selectTowerType(types[parseInt(e.key) - 1]);
                 }
 
@@ -3391,6 +3365,15 @@
 
             animate() {
                 requestAnimationFrame(() => this.animate());
+
+                // Performance monitoring
+                this.frameCount++;
+                const now = Date.now();
+                if (this.frameCount % 60 === 0) { // Check every 60 frames
+                    const fps = 60000 / (now - this.lastFrameTime);
+                    this.performanceMode = fps < 30; // Enable performance mode if FPS drops below 30
+                    this.lastFrameTime = now;
+                }
 
                 // Update free camera
                 if (this.isFreeCam) {
