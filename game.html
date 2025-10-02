@@ -1048,6 +1048,10 @@
             let countdownActive = true;
             document.getElementById('timer').textContent = countdown.toString();
 
+            // Center camera on player for countdown
+            cameraX = player.x - canvas.width / 2;
+            cameraY = player.y - canvas.height / 2;
+
             // Draw during countdown to show player position
             const countdownDrawInterval = setInterval(() => {
                 if (countdownActive) {
