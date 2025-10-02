@@ -349,7 +349,7 @@
         <p style="color: #888; font-size: 14px; margin-bottom: 20px;">v10.2 - Online Edition</p>
         <h2>Select a Map</h2>
         <div class="maps-container" id="mapsContainer"></div>
-        <button onclick="deleteAllTimes()" style="position: fixed; top: 20px; right: 20px; padding: 12px 20px; background: rgba(255, 0, 0, 0.7); color: white; border: 2px solid #ff4444; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; transition: all 0.3s;">🗑 Delete All Times</button>
+        <button onclick="deleteAllTimes()" style="position: fixed; top: 20px; left: 20px; padding: 12px 20px; background: rgba(255, 0, 0, 0.7); color: white; border: 2px solid #ff4444; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; transition: all 0.3s;">🗑 Delete All Times</button>
         <a href="creator.html" style="position: fixed; bottom: 20px; left: 20px; padding: 12px 20px; background: rgba(79, 172, 254, 0.3); color: #4facfe; border: 2px solid #4facfe; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 16px; transition: all 0.3s;">📝 Level Creator</a>
     </div>
 
@@ -1018,15 +1018,10 @@
         }
 
         async function deleteAllTimes() {
-            const password = prompt('⚠️ This will delete all your times from all maps.\n\nEnter your password to confirm:');
-            if (!password) return;
+            const confirm = window.confirm('⚠️ This will delete all your times from all maps.\n\nAre you sure?');
+            if (!confirm) return;
 
             try {
-                const email = currentUser.email;
-                const credential = firebase.auth.EmailAuthProvider.credential(email, password);
-
-                await currentUser.reauthenticateWithCredential(credential);
-
                 const uid = currentUser.uid;
 
                 // Delete all times history
@@ -1044,11 +1039,7 @@
                 alert('All times deleted successfully!');
                 window.location.reload();
             } catch (error) {
-                if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-                    alert('Incorrect password');
-                } else {
-                    alert('Error deleting times. Please try again.');
-                }
+                alert('Error deleting times. Please try again.');
             }
         }
 
