@@ -201,6 +201,8 @@
             <button class="tool-button" onclick="setTool('hazard')">🟥 Hazard (Kill)</button>
             <button class="tool-button" onclick="setTool('start')">🟢 Start Position</button>
             <button class="tool-button" onclick="setTool('finish')">🏁 Finish Line</button>
+            <button class="tool-button" onclick="setTool('player')">👤 Player (40x40)</button>
+            <button class="tool-button" onclick="setTool('select')">✋ Select/Move</button>
             <button class="tool-button delete" onclick="setTool('delete')">🗑 Delete</button>
         </div>
 
@@ -214,30 +216,30 @@
         </div>
 
         <div class="section">
-            <h3>Physics Testing</h3>
-            <div class="slider-group">
-                <label>Gravity: <span class="value" id="gravityValue">0.125</span></label>
-                <input type="range" min="0" max="0.5" step="0.001" value="0.125" id="gravity" oninput="updatePhysics()">
+            <h3>Camera Navigation</h3>
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <div style="flex: 1;">
+                    <label style="font-size: 12px; color: #ccc; display: block; margin-bottom: 5px;">X:</label>
+                    <input type="number" id="camX" value="0" placeholder="X">
+                </div>
+                <div style="flex: 1;">
+                    <label style="font-size: 12px; color: #ccc; display: block; margin-bottom: 5px;">Y:</label>
+                    <input type="number" id="camY" value="0" placeholder="Y">
+                </div>
             </div>
-            <div class="slider-group">
-                <label>Move Speed: <span class="value" id="moveSpeedValue">0.25</span></label>
-                <input type="range" min="0.1" max="1" step="0.01" value="0.25" id="moveSpeed" oninput="updatePhysics()">
-            </div>
-            <div class="slider-group">
-                <label>Jump Power: <span class="value" id="jumpPowerValue">5.9</span></label>
-                <input type="range" min="3" max="10" step="0.1" value="5.9" id="jumpPower" oninput="updatePhysics()">
-            </div>
-            <div class="slider-group">
-                <label>Max Speed: <span class="value" id="maxSpeedValue">2.5</span></label>
-                <input type="range" min="1" max="5" step="0.1" value="2.5" id="maxSpeed" oninput="updatePhysics()">
-            </div>
-            <div class="slider-group">
-                <label>Ground Friction: <span class="value" id="frictionValue">0.82</span></label>
-                <input type="range" min="0.5" max="0.99" step="0.01" value="0.82" id="friction" oninput="updatePhysics()">
-            </div>
-            <div class="slider-group">
-                <label>Air Resistance: <span class="value" id="airResValue">0.88</span></label>
-                <input type="range" min="0.5" max="0.99" step="0.01" value="0.88" id="airRes" oninput="updatePhysics()">
+            <button onclick="goToCoordinates()" style="width: 100%; padding: 8px; font-size: 12px;">Go to Coordinates</button>
+        </div>
+
+        <div class="section">
+            <h3>Physics Info</h3>
+            <div class="stats" style="line-height: 1.8;">
+                <div>Gravity: <span style="color: #4facfe;">0.028</span></div>
+                <div>Move Speed: <span style="color: #4facfe;">1.0</span></div>
+                <div>Jump Power: <span style="color: #4facfe;">3.0</span></div>
+                <div>Max Speed: <span style="color: #4facfe;">1.0</span></div>
+                <div>Ground Friction: <span style="color: #4facfe;">0.94</span></div>
+                <div>Air Resistance: <span style="color: #4facfe;">0.99</span></div>
+                <div style="margin-top: 10px; color: #FFC107;">Jump Height: ~160px</div>
             </div>
         </div>
 
@@ -288,20 +290,24 @@
         let isDrawing = false;
         let dragStart = null;
         let currentRect = null;
+        let selectedBlock = null;
+        let isDraggingBlock = false;
+        let dragOffset = { x: 0, y: 0 };
+        let playerPreview = { x: 0, y: 0, visible: false };
 
         // Camera
         let cameraX = 0;
         let cameraY = 0;
         let zoom = 1;
 
-        // Physics settings
-        let physics = {
-            gravity: 0.125,
-            moveSpeed: 0.25,
-            jumpPower: 5.9,
-            maxSpeed: 2.5,
-            friction: 0.82,
-            airRes: 0.88
+        // Physics settings (fixed values)
+        const physics = {
+            gravity: 0.028,
+            moveSpeed: 1,
+            jumpPower: 3,
+            maxSpeed: 1,
+            friction: 0.94,
+            airRes: 0.99
         };
 
         // Test mode
@@ -322,21 +328,7 @@
             draw();
         }
 
-        function updatePhysics() {
-            physics.gravity = parseFloat(document.getElementById('gravity').value);
-            physics.moveSpeed = parseFloat(document.getElementById('moveSpeed').value);
-            physics.jumpPower = parseFloat(document.getElementById('jumpPower').value);
-            physics.maxSpeed = parseFloat(document.getElementById('maxSpeed').value);
-            physics.friction = parseFloat(document.getElementById('friction').value);
-            physics.airRes = parseFloat(document.getElementById('airRes').value);
-
-            document.getElementById('gravityValue').textContent = physics.gravity.toFixed(3);
-            document.getElementById('moveSpeedValue').textContent = physics.moveSpeed.toFixed(2);
-            document.getElementById('jumpPowerValue').textContent = physics.jumpPower.toFixed(1);
-            document.getElementById('maxSpeedValue').textContent = physics.maxSpeed.toFixed(1);
-            document.getElementById('frictionValue').textContent = physics.friction.toFixed(2);
-            document.getElementById('airResValue').textContent = physics.airRes.toFixed(2);
-        }
+        // Physics are now fixed, no need for update function
 
         function snapToGrid(value) {
             return Math.round(value / gridSize) * gridSize;
@@ -362,7 +354,34 @@
             const rect = canvas.getBoundingClientRect();
             const worldPos = screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
 
-            if (currentTool === 'delete') {
+            if (currentTool === 'select') {
+                // Check if clicking on an existing block
+                selectedBlock = null;
+                for (let i = platforms.length - 1; i >= 0; i--) {
+                    const p = platforms[i];
+                    if (worldPos.x >= p.x && worldPos.x <= p.x + p.width &&
+                        worldPos.y >= p.y && worldPos.y <= p.y + p.height) {
+                        selectedBlock = { type: 'platform', index: i, obj: p };
+                        isDraggingBlock = true;
+                        dragOffset.x = worldPos.x - p.x;
+                        dragOffset.y = worldPos.y - p.y;
+                        break;
+                    }
+                }
+                if (!selectedBlock) {
+                    for (let i = hazards.length - 1; i >= 0; i--) {
+                        const h = hazards[i];
+                        if (worldPos.x >= h.x && worldPos.x <= h.x + h.width &&
+                            worldPos.y >= h.y && worldPos.y <= h.y + h.height) {
+                            selectedBlock = { type: 'hazard', index: i, obj: h };
+                            isDraggingBlock = true;
+                            dragOffset.x = worldPos.x - h.x;
+                            dragOffset.y = worldPos.y - h.y;
+                            break;
+                        }
+                    }
+                }
+            } else if (currentTool === 'delete') {
                 deleteAtPosition(worldPos.x, worldPos.y);
             } else if (currentTool === 'start') {
                 startPos.x = snapToGrid(worldPos.x);
@@ -371,6 +390,11 @@
             } else if (currentTool === 'finish') {
                 finishPos.x = snapToGrid(worldPos.x);
                 finishPos.y = snapToGrid(worldPos.y);
+                draw();
+            } else if (currentTool === 'player') {
+                playerPreview.x = snapToGrid(worldPos.x);
+                playerPreview.y = snapToGrid(worldPos.y);
+                playerPreview.visible = true;
                 draw();
             } else {
                 isDrawing = true;
@@ -382,24 +406,39 @@
         });
 
         canvas.addEventListener('mousemove', (e) => {
-            if (!isDrawing || testMode) return;
+            if (testMode) return;
 
             const rect = canvas.getBoundingClientRect();
             const worldPos = screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
-            const endX = snapToGrid(worldPos.x);
-            const endY = snapToGrid(worldPos.y);
 
-            currentRect = {
-                x: Math.min(dragStart.x, endX),
-                y: Math.min(dragStart.y, endY),
-                width: Math.abs(endX - dragStart.x) + gridSize,
-                height: Math.abs(endY - dragStart.y) + gridSize
-            };
+            if (isDraggingBlock && selectedBlock) {
+                const newX = snapToGrid(worldPos.x - dragOffset.x);
+                const newY = snapToGrid(worldPos.y - dragOffset.y);
+                selectedBlock.obj.x = newX;
+                selectedBlock.obj.y = newY;
+                draw();
+            } else if (isDrawing) {
+                const endX = snapToGrid(worldPos.x);
+                const endY = snapToGrid(worldPos.y);
 
-            draw();
+                currentRect = {
+                    x: Math.min(dragStart.x, endX),
+                    y: Math.min(dragStart.y, endY),
+                    width: Math.abs(endX - dragStart.x) + gridSize,
+                    height: Math.abs(endY - dragStart.y) + gridSize
+                };
+
+                draw();
+            }
         });
 
         canvas.addEventListener('mouseup', (e) => {
+            if (isDraggingBlock) {
+                isDraggingBlock = false;
+                selectedBlock = null;
+                updateLevelData();
+            }
+
             if (!isDrawing || testMode) return;
 
             if (currentRect && currentRect.width > 0 && currentRect.height > 0) {
@@ -474,6 +513,20 @@
             ctx.scale(zoom, zoom);
             ctx.translate(-cameraX, -cameraY);
 
+            // Coordinate plane axes
+            ctx.strokeStyle = 'rgba(79, 172, 254, 0.5)';
+            ctx.lineWidth = 2 / zoom;
+            // X-axis (y=0)
+            ctx.beginPath();
+            ctx.moveTo(cameraX, 0);
+            ctx.lineTo(cameraX + canvas.width / zoom, 0);
+            ctx.stroke();
+            // Y-axis (x=0)
+            ctx.beginPath();
+            ctx.moveTo(0, cameraY);
+            ctx.lineTo(0, cameraY + canvas.height / zoom);
+            ctx.stroke();
+
             // Grid
             ctx.strokeStyle = 'rgba(255,255,255,0.1)';
             ctx.lineWidth = 1 / zoom;
@@ -494,6 +547,22 @@
                 ctx.moveTo(startGridX, y);
                 ctx.lineTo(endGridX, y);
                 ctx.stroke();
+            }
+
+            // Coordinate labels
+            ctx.fillStyle = '#4facfe';
+            ctx.font = `${12 / zoom}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            // X-axis labels
+            for (let x = Math.ceil(cameraX / 100) * 100; x < cameraX + canvas.width / zoom; x += 100) {
+                ctx.fillText(x.toString(), x, 0 - 5 / zoom);
+            }
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            // Y-axis labels
+            for (let y = Math.ceil(cameraY / 100) * 100; y < cameraY + canvas.height / zoom; y += 100) {
+                ctx.fillText(y.toString(), 0 + 5 / zoom, y);
             }
 
             // Platforms
@@ -537,6 +606,24 @@
             ctx.lineWidth = 2 / zoom;
             ctx.strokeRect(finishPos.x, finishPos.y, finishPos.width, finishPos.height);
 
+            // Player preview (40x40 reference)
+            if (playerPreview.visible) {
+                ctx.fillStyle = 'rgba(255, 165, 0, 0.5)';
+                ctx.fillRect(playerPreview.x, playerPreview.y, 40, 40);
+                ctx.strokeStyle = '#FFA500';
+                ctx.lineWidth = 2 / zoom;
+                ctx.strokeRect(playerPreview.x, playerPreview.y, 40, 40);
+            }
+
+            // Selected block highlight
+            if (selectedBlock && isDraggingBlock) {
+                ctx.strokeStyle = '#FFD700';
+                ctx.lineWidth = 3 / zoom;
+                ctx.setLineDash([10 / zoom, 5 / zoom]);
+                ctx.strokeRect(selectedBlock.obj.x, selectedBlock.obj.y, selectedBlock.obj.width, selectedBlock.obj.height);
+                ctx.setLineDash([]);
+            }
+
             // Player in test mode
             if (testMode) {
                 ctx.fillStyle = '#FF5722';
@@ -547,6 +634,16 @@
             }
 
             ctx.restore();
+        }
+
+        function goToCoordinates() {
+            const x = parseFloat(document.getElementById('camX').value) || 0;
+            const y = parseFloat(document.getElementById('camY').value) || 0;
+            cameraX = x;
+            cameraY = y;
+            document.getElementById('cameraInfo').textContent =
+                `Camera: ${Math.round(cameraX)}, ${Math.round(cameraY)} | Zoom: ${zoom.toFixed(1)}x`;
+            draw();
         }
 
         // Camera movement with WASD
@@ -722,7 +819,6 @@
         });
 
         // Initial draw
-        updatePhysics();
         updateLevelData();
         draw();
     </script>

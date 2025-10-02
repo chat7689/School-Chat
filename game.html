@@ -475,14 +475,14 @@
         let personalBests = {};
 
         // Constants
-        const GRAVITY = 0.125;
-        const MOVE_SPEED = 0.25;
+        const GRAVITY = 0.028;
+        const MOVE_SPEED = 1;
         const BOOST_MOVE_SPEED = 0.5;  // Speed when holding SPACE
-        const MAX_SPEED = 2.5;
+        const MAX_SPEED = 1;
         const MAX_BOOST_SPEED = 4.0;  // Max speed when boosting
-        const AIR_RESISTANCE = 0.88;
-        const GROUND_FRICTION = 0.82;
-        const JUMP_POWER = 5.9;
+        const AIR_RESISTANCE = 0.99;
+        const GROUND_FRICTION = 0.94;
+        const JUMP_POWER = 3;
         const ENERGY_COST_PER_FRAME = 1.5;  // Energy cost per frame while boosting
         const ENERGY_REGEN_RATE = 0.15;  // Energy regeneration per frame
         const MAX_ENERGY = 100;
@@ -490,37 +490,49 @@
         // Map definitions
         const maps = [
             {
-                id: 'starter',
-                name: 'The Staircase',
-                difficulty: 'Easy',
-                description: 'A simple ascent',
+                id: 'custom_level',
+                name: 'Custom Level',
+                difficulty: 'Custom',
+                description: 'A custom designed level',
                 platforms: [
-                    // Floor
-                    { x: 0, y: 570, width: 1800, height: 30 },
-                    // Left wall
-                    { x: 0, y: 0, width: 20, height: 600 },
-                    // Right wall
-                    { x: 1780, y: 0, width: 20, height: 600 },
-                    // Ceiling
-                    { x: 0, y: 0, width: 1800, height: 20 },
-                    // Staircase platforms
-                    { x: 200, y: 520, width: 200, height: 20 },
-                    { x: 400, y: 470, width: 200, height: 20 },
-                    { x: 600, y: 420, width: 200, height: 20 },
-                    { x: 800, y: 370, width: 200, height: 20 },
-                    { x: 1000, y: 320, width: 200, height: 20 },
-                    { x: 1200, y: 270, width: 200, height: 20 },
-                    { x: 1400, y: 220, width: 200, height: 20 }
+                    { x: 0, y: 400, width: 40, height: 200 },
+                    { x: 40, y: 560, width: 520, height: 40 },
+                    { x: 240, y: 440, width: 80, height: 40 },
+                    { x: 320, y: 320, width: 80, height: 40 },
+                    { x: 240, y: 200, width: 80, height: 40 },
+                    { x: 320, y: 80, width: 80, height: 40 },
+                    { x: 160, y: -80, width: 360, height: 40 },
+                    { x: 480, y: -40, width: 40, height: 480 },
+                    { x: -240, y: 160, width: 400, height: 40 },
+                    { x: -80, y: 40, width: 40, height: 160 },
+                    { x: -160, y: -80, width: 320, height: 40 },
+                    { x: -200, y: -80, width: 40, height: 200 },
+                    { x: -320, y: 80, width: 120, height: 40 },
+                    { x: -320, y: 120, width: 40, height: 240 },
+                    { x: -240, y: 480, width: 40, height: 40 },
+                    { x: 0, y: 720, width: 40, height: 40 },
+                    { x: 160, y: 720, width: 40, height: 40 },
+                    { x: 560, y: 320, width: 40, height: 280 },
+                    { x: 160, y: 40, width: 80, height: 40 },
+                    { x: 440, y: 680, width: 40, height: 40 },
+                    { x: 600, y: 520, width: 240, height: 40 },
+                    { x: 480, y: 640, width: 440, height: 40 },
+                    { x: 920, y: 320, width: 40, height: 360 },
+                    { x: 600, y: 320, width: 320, height: 40 },
+                    { x: 320, y: 760, width: 120, height: 40 }
                 ],
                 hazards: [
-                    { x: 200, y: 570, width: 200, height: 10 },
-                    { x: 600, y: 570, width: 200, height: 10 },
-                    { x: 1000, y: 570, width: 200, height: 10 },
-                    { x: 1400, y: 570, width: 200, height: 10 }
+                    { x: 200, y: 80, width: 40, height: 80 },
+                    { x: 0, y: 360, width: 40, height: 40 },
+                    { x: -520, y: 800, width: 1560, height: 80 }
                 ],
-                start: { x: 50, y: 520 },
-                finish: { x: 1500, y: 170, width: 100, height: 50 }
-            },
+                start: { x: 80, y: 480 },
+                finish: { x: 700, y: 470, width: 100, height: 50 }
+            }
+        ];
+
+        // Old maps removed - now using single custom level
+        /*
             {
                 id: 'spike_path',
                 name: 'The Zigzag',
@@ -903,7 +915,7 @@
                 start: { x: 20, y: 500 },
                 finish: { x: 4120, y: 340, width: 50, height: 50 }
             }
-        ];
+        */
 
         // Check authentication
         auth.onAuthStateChanged(async (user) => {
