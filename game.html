@@ -889,10 +889,13 @@
                 const userData = userSnapshot.val();
                 currentUsername = userData ? userData.username : 'Player';
 
-                // Admin email - must match console.html
-                const ADMIN_EMAIL = 'malonetobinkai@gmail.com';
+                // Admin emails - must match console.html
+                const ADMIN_EMAILS = [
+                    'malonetobinkai@gmail.com',
+                    'tmalone01@4j.lane.edu'
+                ];
 
-                const consoleButton = user.email === ADMIN_EMAIL ?
+                const consoleButton = ADMIN_EMAILS.includes(user.email) ?
                     '<button onclick="window.location.href=\'console.html\'" class="main-page-btn">Console</button>' : '';
 
                 document.getElementById('userInfo').innerHTML = `

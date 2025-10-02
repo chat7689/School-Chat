@@ -172,8 +172,11 @@
         let currentUser = null;
         let currentUsername = '';
 
-        // Admin email for verification
-        const ADMIN_EMAIL = 'malonetobinkai@gmail.com';
+        // Admin emails for verification
+        const ADMIN_EMAILS = [
+            'malonetobinkai@gmail.com',
+            'tmalone01@4j.lane.edu'
+        ];
 
         auth.onAuthStateChanged(async (user) => {
             if (!user) {
@@ -181,8 +184,8 @@
             } else {
                 currentUser = user;
 
-                // Check if user's email matches admin email
-                if (user.email !== ADMIN_EMAIL) {
+                // Check if user's email is in admin list
+                if (!ADMIN_EMAILS.includes(user.email)) {
                     alert('Access Denied: This console is restricted to administrators only.');
                     window.location.href = 'game.html';
                     return;
@@ -191,9 +194,10 @@
                 const userSnapshot = await database.ref('users/' + user.uid).once('value');
                 const userData = userSnapshot.val();
                 currentUsername = userData ? userData.username : 'Player';
-                document.getElementById('username').textContent = `👤 ${currentUsername}`;
+                document.getElementById('username').textContent = `👤 ${currentUsername} (ADMIN)`;
 
                 addOutput('✅ Admin access granted', 'success');
+                addOutput('⚠️  This is a global admin console - commands affect ALL users', 'warning');
             }
         });
 
@@ -219,13 +223,15 @@
 
             switch (mainCommand) {
                 case '/help':
-                    addOutput('Available commands:', 'info');
+                    addOutput('Available Admin Commands:', 'info');
                     addOutput('  /help - Show this help message', 'info');
-                    addOutput('  /delete all - Delete all your times (requires password)', 'warning');
-                    addOutput('  /delete [mapid] - Delete time for specific map (requires password)', 'warning');
-                    addOutput('  /list - List all your times', 'info');
+                    addOutput('  /delete all - Delete all YOUR times (requires password)', 'warning');
+                    addOutput('  /delete [mapid] - Delete YOUR time for specific map (requires password)', 'warning');
+                    addOutput('  /purge all - DELETE ALL TIMES FROM ALL USERS (requires password)', 'error');
+                    addOutput('  /purge [mapid] - Delete all times for specific map from all users', 'error');
+                    addOutput('  /list - List all YOUR times', 'info');
                     addOutput('  /clear - Clear console output', 'info');
-                    addOutput('  /whoami - Show current user info', 'info');
+                    addOutput('  /whoami - Show current admin info', 'info');
                     break;
 
                 case '/delete':
@@ -235,6 +241,16 @@
                         await deleteMapTime(parts[1]);
                     } else {
                         addOutput('Usage: /delete all OR /delete [mapid]', 'error');
+                    }
+                    break;
+
+                case '/purge':
+                    if (parts[1] === 'all') {
+                        await purgeAllTimes();
+                    } else if (parts[1]) {
+                        await purgeMapTimes(parts[1]);
+                    } else {
+                        addOutput('Usage: /purge all OR /purge [mapid]', 'error');
                     }
                     break;
 
@@ -349,6 +365,78 @@
 
             if (!foundAny) {
                 addOutput('No times found.', 'warning');
+            }
+        }
+
+        async function purgeAllTimes() {
+            const confirmation = prompt('⚠️ CRITICAL WARNING: This will DELETE ALL TIMES FROM ALL USERS!\n\nType "DELETE ALL" to confirm:');
+            if (confirmation !== 'DELETE ALL') {
+                addOutput('Purge cancelled.', 'warning');
+                return;
+            }
+
+            const password = prompt('Enter your password to confirm:');
+            if (!password) {
+                addOutput('Purge cancelled.', 'warning');
+                return;
+            }
+
+            try {
+                const email = currentUser.email;
+                const credential = firebase.auth.EmailAuthProvider.credential(email, password);
+                await currentUser.reauthenticateWithCredential(credential);
+
+                // Delete all leaderboards
+                await database.ref('leaderboards').remove();
+                await database.ref('scores').remove();
+
+                addOutput('✅ Successfully purged all times from all users', 'success');
+            } catch (error) {
+                if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                    addOutput('Incorrect password.', 'error');
+                } else {
+                    addOutput('Error: ' + error.message, 'error');
+                }
+            }
+        }
+
+        async function purgeMapTimes(mapId) {
+            const confirmation = prompt(`⚠️ WARNING: This will delete ALL times for map "${mapId}" from ALL users.\n\nType "PURGE" to confirm:`);
+            if (confirmation !== 'PURGE') {
+                addOutput('Purge cancelled.', 'warning');
+                return;
+            }
+
+            const password = prompt('Enter your password to confirm:');
+            if (!password) {
+                addOutput('Purge cancelled.', 'warning');
+                return;
+            }
+
+            try {
+                const email = currentUser.email;
+                const credential = firebase.auth.EmailAuthProvider.credential(email, password);
+                await currentUser.reauthenticateWithCredential(credential);
+
+                // Count times before deletion
+                const leaderboardSnapshot = await database.ref('leaderboards/' + mapId).once('value');
+                const count = leaderboardSnapshot.numChildren();
+
+                if (count === 0) {
+                    addOutput(`No times found for map: ${mapId}`, 'warning');
+                    return;
+                }
+
+                await database.ref('leaderboards/' + mapId).remove();
+                await database.ref('scores/' + mapId).remove();
+
+                addOutput(`✅ Successfully deleted ${count} time(s) for map: ${mapId}`, 'success');
+            } catch (error) {
+                if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                    addOutput('Incorrect password.', 'error');
+                } else {
+                    addOutput('Error: ' + error.message, 'error');
+                }
             }
         }
 
