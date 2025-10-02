@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Console - Speedrun</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #1a1a1a;
+            font-family: 'Courier New', monospace;
+            color: #00ff00;
+            padding: 20px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #00ff00;
+        }
+
+        .header h1 {
+            color: #00ff00;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .username {
+            color: #888;
+            font-size: 14px;
+        }
+
+        .output-container {
+            flex: 1;
+            overflow-y: auto;
+            background: #000;
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .output-line {
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .output-line.info {
+            color: #00ff00;
+        }
+
+        .output-line.error {
+            color: #ff0000;
+        }
+
+        .output-line.warning {
+            color: #ffaa00;
+        }
+
+        .output-line.success {
+            color: #00ffff;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        .prompt {
+            color: #00ff00;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+        }
+
+        #commandInput {
+            flex: 1;
+            background: #000;
+            border: 2px solid #00ff00;
+            color: #00ff00;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+
+        #commandInput:focus {
+            outline: none;
+            border-color: #00ffff;
+        }
+
+        .nav-buttons {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .nav-buttons button {
+            margin: 0 10px;
+            padding: 10px 20px;
+            background: rgba(0, 255, 0, 0.2);
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s;
+        }
+
+        .nav-buttons button:hover {
+            background: rgba(0, 255, 0, 0.4);
+        }
+
+        .help-text {
+            color: #888;
+            font-size: 12px;
+            margin-top: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⚡ SPEEDRUN CONSOLE ⚡</h1>
+        <div class="username" id="username">Loading...</div>
+    </div>
+
+    <div class="output-container" id="output">
+        <div class="output-line info">Console initialized. Type /help for available commands.</div>
+    </div>
+
+    <div class="input-container">
+        <div class="prompt">></div>
+        <input type="text" id="commandInput" placeholder="Enter command..." autofocus>
+    </div>
+
+    <div class="help-text">Press Enter to execute command | ESC to clear input</div>
+
+    <div class="nav-buttons">
+        <button onclick="window.location.href='game.html'">Back to Game</button>
+        <button onclick="window.location.href='times.html'">My Times</button>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBLkFMipRS631fDNr8uwgozmxXBnqLd5_o",
+            authDomain: "base-control-b391e.firebaseapp.com",
+            databaseURL: "https://base-control-b391e-default-rtdb.firebaseio.com",
+            projectId: "base-control-b391e",
+            storageBucket: "base-control-b391e.firebasestorage.app",
+            messagingSenderId: "116375376675",
+            appId: "1:116375376675:web:cdc8688222c7c35accf296",
+            measurementId: "G-JY7P6D49HM"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+
+        let currentUser = null;
+        let currentUsername = '';
+
+        auth.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+            } else {
+                currentUser = user;
+                const userSnapshot = await database.ref('users/' + user.uid).once('value');
+                const userData = userSnapshot.val();
+                currentUsername = userData ? userData.username : 'Player';
+                document.getElementById('username').textContent = `👤 ${currentUsername}`;
+            }
+        });
+
+        const commandInput = document.getElementById('commandInput');
+        const outputContainer = document.getElementById('output');
+
+        function addOutput(message, type = 'info') {
+            const line = document.createElement('div');
+            line.className = `output-line ${type}`;
+            line.textContent = message;
+            outputContainer.appendChild(line);
+            outputContainer.scrollTop = outputContainer.scrollHeight;
+        }
+
+        async function executeCommand(cmd) {
+            const command = cmd.trim().toLowerCase();
+            addOutput(`> ${cmd}`, 'info');
+
+            if (!command) return;
+
+            const parts = command.split(' ');
+            const mainCommand = parts[0];
+
+            switch (mainCommand) {
+                case '/help':
+                    addOutput('Available commands:', 'info');
+                    addOutput('  /help - Show this help message', 'info');
+                    addOutput('  /delete all - Delete all your times (requires password)', 'warning');
+                    addOutput('  /delete [mapid] - Delete time for specific map (requires password)', 'warning');
+                    addOutput('  /list - List all your times', 'info');
+                    addOutput('  /clear - Clear console output', 'info');
+                    addOutput('  /whoami - Show current user info', 'info');
+                    break;
+
+                case '/delete':
+                    if (parts[1] === 'all') {
+                        await deleteAllTimes();
+                    } else if (parts[1]) {
+                        await deleteMapTime(parts[1]);
+                    } else {
+                        addOutput('Usage: /delete all OR /delete [mapid]', 'error');
+                    }
+                    break;
+
+                case '/list':
+                    await listTimes();
+                    break;
+
+                case '/clear':
+                    outputContainer.innerHTML = '<div class="output-line info">Console cleared.</div>';
+                    break;
+
+                case '/whoami':
+                    addOutput(`User: ${currentUsername}`, 'success');
+                    addOutput(`UID: ${currentUser.uid}`, 'success');
+                    addOutput(`Email: ${currentUser.email}`, 'success');
+                    break;
+
+                default:
+                    addOutput(`Unknown command: ${mainCommand}. Type /help for available commands.`, 'error');
+            }
+        }
+
+        async function deleteAllTimes() {
+            const password = prompt('⚠️ WARNING: This will delete ALL your times.\n\nEnter your password to confirm:');
+            if (!password) {
+                addOutput('Delete cancelled.', 'warning');
+                return;
+            }
+
+            try {
+                const email = currentUser.email;
+                const credential = firebase.auth.EmailAuthProvider.credential(email, password);
+                await currentUser.reauthenticateWithCredential(credential);
+
+                // Get all maps
+                const leaderboardsSnapshot = await database.ref('leaderboards').once('value');
+                const maps = [];
+
+                leaderboardsSnapshot.forEach((mapSnapshot) => {
+                    const mapId = mapSnapshot.key;
+                    if (mapSnapshot.child(currentUser.uid).exists()) {
+                        maps.push(mapId);
+                    }
+                });
+
+                if (maps.length === 0) {
+                    addOutput('No times found to delete.', 'warning');
+                    return;
+                }
+
+                // Delete all times
+                for (const mapId of maps) {
+                    await database.ref('leaderboards/' + mapId + '/' + currentUser.uid).remove();
+                    await database.ref('scores/' + mapId + '/' + currentUser.uid).remove();
+                }
+
+                addOutput(`Successfully deleted ${maps.length} time(s).`, 'success');
+            } catch (error) {
+                if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                    addOutput('Incorrect password.', 'error');
+                } else {
+                    addOutput('Error: ' + error.message, 'error');
+                }
+            }
+        }
+
+        async function deleteMapTime(mapId) {
+            const password = prompt(`Enter your password to delete time for map: ${mapId}`);
+            if (!password) {
+                addOutput('Delete cancelled.', 'warning');
+                return;
+            }
+
+            try {
+                const email = currentUser.email;
+                const credential = firebase.auth.EmailAuthProvider.credential(email, password);
+                await currentUser.reauthenticateWithCredential(credential);
+
+                const timeSnapshot = await database.ref('leaderboards/' + mapId + '/' + currentUser.uid).once('value');
+                if (!timeSnapshot.exists()) {
+                    addOutput(`No time found for map: ${mapId}`, 'warning');
+                    return;
+                }
+
+                await database.ref('leaderboards/' + mapId + '/' + currentUser.uid).remove();
+                await database.ref('scores/' + mapId + '/' + currentUser.uid).remove();
+
+                addOutput(`Successfully deleted time for map: ${mapId}`, 'success');
+            } catch (error) {
+                if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                    addOutput('Incorrect password.', 'error');
+                } else {
+                    addOutput('Error: ' + error.message, 'error');
+                }
+            }
+        }
+
+        async function listTimes() {
+            const leaderboardsSnapshot = await database.ref('leaderboards').once('value');
+            let foundAny = false;
+
+            leaderboardsSnapshot.forEach((mapSnapshot) => {
+                const mapId = mapSnapshot.key;
+                const timeData = mapSnapshot.child(currentUser.uid).val();
+
+                if (timeData) {
+                    foundAny = true;
+                    const time = formatTime(timeData.time);
+                    addOutput(`${mapId}: ${time}`, 'success');
+                }
+            });
+
+            if (!foundAny) {
+                addOutput('No times found.', 'warning');
+            }
+        }
+
+        function formatTime(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            const milliseconds = ms % 1000;
+            return `${minutes}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0')}`;
+        }
+
+        // Event listeners
+        commandInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const cmd = commandInput.value;
+                executeCommand(cmd);
+                commandInput.value = '';
+            } else if (e.key === 'Escape') {
+                commandInput.value = '';
+            }
+        });
+    </script>
+</body>
+</html>
