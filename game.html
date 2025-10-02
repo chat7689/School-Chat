@@ -463,10 +463,11 @@
 
         // Constants
         const GRAVITY = 0.125;
-        const ACCELERATION = 0.15;  // How much velocity increases per frame
-        const BOOST_ACCELERATION = 0.3;  // Acceleration when holding SPACE
+        const ACCELERATION = 0.0375;  // How much velocity increases per frame (quarter of 0.15)
+        const BOOST_ACCELERATION = 0.075;  // Acceleration when holding SPACE (quarter of 0.3)
         const MAX_SPEED = 4.0;
         const MAX_BOOST_SPEED = 6.0;  // Max speed when boosting
+        const FRICTION = 0.98;  // Small friction (closer to 1 = less friction)
         const JUMP_POWER = 5.9;
         const ENERGY_COST_PER_FRAME = 1.5;  // Energy cost per frame while boosting
         const ENERGY_REGEN_RATE = 0.15;  // Energy regeneration per frame
@@ -1224,6 +1225,9 @@
             if ((keys['ArrowUp'] || keys['KeyW']) && isGrounded) {
                 player.velocityY = -JUMP_POWER;
             }
+
+            // Apply friction
+            player.velocityX *= FRICTION;
 
             // Use different max speed based on boost
             const maxSpeed = isBoosting ? MAX_BOOST_SPEED : MAX_SPEED;
