@@ -80,6 +80,14 @@
             background: rgba(255,0,0,0.9);
         }
 
+        .main-page-btn {
+            background: rgba(79, 172, 254, 0.7) !important;
+        }
+
+        .main-page-btn:hover {
+            background: rgba(79, 172, 254, 0.9) !important;
+        }
+
         #controls {
             position: absolute;
             bottom: 20px;
@@ -122,8 +130,8 @@
 
         #velocityIndicator {
             position: absolute;
-            top: 20px;
-            left: 20px;
+            bottom: 20px;
+            right: 20px;
             width: 120px;
             height: 120px;
             z-index: 10;
@@ -883,6 +891,7 @@
 
                 document.getElementById('userInfo').innerHTML = `
                     <div style="font-size: 18px; font-weight: bold;">👤 ${currentUsername}</div>
+                    <button onclick="window.location.href='index.html'" class="main-page-btn">Main Page</button>
                     <button onclick="logout()">Logout</button>
                 `;
                 loadUserStats();
@@ -1025,7 +1034,15 @@
 
             // 3 second countdown before starting
             let countdown = 3;
+            let countdownActive = true;
             document.getElementById('timer').textContent = countdown.toString();
+
+            // Draw during countdown to show player position
+            const countdownDrawInterval = setInterval(() => {
+                if (countdownActive) {
+                    draw();
+                }
+            }, 16);
 
             const countdownInterval = setInterval(() => {
                 countdown--;
@@ -1035,6 +1052,8 @@
                     document.getElementById('timer').textContent = 'GO!';
                 } else {
                     clearInterval(countdownInterval);
+                    clearInterval(countdownDrawInterval);
+                    countdownActive = false;
 
                     // Start the actual game
                     startTime = Date.now();
@@ -1374,6 +1393,8 @@
 
         // Restart map
         function restartMap() {
+            gameActive = false;
+            clearInterval(timerInterval);
             document.getElementById('finishScreen').style.display = 'none';
             if (currentMap) {
                 startMap(currentMap);
