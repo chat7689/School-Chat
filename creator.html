@@ -843,8 +843,12 @@
         }
 
         function updatePlayer() {
-            // Gravity
-            player.velocityY += physics.gravity;
+            // Gravity (with fast fall)
+            if ((keys['KeyS'] || keys['ArrowDown']) && !isGrounded) {
+                player.velocityY += physics.gravity * 3;  // Fall 3x faster
+            } else {
+                player.velocityY += physics.gravity;
+            }
 
             // Movement
             if (keys['KeyA'] || keys['ArrowLeft']) {
