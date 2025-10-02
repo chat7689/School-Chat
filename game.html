@@ -363,7 +363,7 @@
     </div>
 
     <div id="gameLeaderboard">
-        <h3>🏆 Leaderboard</h3>
+        <h3>🏆 Global Leaderboard</h3>
         <div id="gameLeaderboardEntries"></div>
     </div>
 
@@ -382,7 +382,6 @@
         <div>
             <button onclick="restartMap()">Retry Map</button>
             <button onclick="backToMenu()" class="secondary">Map Select</button>
-            <button onclick="deleteTime()" class="secondary" style="background: #d32f2f;">Delete Time</button>
         </div>
     </div>
 
@@ -891,6 +890,7 @@
 
                 document.getElementById('userInfo').innerHTML = `
                     <div style="font-size: 18px; font-weight: bold;">👤 ${currentUsername}</div>
+                    <button onclick="window.location.href='times.html'" class="main-page-btn">My Times</button>
                     <button onclick="window.location.href='index.html'" class="main-page-btn">Main Page</button>
                     <button onclick="logout()">Logout</button>
                 `;
@@ -1073,7 +1073,7 @@
         // Load leaderboard for current game
         async function loadGameLeaderboard(mapId) {
             try {
-                const snapshot = await database.ref('scores/' + mapId).orderByChild('time').limitToFirst(10).once('value');
+                const snapshot = await database.ref('scores/' + mapId).orderByChild('time').limitToFirst(100).once('value');
                 const entries = [];
                 snapshot.forEach((child) => {
                     entries.push(child.val());
@@ -1416,44 +1416,6 @@
             initMenu();
         }
 
-        async function deleteTime() {
-            const password = prompt('Enter your password to delete your time:');
-            if (!password) return;
-
-            try {
-                const user = auth.currentUser;
-                if (!user) {
-                    alert('You must be logged in to delete your time');
-                    return;
-                }
-
-                // Re-authenticate user
-                const email = user.email;
-                const credential = firebase.auth.EmailAuthProvider.credential(email, password);
-
-                await user.reauthenticateWithCredential(credential);
-
-                // Delete the time from leaderboard
-                const mapId = currentMap.id;
-                await database.ref('leaderboards/' + mapId + '/' + user.uid).remove();
-
-                alert('Time deleted successfully!');
-
-                // Reload leaderboard
-                loadGameLeaderboard(mapId);
-
-                // Close finish screen and go back to menu
-                backToMenu();
-            } catch (error) {
-                if (error.code === 'auth/wrong-password') {
-                    alert('Incorrect password');
-                } else if (error.code === 'auth/invalid-credential') {
-                    alert('Incorrect password');
-                } else {
-                    alert('Error deleting time: ' + error.message);
-                }
-            }
-        }
 
         // Event listeners
         document.addEventListener('keydown', (e) => {

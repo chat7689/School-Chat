@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Times - Speedrun</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #2c2c2c;
+            font-family: 'Arial', sans-serif;
+            color: white;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #4facfe;
+            margin-bottom: 10px;
+        }
+
+        .username {
+            text-align: center;
+            color: #ccc;
+            margin-bottom: 40px;
+            font-size: 18px;
+        }
+
+        .nav-buttons {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .nav-buttons button {
+            margin: 0 10px;
+            padding: 12px 24px;
+            background: rgba(79, 172, 254, 0.3);
+            color: #4facfe;
+            border: 2px solid #4facfe;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .nav-buttons button:hover {
+            background: rgba(79, 172, 254, 0.5);
+        }
+
+        .times-grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .time-card {
+            background: rgba(0,0,0,0.5);
+            border: 2px solid #4facfe;
+            border-radius: 10px;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .time-info {
+            flex: 1;
+        }
+
+        .map-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4facfe;
+            margin-bottom: 10px;
+        }
+
+        .time-value {
+            font-size: 32px;
+            font-family: 'Courier New', monospace;
+            color: #FFD700;
+            margin-bottom: 5px;
+        }
+
+        .rank-info {
+            color: #ccc;
+            font-size: 14px;
+        }
+
+        .delete-btn {
+            padding: 12px 24px;
+            background: rgba(255, 0, 0, 0.3);
+            color: #ff4444;
+            border: 2px solid #ff4444;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .delete-btn:hover {
+            background: rgba(255, 0, 0, 0.5);
+        }
+
+        .no-times {
+            text-align: center;
+            padding: 60px 20px;
+            color: #888;
+            font-size: 18px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: #4facfe;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 My Times</h1>
+        <div class="username" id="username">Loading...</div>
+
+        <div class="nav-buttons">
+            <button onclick="window.location.href='game.html'">Back to Game</button>
+            <button onclick="window.location.href='index.html'">Main Page</button>
+        </div>
+
+        <div id="loading" class="loading">Loading your times...</div>
+        <div id="times-container" class="times-grid" style="display: none;"></div>
+        <div id="no-times" class="no-times" style="display: none;">You haven't set any times yet. Play the game to set some records!</div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBLkFMipRS631fDNr8uwgozmxXBnqLd5_o",
+            authDomain: "base-control-b391e.firebaseapp.com",
+            databaseURL: "https://base-control-b391e-default-rtdb.firebaseio.com",
+            projectId: "base-control-b391e",
+            storageBucket: "base-control-b391e.firebasestorage.app",
+            messagingSenderId: "116375376675",
+            appId: "1:116375376675:web:cdc8688222c7c35accf296",
+            measurementId: "G-JY7P6D49HM"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+
+        let currentUser = null;
+        let currentUsername = '';
+
+        // Map definitions (same as game.html)
+        const maps = [
+            { id: 'custom_level', name: 'Original Map' }
+        ];
+
+        function formatTime(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            const milliseconds = ms % 1000;
+            return `${minutes}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0')}`;
+        }
+
+        auth.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+            } else {
+                currentUser = user;
+                const userSnapshot = await database.ref('users/' + user.uid).once('value');
+                const userData = userSnapshot.val();
+                currentUsername = userData ? userData.username : 'Player';
+                document.getElementById('username').textContent = `👤 ${currentUsername}`;
+                loadTimes();
+            }
+        });
+
+        async function loadTimes() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('times-container').style.display = 'none';
+            document.getElementById('no-times').style.display = 'none';
+
+            const timesContainer = document.getElementById('times-container');
+            timesContainer.innerHTML = '';
+
+            let hasAnyTimes = false;
+
+            for (const map of maps) {
+                const timeSnapshot = await database.ref('leaderboards/' + map.id + '/' + currentUser.uid).once('value');
+                const timeData = timeSnapshot.val();
+
+                if (timeData) {
+                    hasAnyTimes = true;
+
+                    // Get rank
+                    const leaderboardSnapshot = await database.ref('leaderboards/' + map.id).orderByChild('time').once('value');
+                    const allTimes = [];
+                    leaderboardSnapshot.forEach((child) => {
+                        allTimes.push({ uid: child.key, time: child.val().time });
+                    });
+                    allTimes.sort((a, b) => a.time - b.time);
+                    const rank = allTimes.findIndex(t => t.uid === currentUser.uid) + 1;
+
+                    const card = document.createElement('div');
+                    card.className = 'time-card';
+                    card.innerHTML = `
+                        <div class="time-info">
+                            <div class="map-name">${map.name}</div>
+                            <div class="time-value">${formatTime(timeData.time)}</div>
+                            <div class="rank-info">Rank: #${rank} of ${allTimes.length}</div>
+                        </div>
+                        <button class="delete-btn" onclick="deleteTime('${map.id}', '${map.name}')">Delete</button>
+                    `;
+                    timesContainer.appendChild(card);
+                }
+            }
+
+            document.getElementById('loading').style.display = 'none';
+
+            if (hasAnyTimes) {
+                document.getElementById('times-container').style.display = 'grid';
+            } else {
+                document.getElementById('no-times').style.display = 'block';
+            }
+        }
+
+        async function deleteTime(mapId, mapName) {
+            const password = prompt(`Enter your password to delete your time for ${mapName}:`);
+            if (!password) return;
+
+            try {
+                const email = currentUser.email;
+                const credential = firebase.auth.EmailAuthProvider.credential(email, password);
+
+                await currentUser.reauthenticateWithCredential(credential);
+
+                // Delete the time from leaderboard
+                await database.ref('leaderboards/' + mapId + '/' + currentUser.uid).remove();
+
+                alert('Time deleted successfully!');
+
+                // Reload times
+                loadTimes();
+            } catch (error) {
+                if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                    alert('Incorrect password');
+                } else {
+                    alert('Error deleting time: ' + error.message);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
