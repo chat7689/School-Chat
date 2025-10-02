@@ -374,6 +374,7 @@
         <div>
             <button onclick="restartMap()">Retry Map</button>
             <button onclick="backToMenu()" class="secondary">Map Select</button>
+            <button onclick="deleteTime()" class="secondary" style="background: #d32f2f;">Delete Time</button>
         </div>
     </div>
 
@@ -1392,6 +1393,45 @@
             document.getElementById('velocityIndicator').style.display = 'none';
             document.getElementById('versionLabel').style.display = 'none';
             initMenu();
+        }
+
+        async function deleteTime() {
+            const password = prompt('Enter your password to delete your time:');
+            if (!password) return;
+
+            try {
+                const user = auth.currentUser;
+                if (!user) {
+                    alert('You must be logged in to delete your time');
+                    return;
+                }
+
+                // Re-authenticate user
+                const email = user.email;
+                const credential = firebase.auth.EmailAuthProvider.credential(email, password);
+
+                await user.reauthenticateWithCredential(credential);
+
+                // Delete the time from leaderboard
+                const mapId = currentMap.id;
+                await database.ref('leaderboards/' + mapId + '/' + user.uid).remove();
+
+                alert('Time deleted successfully!');
+
+                // Reload leaderboard
+                loadGameLeaderboard(mapId);
+
+                // Close finish screen and go back to menu
+                backToMenu();
+            } catch (error) {
+                if (error.code === 'auth/wrong-password') {
+                    alert('Incorrect password');
+                } else if (error.code === 'auth/invalid-credential') {
+                    alert('Incorrect password');
+                } else {
+                    alert('Error deleting time: ' + error.message);
+                }
+            }
         }
 
         // Event listeners
