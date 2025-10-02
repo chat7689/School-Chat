@@ -23,6 +23,7 @@
             left: 250px;
             background: #87CEEB;
             cursor: crosshair;
+            pointer-events: auto;
         }
 
         #sidebar {
@@ -35,6 +36,8 @@
             color: white;
             padding: 20px;
             overflow-y: auto;
+            z-index: 100;
+            pointer-events: auto;
         }
 
         #topbar {
@@ -156,7 +159,7 @@
             margin-top: 5px;
         }
 
-        #levelData {
+        #levelData, #importData {
             width: 100%;
             height: 150px;
             background: rgba(0,0,0,0.5);
@@ -167,6 +170,13 @@
             font-family: 'Courier New', monospace;
             font-size: 11px;
             resize: none;
+            pointer-events: auto;
+        }
+
+        #importData:focus, #levelData:focus {
+            outline: none;
+            border-color: #FFC107;
+            background: rgba(0,0,0,0.7);
         }
 
         .stats {
