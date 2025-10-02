@@ -172,11 +172,8 @@
         let currentUser = null;
         let currentUsername = '';
 
-        // Admin UIDs - only these users can access the console
-        const ADMIN_UIDS = [
-            // Add your UID here - you can find it by visiting console.html once and checking browser console
-            // Or use /whoami command to see your UID
-        ];
+        // Admin email for verification
+        const ADMIN_EMAIL = 'malonetobinkai@gmail.com';
 
         auth.onAuthStateChanged(async (user) => {
             if (!user) {
@@ -184,8 +181,8 @@
             } else {
                 currentUser = user;
 
-                // Check if user is admin
-                if (ADMIN_UIDS.length > 0 && !ADMIN_UIDS.includes(user.uid)) {
+                // Check if user's email matches admin email
+                if (user.email !== ADMIN_EMAIL) {
                     alert('Access Denied: This console is restricted to administrators only.');
                     window.location.href = 'game.html';
                     return;
@@ -196,12 +193,7 @@
                 currentUsername = userData ? userData.username : 'Player';
                 document.getElementById('username').textContent = `👤 ${currentUsername}`;
 
-                // Show UID in console for first-time setup
-                if (ADMIN_UIDS.length === 0) {
-                    addOutput('⚠️ SETUP REQUIRED: Add your UID to ADMIN_UIDS array in console.html', 'warning');
-                    addOutput(`Your UID: ${user.uid}`, 'info');
-                    addOutput('Copy this UID and add it to the ADMIN_UIDS array at the top of console.html', 'info');
-                }
+                addOutput('✅ Admin access granted', 'success');
             }
         });
 
