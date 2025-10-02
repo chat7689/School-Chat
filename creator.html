@@ -980,6 +980,18 @@
             e.preventDefault();
         });
 
+        // Stop event propagation for import modal textarea
+        const importTextarea = document.getElementById('importModalText');
+        importTextarea.addEventListener('keydown', (e) => {
+            e.stopPropagation();
+        });
+        importTextarea.addEventListener('keyup', (e) => {
+            e.stopPropagation();
+        });
+        importTextarea.addEventListener('keypress', (e) => {
+            e.stopPropagation();
+        });
+
         // Window resize
         window.addEventListener('resize', () => {
             canvas.width = window.innerWidth - 250;

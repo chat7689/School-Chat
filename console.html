@@ -187,7 +187,19 @@
                 // Get username
                 const userSnapshot = await database.ref('users/' + user.uid).once('value');
                 const userData = userSnapshot.val();
-                currentUsername = userData ? userData.username : 'Player';
+
+                if (userData && userData.username) {
+                    currentUsername = userData.username;
+                } else {
+                    // Extract username from email (format: username@speedrun.local)
+                    currentUsername = user.email.split('@')[0];
+
+                    // Save username to database for future use
+                    await database.ref('users/' + user.uid).set({
+                        username: currentUsername,
+                        createdAt: firebase.database.ServerValue.TIMESTAMP
+                    });
+                }
 
                 // Check if user's username is admin
                 const ADMIN_USERNAMES = ['beanz'];

@@ -183,7 +183,19 @@
                 currentUser = user;
                 const userSnapshot = await database.ref('users/' + user.uid).once('value');
                 const userData = userSnapshot.val();
-                currentUsername = userData ? userData.username : 'Player';
+
+                if (userData && userData.username) {
+                    currentUsername = userData.username;
+                } else {
+                    // Extract username from email (format: username@speedrun.local)
+                    currentUsername = user.email.split('@')[0];
+
+                    // Save username to database for future use
+                    await database.ref('users/' + user.uid).set({
+                        username: currentUsername,
+                        createdAt: firebase.database.ServerValue.TIMESTAMP
+                    });
+                }
                 document.getElementById('username').textContent = `👤 ${currentUsername}`;
                 loadTimes();
             }
@@ -282,7 +294,32 @@
                 await currentUser.reauthenticateWithCredential(credential);
 
                 // Delete the time from history
-                await database.ref('times_history/' + currentUser.uid + '/' + mapId + '/' + timeId).remove();
+                if (timeId !== 'legacy') {
+                    await database.ref('times_history/' + currentUser.uid + '/' + mapId + '/' + timeId).remove();
+                }
+
+                // Get all remaining times for this map to find new best
+                const remainingTimes = [];
+                const mapTimesSnapshot = await database.ref('times_history/' + currentUser.uid + '/' + mapId).once('value');
+
+                mapTimesSnapshot.forEach((timeSnapshot) => {
+                    remainingTimes.push(timeSnapshot.val());
+                });
+
+                if (remainingTimes.length > 0) {
+                    // Find best time and update scores
+                    const bestTime = Math.min(...remainingTimes.map(t => t.time));
+                    const bestTimeData = remainingTimes.find(t => t.time === bestTime);
+
+                    await database.ref('scores/' + mapId + '/' + currentUser.uid).set({
+                        username: currentUsername,
+                        time: bestTime,
+                        timestamp: bestTimeData.timestamp
+                    });
+                } else {
+                    // No times left, remove from global leaderboard
+                    await database.ref('scores/' + mapId + '/' + currentUser.uid).remove();
+                }
 
                 alert('Time deleted successfully!');
 
