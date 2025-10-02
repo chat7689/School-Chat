@@ -1427,15 +1427,15 @@
 
             player.velocityX = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, player.velocityX));
 
-            // Update velocity indicator
-            updateVelocityIndicator();
-
             player.x += player.velocityX;
             player.y += player.velocityY;
 
             checkCollision();
             checkHazards();
             checkFinish();
+
+            // Update velocity indicator (after collision so it shows actual velocity)
+            updateVelocityIndicator();
 
             const targetCameraX = player.x - canvas.width / 2;
             const targetCameraY = player.y - canvas.height / 2;
