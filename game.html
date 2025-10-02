@@ -889,10 +889,18 @@
                 const userData = userSnapshot.val();
                 currentUsername = userData ? userData.username : 'Player';
 
+                // Admin UIDs - must match console.html
+                const ADMIN_UIDS = [
+                    // Add your admin UID here
+                ];
+
+                const consoleButton = ADMIN_UIDS.includes(user.uid) ?
+                    '<button onclick="window.location.href=\'console.html\'" class="main-page-btn">Console</button>' : '';
+
                 document.getElementById('userInfo').innerHTML = `
                     <div style="font-size: 18px; font-weight: bold;">👤 ${currentUsername}</div>
                     <button onclick="window.location.href='times.html'" class="main-page-btn">My Times</button>
-                    <button onclick="window.location.href='console.html'" class="main-page-btn">Console</button>
+                    ${consoleButton}
                     <button onclick="backToMenu()" class="main-page-btn">Map Select</button>
                     <button onclick="logout()">Logout</button>
                 `;
