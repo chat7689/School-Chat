@@ -93,6 +93,40 @@
             display: none;
         }
 
+        #gameLeaderboard {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            z-index: 10;
+            min-width: 200px;
+            display: none;
+        }
+
+        #gameLeaderboard h3 {
+            color: #4facfe;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .game-lb-entry {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px;
+            margin: 3px 0;
+            background: rgba(255,255,255,0.05);
+            border-radius: 5px;
+            font-size: 13px;
+        }
+
+        .game-lb-entry.top1 { border-left: 3px solid gold; }
+        .game-lb-entry.top2 { border-left: 3px solid silver; }
+        .game-lb-entry.top3 { border-left: 3px solid #cd7f32; }
+        .game-lb-entry.you { background: rgba(79, 172, 254, 0.2); font-weight: bold; }
+
         #menu {
             background: rgba(0,0,0,0.9);
             color: white;
@@ -263,6 +297,11 @@
         A/D or Arrows: Move | W/SPACE/UP: Jump (Hold for higher!) | R: Restart
     </div>
 
+    <div id="gameLeaderboard">
+        <h3>🏆 Leaderboard</h3>
+        <div id="gameLeaderboardEntries"></div>
+    </div>
+
     <div id="finishScreen">
         <h2>🏁 Finish! 🏁</h2>
         <div id="finishTime"></div>
@@ -337,9 +376,9 @@
         const MAX_SPEED = 2.5;
         const AIR_RESISTANCE = 0.88;
         const GROUND_FRICTION = 0.82;
-        const MIN_JUMP_POWER = 2;
-        const MAX_JUMP_POWER = 5.9;
-        const MAX_JUMP_CHARGE = 100;
+        const MIN_JUMP_POWER = 0.5;  // Barely jump when tapping
+        const MAX_JUMP_POWER = 11.8;  // Double the original max jump height
+        const JUMP_CHARGE_RATE = 0.15;  // How fast the jump charges
 
         // Map definitions
         const maps = [
@@ -817,7 +856,11 @@
             document.getElementById('gameCanvas').style.display = 'block';
             document.getElementById('controls').style.display = 'block';
             document.getElementById('timer').style.display = 'block';
+            document.getElementById('gameLeaderboard').style.display = 'block';
             document.getElementById('mapInfo').textContent = map.name + ' - ' + map.difficulty;
+
+            // Load and display leaderboard for this map
+            loadGameLeaderboard(map.id);
 
             startTime = Date.now();
             currentTime = 0;
@@ -831,11 +874,43 @@
             }, 10);
         }
 
+        // Load leaderboard for current game
+        async function loadGameLeaderboard(mapId) {
+            try {
+                const snapshot = await database.ref('scores/' + mapId).orderByChild('time').limitToFirst(10).once('value');
+                const entries = [];
+                snapshot.forEach((child) => {
+                    entries.push(child.val());
+                });
+
+                const container = document.getElementById('gameLeaderboardEntries');
+                container.innerHTML = '';
+
+                if (entries.length === 0) {
+                    container.innerHTML = '<p style="color: #888; font-size: 12px;">No scores yet!</p>';
+                } else {
+                    entries.forEach((entry, index) => {
+                        const rankClass = index === 0 ? 'top1' : index === 1 ? 'top2' : index === 2 ? 'top3' : '';
+                        const youClass = entry.username === currentUsername ? 'you' : '';
+                        const entryDiv = document.createElement('div');
+                        entryDiv.className = `game-lb-entry ${rankClass} ${youClass}`;
+                        entryDiv.innerHTML = `
+                            <span>${index + 1}. ${entry.username}</span>
+                            <span>${formatTime(entry.time)}</span>
+                        `;
+                        container.appendChild(entryDiv);
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load game leaderboard:', error);
+            }
+        }
+
         // Format time
         function formatTime(ms) {
             const seconds = Math.floor(ms / 1000);
             const milliseconds = Math.floor((ms % 1000) / 10);
-            return seconds + '.' + (milliseconds < 10 ? '0' : '') + milliseconds;
+            return seconds + '.' + (milliseconds < 10 ? '0' : '') + milliseconds + 's';
         }
 
         // Check collision
@@ -965,20 +1040,23 @@
                 player.velocityX += MOVE_SPEED;
             }
 
+            // Jump mechanics - charge based on hold time
             if ((keys['Space'] || keys['ArrowUp'] || keys['KeyW']) && isGrounded && !hasJumped) {
-                player.velocityY = -MIN_JUMP_POWER;
                 hasJumped = true;
                 isCharging = true;
                 jumpCharge = 0;
             }
 
-            if ((keys['Space'] || keys['ArrowUp'] || keys['KeyW']) && hasJumped && isCharging && player.velocityY < 0 && jumpCharge < MAX_JUMP_CHARGE) {
-                jumpCharge += 3;
-                const additionalPower = ((MAX_JUMP_POWER - MIN_JUMP_POWER) / MAX_JUMP_CHARGE) * 3;
-                player.velocityY -= additionalPower;
+            // Charge jump while holding
+            if ((keys['Space'] || keys['ArrowUp'] || keys['KeyW']) && isGrounded && hasJumped && isCharging) {
+                jumpCharge += JUMP_CHARGE_RATE;
+                if (jumpCharge > 1) jumpCharge = 1; // Cap at 100%
             }
 
-            if ((!keys['Space'] && !keys['ArrowUp'] && !keys['KeyW']) || player.velocityY >= 0) {
+            // Apply jump when released or player leaves ground
+            if (hasJumped && isCharging && (!isGrounded || (!keys['Space'] && !keys['ArrowUp'] && !keys['KeyW']))) {
+                const jumpPower = MIN_JUMP_POWER + (MAX_JUMP_POWER - MIN_JUMP_POWER) * jumpCharge;
+                player.velocityY = -jumpPower;
                 isCharging = false;
             }
 
@@ -1100,6 +1178,7 @@
             document.getElementById('gameCanvas').style.display = 'none';
             document.getElementById('controls').style.display = 'none';
             document.getElementById('timer').style.display = 'none';
+            document.getElementById('gameLeaderboard').style.display = 'none';
             initMenu();
         }
 
