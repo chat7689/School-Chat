@@ -106,6 +106,42 @@
             display: none;
         }
 
+        #energyBar {
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            z-index: 10;
+            display: none;
+        }
+
+        #energyBarLabel {
+            color: white;
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+            margin-bottom: 5px;
+        }
+
+        #energyBarContainer {
+            width: 100%;
+            height: 25px;
+            background: rgba(0,0,0,0.7);
+            border: 3px solid #4facfe;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        #energyBarFill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #00ff88, #00ccff);
+            transition: width 0.1s ease;
+            box-shadow: 0 0 10px rgba(0,255,136,0.5);
+        }
+
         #gameLeaderboard h3 {
             color: #4facfe;
             margin-bottom: 10px;
@@ -294,7 +330,14 @@
     <div id="userInfo"></div>
 
     <div id="controls">
-        A/D or Arrows: Move | W/SPACE/UP: Jump (Hold for higher!) | R: Restart
+        A/D: Move | W/UP: Jump | S/DOWN: Fast Fall | Hold SPACE: Charge Boost | R: Restart
+    </div>
+
+    <div id="energyBar">
+        <div id="energyBarLabel">BOOST ENERGY</div>
+        <div id="energyBarContainer">
+            <div id="energyBarFill"></div>
+        </div>
     </div>
 
     <div id="gameLeaderboard">
@@ -346,8 +389,8 @@
         let player = {
             x: 0,
             y: 0,
-            width: 30,
-            height: 50,
+            width: 40,
+            height: 40,  // Square shape
             velocityX: 0,
             velocityY: 0,
             color: '#FF5722'
@@ -358,8 +401,9 @@
         let keys = {};
         let isGrounded = false;
         let hasJumped = false;
-        let jumpCharge = 0;
-        let isCharging = false;
+        let energy = 0;  // Starts at 0
+        let boostCharge = 0;
+        let isChargingBoost = false;
         let cameraX = 0;
         let cameraY = 0;
         let gameActive = false;
@@ -376,9 +420,12 @@
         const MAX_SPEED = 2.5;
         const AIR_RESISTANCE = 0.88;
         const GROUND_FRICTION = 0.82;
-        const MIN_JUMP_POWER = 0.5;  // Barely jump when tapping
-        const MAX_JUMP_POWER = 11.8;  // Double the original max jump height
-        const JUMP_CHARGE_RATE = 0.15;  // How fast the jump charges
+        const JUMP_POWER = 5.9;
+        const BOOST_CHARGE_RATE = 2;  // How fast boost charges per frame
+        const MAX_BOOST_CHARGE = 100;
+        const BOOST_POWER = 8;  // Velocity multiplier for boost
+        const ENERGY_REGEN_RATE = 0.15;  // Energy regeneration per frame
+        const MAX_ENERGY = 100;
 
         // Map definitions
         const maps = [
@@ -388,22 +435,30 @@
                 difficulty: 'Easy',
                 description: 'Learn the mechanics',
                 platforms: [
-                    { x: 0, y: 550, width: 250, height: 20 },
-                    { x: 350, y: 520, width: 180, height: 20 },
-                    { x: 620, y: 490, width: 160, height: 20 },
-                    { x: 870, y: 460, width: 140, height: 20 },
-                    { x: 1100, y: 430, width: 160, height: 20 },
-                    { x: 1350, y: 460, width: 150, height: 20 },
-                    { x: 1590, y: 490, width: 140, height: 20 },
-                    { x: 1820, y: 520, width: 250, height: 20 }
+                    // Floor
+                    { x: 0, y: 570, width: 2200, height: 30 },
+                    // Left wall
+                    { x: 0, y: 0, width: 20, height: 600 },
+                    // Right wall
+                    { x: 2180, y: 0, width: 20, height: 600 },
+                    // Ceiling
+                    { x: 0, y: 0, width: 2200, height: 20 },
+                    // Platforms
+                    { x: 300, y: 480, width: 150, height: 20 },
+                    { x: 550, y: 420, width: 150, height: 20 },
+                    { x: 800, y: 360, width: 150, height: 20 },
+                    { x: 1050, y: 420, width: 150, height: 20 },
+                    { x: 1300, y: 480, width: 150, height: 20 },
+                    { x: 1550, y: 420, width: 150, height: 20 },
+                    { x: 1800, y: 480, width: 150, height: 20 }
                 ],
                 hazards: [
-                    { x: 530, y: 570, width: 90, height: 10 },
-                    { x: 1010, y: 570, width: 90, height: 10 },
-                    { x: 1500, y: 570, width: 90, height: 10 }
+                    { x: 450, y: 570, width: 100, height: 10 },
+                    { x: 950, y: 570, width: 100, height: 10 },
+                    { x: 1450, y: 570, width: 100, height: 10 }
                 ],
-                start: { x: 100, y: 500 },
-                finish: { x: 1950, y: 470, width: 100, height: 50 }
+                start: { x: 50, y: 520 },
+                finish: { x: 2050, y: 430, width: 100, height: 50 }
             },
             {
                 id: 'spike_path',
@@ -851,13 +906,18 @@
 
             cameraX = 0;
             cameraY = 0;
+            energy = 0;  // Reset energy to 0
+            boostCharge = 0;
+            isChargingBoost = false;
 
             document.getElementById('menu').style.display = 'none';
             document.getElementById('gameCanvas').style.display = 'block';
             document.getElementById('controls').style.display = 'block';
             document.getElementById('timer').style.display = 'block';
             document.getElementById('gameLeaderboard').style.display = 'block';
+            document.getElementById('energyBar').style.display = 'block';
             document.getElementById('mapInfo').textContent = map.name + ' - ' + map.difficulty;
+            updateEnergyBar();
 
             // Load and display leaderboard for this map
             loadGameLeaderboard(map.id);
@@ -1027,12 +1087,31 @@
             }
         }
 
+        // Update energy bar display
+        function updateEnergyBar() {
+            const percentage = (energy / MAX_ENERGY) * 100;
+            document.getElementById('energyBarFill').style.width = percentage + '%';
+        }
+
         // Update player
         function updatePlayer() {
             if (!gameActive) return;
 
-            player.velocityY += GRAVITY;
+            // Gravity (with fast fall)
+            if ((keys['KeyS'] || keys['ArrowDown']) && !isGrounded) {
+                player.velocityY += GRAVITY * 3;  // Fall 3x faster
+            } else {
+                player.velocityY += GRAVITY;
+            }
 
+            // Energy regeneration over time
+            if (energy < MAX_ENERGY) {
+                energy += ENERGY_REGEN_RATE;
+                if (energy > MAX_ENERGY) energy = MAX_ENERGY;
+                updateEnergyBar();
+            }
+
+            // Movement
             if (keys['KeyA'] || keys['ArrowLeft']) {
                 player.velocityX -= MOVE_SPEED;
             }
@@ -1040,32 +1119,47 @@
                 player.velocityX += MOVE_SPEED;
             }
 
-            // Jump mechanics - charge based on hold time
-            if ((keys['Space'] || keys['ArrowUp'] || keys['KeyW']) && isGrounded && !hasJumped) {
+            // Jump (W or UP arrow only, not SPACE)
+            if ((keys['ArrowUp'] || keys['KeyW']) && isGrounded && !hasJumped) {
+                player.velocityY = -JUMP_POWER;
                 hasJumped = true;
-                isCharging = true;
-                jumpCharge = 0;
             }
 
-            // Charge jump while holding
-            if ((keys['Space'] || keys['ArrowUp'] || keys['KeyW']) && isGrounded && hasJumped && isCharging) {
-                jumpCharge += JUMP_CHARGE_RATE;
-                if (jumpCharge > 1) jumpCharge = 1; // Cap at 100%
+            // Reset jump when grounded
+            if (isGrounded && !keys['ArrowUp'] && !keys['KeyW']) {
+                hasJumped = false;
             }
 
-            // Apply jump when released or player leaves ground
-            if (hasJumped && isCharging && (!isGrounded || (!keys['Space'] && !keys['ArrowUp'] && !keys['KeyW']))) {
-                const jumpPower = MIN_JUMP_POWER + (MAX_JUMP_POWER - MIN_JUMP_POWER) * jumpCharge;
-                player.velocityY = -jumpPower;
-                isCharging = false;
+            // Boost charging (SPACE key only)
+            if (keys['Space'] && !isChargingBoost) {
+                isChargingBoost = true;
+                boostCharge = 0;
             }
 
-            if (isGrounded) {
-                if (!keys['Space'] && !keys['ArrowUp'] && !keys['KeyW']) {
-                    hasJumped = false;
-                    jumpCharge = 0;
-                    isCharging = false;
+            // Charge boost while holding space
+            if (keys['Space'] && isChargingBoost) {
+                boostCharge += BOOST_CHARGE_RATE;
+                if (boostCharge > MAX_BOOST_CHARGE) boostCharge = MAX_BOOST_CHARGE;
+            }
+
+            // Apply boost when space is released
+            if (!keys['Space'] && isChargingBoost && boostCharge > 0) {
+                const energyCost = (boostCharge / MAX_BOOST_CHARGE) * 50;  // Max 50 energy cost
+                if (energy >= energyCost) {
+                    const boostAmount = (boostCharge / MAX_BOOST_CHARGE) * BOOST_POWER;
+
+                    // Apply boost in movement direction
+                    if (Math.abs(player.velocityX) > 0.1) {
+                        player.velocityX += (player.velocityX > 0 ? boostAmount : -boostAmount);
+                    }
+
+                    energy -= energyCost;
+                    if (energy < 0) energy = 0;
+                    updateEnergyBar();
                 }
+
+                isChargingBoost = false;
+                boostCharge = 0;
             }
 
             if (isGrounded) {
@@ -1179,6 +1273,7 @@
             document.getElementById('controls').style.display = 'none';
             document.getElementById('timer').style.display = 'none';
             document.getElementById('gameLeaderboard').style.display = 'none';
+            document.getElementById('energyBar').style.display = 'none';
             initMenu();
         }
 
