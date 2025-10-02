@@ -402,9 +402,9 @@
                 const credential = firebase.auth.EmailAuthProvider.credential(email, password);
                 await currentUser.reauthenticateWithCredential(credential);
 
-                // Delete all leaderboards
-                await database.ref('leaderboards').remove();
+                // Delete all scores and times history
                 await database.ref('scores').remove();
+                await database.ref('times_history').remove();
 
                 addOutput('✅ Successfully purged all times from all users', 'success');
             } catch (error) {
@@ -435,16 +435,25 @@
                 await currentUser.reauthenticateWithCredential(credential);
 
                 // Count times before deletion
-                const leaderboardSnapshot = await database.ref('leaderboards/' + mapId).once('value');
-                const count = leaderboardSnapshot.numChildren();
+                const scoresSnapshot = await database.ref('scores/' + mapId).once('value');
+                const count = scoresSnapshot.numChildren();
 
                 if (count === 0) {
                     addOutput(`No times found for map: ${mapId}`, 'warning');
                     return;
                 }
 
-                await database.ref('leaderboards/' + mapId).remove();
+                // Delete from scores and all user history for this map
                 await database.ref('scores/' + mapId).remove();
+
+                // Delete from all users' times_history
+                const usersSnapshot = await database.ref('times_history').once('value');
+                const deletePromises = [];
+                usersSnapshot.forEach((userSnapshot) => {
+                    const uid = userSnapshot.key;
+                    deletePromises.push(database.ref('times_history/' + uid + '/' + mapId).remove());
+                });
+                await Promise.all(deletePromises);
 
                 addOutput(`✅ Successfully deleted ${count} time(s) for map: ${mapId}`, 'success');
             } catch (error) {
