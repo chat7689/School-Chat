@@ -215,25 +215,25 @@
             const historySnapshot = await database.ref('times_history/' + currentUser.uid).once('value');
             const allTimes = [];
 
-            if (historySnapshot.exists()) {
-                historySnapshot.forEach((mapSnapshot) => {
-                    const mapId = mapSnapshot.key;
-                    const mapName = maps.find(m => m.id === mapId)?.name || mapId;
+            historySnapshot.forEach((mapSnapshot) => {
+                const mapId = mapSnapshot.key;
+                const mapName = maps.find(m => m.id === mapId)?.name || mapId;
 
-                    mapSnapshot.forEach((timeSnapshot) => {
-                        const timeData = timeSnapshot.val();
-                        allTimes.push({
-                            id: timeSnapshot.key,
-                            mapId: mapId,
-                            mapName: mapName,
-                            time: timeData.time,
-                            timestamp: timeData.timestamp,
-                            username: timeData.username
-                        });
+                mapSnapshot.forEach((timeSnapshot) => {
+                    const timeData = timeSnapshot.val();
+                    allTimes.push({
+                        id: timeSnapshot.key,
+                        mapId: mapId,
+                        mapName: mapName,
+                        time: timeData.time,
+                        timestamp: timeData.timestamp,
+                        username: timeData.username
                     });
                 });
-            } else {
-                // Fallback: Load from old scores database if no history exists
+            });
+
+            // If no history found, fallback to legacy scores
+            if (allTimes.length === 0) {
                 for (const map of maps) {
                     const scoreSnapshot = await database.ref('scores/' + map.id + '/' + currentUser.uid).once('value');
                     if (scoreSnapshot.exists()) {
@@ -316,8 +316,14 @@
                             timestamp: bestTimeData.timestamp
                         });
                     } else {
-                        // No times left, remove from global leaderboard
+                        // No times left for this map, remove from global leaderboard
                         await database.ref('scores/' + mapId + '/' + currentUser.uid).remove();
+
+                        // Also check if ALL maps have no times left, if so remove entire history node
+                        const allHistorySnapshot = await database.ref('times_history/' + currentUser.uid).once('value');
+                        if (!allHistorySnapshot.exists() || !allHistorySnapshot.hasChildren()) {
+                            await database.ref('times_history/' + currentUser.uid).remove();
+                        }
                     }
                 } else {
                     // Deleting legacy time - just remove from scores
@@ -327,7 +333,7 @@
                 alert('Time deleted successfully!');
 
                 // Reload times
-                loadTimes();
+                await loadTimes();
             } catch (error) {
                 if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
                     alert('Incorrect password');
