@@ -820,6 +820,7 @@
         // Test mode functions
         function testLevel() {
             testMode = true;
+            zoom = 1; // Reset zoom to match actual game
             player.x = startPos.x;
             player.y = startPos.y;
             player.velocityX = 0;
@@ -858,7 +859,7 @@
                 player.velocityY = -physics.jumpPower;
             }
 
-            // Friction
+            // Apply friction
             if (isGrounded) {
                 player.velocityX *= physics.friction;
             } else {
