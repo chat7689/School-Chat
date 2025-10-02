@@ -117,7 +117,7 @@
 
         #versionLabel {
             position: absolute;
-            top: 20px;
+            bottom: 20px;
             left: 20px;
             color: white;
             font-size: 14px;
@@ -346,7 +346,7 @@
 <body>
     <div id="menu">
         <h1>⚡ SPEEDRUN ⚡</h1>
-        <p style="color: #888; font-size: 14px; margin-bottom: 20px;">v10.0 - Online Edition</p>
+        <p style="color: #888; font-size: 14px; margin-bottom: 20px;">v10.1 - Online Edition</p>
         <h2>Select a Map</h2>
         <div class="maps-container" id="mapsContainer"></div>
         <a href="creator.html" style="position: fixed; bottom: 20px; left: 20px; padding: 12px 20px; background: rgba(79, 172, 254, 0.3); color: #4facfe; border: 2px solid #4facfe; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 16px; transition: all 0.3s;">📝 Level Creator</a>
@@ -357,7 +357,7 @@
     <div id="timer" style="display: none;">0.00</div>
     <div id="mapInfo"></div>
     <div id="userInfo"></div>
-    <div id="versionLabel">v10.0</div>
+    <div id="versionLabel">v10.1</div>
 
     <div id="controls">
         A/D: Move | W/UP/SPACE: Jump | S/DOWN: Fast Fall | R: Restart
@@ -889,13 +889,10 @@
                 const userData = userSnapshot.val();
                 currentUsername = userData ? userData.username : 'Player';
 
-                // Admin emails - must match console.html
-                const ADMIN_EMAILS = [
-                    'malonetobinkai@gmail.com',
-                    'tmalone01@4j.lane.edu'
-                ];
+                // Admin usernames - must match console.html
+                const ADMIN_USERNAMES = ['beanz'];
 
-                const consoleButton = ADMIN_EMAILS.includes(user.email) ?
+                const consoleButton = ADMIN_USERNAMES.includes(currentUsername.toLowerCase()) ?
                     '<button onclick="window.location.href=\'console.html\'" class="main-page-btn">Console</button>' : '';
 
                 document.getElementById('userInfo').innerHTML = `
@@ -1103,11 +1100,16 @@
                     entries.forEach((entry, index) => {
                         const rankClass = index === 0 ? 'top1' : index === 1 ? 'top2' : index === 2 ? 'top3' : '';
                         const youClass = entry.username === currentUsername ? 'you' : '';
+                        const date = new Date(entry.timestamp);
+                        const dateStr = date.toLocaleDateString();
                         const entryDiv = document.createElement('div');
                         entryDiv.className = `game-lb-entry ${rankClass} ${youClass}`;
                         entryDiv.innerHTML = `
-                            <span>${index + 1}. ${entry.username}</span>
-                            <span>${formatTime(entry.time)}</span>
+                            <div style="display: flex; flex-direction: column; gap: 2px;">
+                                <span style="font-weight: bold;">${index + 1}. ${entry.username}</span>
+                                <span style="font-size: 10px; color: #888;">${dateStr}</span>
+                            </div>
+                            <span style="font-weight: bold;">${formatTime(entry.time)}</span>
                         `;
                         container.appendChild(entryDiv);
                     });
@@ -1228,7 +1230,7 @@
                 const uid = currentUser.uid;
                 const scoreRef = database.ref(`scores/${mapId}/${uid}`);
 
-                // Check existing score
+                // Check existing score and update if better
                 const existing = await scoreRef.once('value');
                 if (!existing.exists() || time < existing.val().time) {
                     await scoreRef.set({
@@ -1237,6 +1239,14 @@
                         timestamp: firebase.database.ServerValue.TIMESTAMP
                     });
                 }
+
+                // Always save to times history (all times, not just best)
+                const historyRef = database.ref(`times_history/${uid}/${mapId}`).push();
+                await historyRef.set({
+                    username: currentUsername,
+                    time: time,
+                    timestamp: firebase.database.ServerValue.TIMESTAMP
+                });
             } catch (error) {
                 console.error('Failed to submit score:', error);
             }

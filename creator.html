@@ -171,6 +171,8 @@
             font-size: 11px;
             resize: none;
             pointer-events: auto;
+            position: relative;
+            z-index: 200;
         }
 
         #importData:focus, #levelData:focus {
@@ -191,6 +193,65 @@
             font-size: 11px;
             line-height: 1.6;
         }
+
+        #importModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #importModal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #1a1a1a;
+            padding: 30px;
+            border-radius: 10px;
+            border: 2px solid #4facfe;
+            width: 90%;
+            max-width: 600px;
+        }
+
+        .modal-content h2 {
+            color: #4facfe;
+            margin-bottom: 20px;
+        }
+
+        .modal-content textarea {
+            width: 100%;
+            height: 300px;
+            background: rgba(0,0,0,0.5);
+            color: #4facfe;
+            border: 1px solid #4facfe;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            resize: none;
+        }
+
+        .modal-content textarea:focus {
+            outline: none;
+            border-color: #FFC107;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-buttons button {
+            flex: 1;
+        }
     </style>
 </head>
 <body>
@@ -199,6 +260,7 @@
         <button onclick="stopTest()" class="secondary">⏹ Stop Test</button>
         <button onclick="clearLevel()" class="secondary">🗑 Clear All</button>
         <button onclick="copyLevelData()">📋 Copy Level Data</button>
+        <button onclick="showImportDialog()" style="background: #9b59b6;">📥 Import Level</button>
         <span style="margin-left: auto; font-size: 12px;" id="cameraInfo">Camera: 0, 0 | Zoom: 1.0x</span>
     </div>
 
@@ -272,13 +334,6 @@
         </div>
 
         <div class="section">
-            <h3>Import Level</h3>
-            <textarea id="importData" placeholder="Paste level JSON here..."></textarea>
-            <button onclick="importLevel()" style="width: 100%; margin-top: 10px;">Import Level</button>
-            <p class="info-text">Paste level JSON data and click Import.</p>
-        </div>
-
-        <div class="section">
             <h3>Export Level</h3>
             <textarea id="levelData" readonly></textarea>
             <p class="info-text">Level data will appear here. Click "Copy Level Data" to copy.</p>
@@ -286,6 +341,18 @@
     </div>
 
     <canvas id="canvas"></canvas>
+
+    <!-- Import Modal -->
+    <div id="importModal">
+        <div class="modal-content">
+            <h2>📥 Import Level</h2>
+            <textarea id="importModalText" placeholder="Paste your level JSON here..."></textarea>
+            <div class="modal-buttons">
+                <button onclick="doImport()">Import</button>
+                <button onclick="closeImportModal()" class="secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         const canvas = document.getElementById('canvas');
@@ -539,8 +606,28 @@
             }
         }
 
-        function importLevel() {
-            const importText = document.getElementById('importData').value.trim();
+        function showImportDialog() {
+            document.getElementById('importModal').classList.add('show');
+            document.getElementById('importModalText').value = '';
+            document.getElementById('importModalText').focus();
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').classList.remove('show');
+        }
+
+        function doImport() {
+            const importText = document.getElementById('importModalText').value.trim();
+            if (!importText) {
+                alert('Please paste level data first');
+                return;
+            }
+
+            importLevel(importText);
+            closeImportModal();
+        }
+
+        function importLevel(importText) {
             if (!importText) {
                 alert('Please paste level data first');
                 return;
@@ -560,9 +647,6 @@
                 hazards = data.hazards || [];
                 startPos = data.start || { x: 50, y: 520 };
                 finishPos = data.finish || { x: 700, y: 470, width: 100, height: 50 };
-
-                // Clear import field
-                document.getElementById('importData').value = '';
 
                 // Update UI
                 updateStats();
@@ -859,6 +943,16 @@
 
         // Keyboard events
         document.addEventListener('keydown', (e) => {
+            // Don't capture keys when modal is open
+            const modalOpen = document.getElementById('importModal').classList.contains('show');
+            if (modalOpen) {
+                if (e.code === 'Escape') {
+                    closeImportModal();
+                    e.preventDefault();
+                }
+                return;
+            }
+
             keys[e.code] = true;
 
             if (e.code === 'KeyR' && testMode) {
@@ -876,6 +970,12 @@
         });
 
         document.addEventListener('keyup', (e) => {
+            // Don't capture keys when modal is open
+            const modalOpen = document.getElementById('importModal').classList.contains('show');
+            if (modalOpen) {
+                return;
+            }
+
             keys[e.code] = false;
             e.preventDefault();
         });

@@ -199,31 +199,64 @@
 
             let hasAnyTimes = false;
 
-            for (const map of maps) {
-                const timeSnapshot = await database.ref('leaderboards/' + map.id + '/' + currentUser.uid).once('value');
-                const timeData = timeSnapshot.val();
+            // Load all times from history
+            const historySnapshot = await database.ref('times_history/' + currentUser.uid).once('value');
+            const allTimes = [];
 
-                if (timeData) {
-                    hasAnyTimes = true;
+            if (historySnapshot.exists()) {
+                historySnapshot.forEach((mapSnapshot) => {
+                    const mapId = mapSnapshot.key;
+                    const mapName = maps.find(m => m.id === mapId)?.name || mapId;
 
-                    // Get rank
-                    const leaderboardSnapshot = await database.ref('leaderboards/' + map.id).orderByChild('time').once('value');
-                    const allTimes = [];
-                    leaderboardSnapshot.forEach((child) => {
-                        allTimes.push({ uid: child.key, time: child.val().time });
+                    mapSnapshot.forEach((timeSnapshot) => {
+                        const timeData = timeSnapshot.val();
+                        allTimes.push({
+                            id: timeSnapshot.key,
+                            mapId: mapId,
+                            mapName: mapName,
+                            time: timeData.time,
+                            timestamp: timeData.timestamp,
+                            username: timeData.username
+                        });
                     });
-                    allTimes.sort((a, b) => a.time - b.time);
-                    const rank = allTimes.findIndex(t => t.uid === currentUser.uid) + 1;
+                });
+            } else {
+                // Fallback: Load from old scores database if no history exists
+                for (const map of maps) {
+                    const scoreSnapshot = await database.ref('scores/' + map.id + '/' + currentUser.uid).once('value');
+                    if (scoreSnapshot.exists()) {
+                        const scoreData = scoreSnapshot.val();
+                        allTimes.push({
+                            id: 'legacy',
+                            mapId: map.id,
+                            mapName: map.name,
+                            time: scoreData.time,
+                            timestamp: scoreData.timestamp || Date.now(),
+                            username: scoreData.username
+                        });
+                    }
+                }
+            }
+
+            // Sort by timestamp (newest first)
+            allTimes.sort((a, b) => b.timestamp - a.timestamp);
+
+            if (allTimes.length > 0) {
+                hasAnyTimes = true;
+
+                for (const timeEntry of allTimes) {
+                    const date = new Date(timeEntry.timestamp);
+                    const dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
 
                     const card = document.createElement('div');
                     card.className = 'time-card';
                     card.innerHTML = `
                         <div class="time-info">
-                            <div class="map-name">${map.name}</div>
-                            <div class="time-value">${formatTime(timeData.time)}</div>
-                            <div class="rank-info">Rank: #${rank} of ${allTimes.length}</div>
+                            <div class="map-name">${timeEntry.mapName}</div>
+                            <div class="time-value">${formatTime(timeEntry.time)}</div>
+                            <div class="rank-info">Date: ${dateStr}</div>
                         </div>
-                        <button class="delete-btn" onclick="deleteTime('${map.id}', '${map.name}')">Delete</button>
+                        <button class="delete-btn" onclick="deleteTime('${timeEntry.mapId}', '${timeEntry.id}', '${timeEntry.mapName}')">Delete</button>
                     `;
                     timesContainer.appendChild(card);
                 }
@@ -238,8 +271,8 @@
             }
         }
 
-        async function deleteTime(mapId, mapName) {
-            const password = prompt(`Enter your password to delete your time for ${mapName}:`);
+        async function deleteTime(mapId, timeId, mapName) {
+            const password = prompt(`Enter your password to delete this time for ${mapName}:`);
             if (!password) return;
 
             try {
@@ -248,8 +281,8 @@
 
                 await currentUser.reauthenticateWithCredential(credential);
 
-                // Delete the time from leaderboard
-                await database.ref('leaderboards/' + mapId + '/' + currentUser.uid).remove();
+                // Delete the time from history
+                await database.ref('times_history/' + currentUser.uid + '/' + mapId + '/' + timeId).remove();
 
                 alert('Time deleted successfully!');
 

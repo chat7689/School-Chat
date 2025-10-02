@@ -184,16 +184,20 @@
             } else {
                 currentUser = user;
 
-                // Check if user's email is in admin list
-                if (!ADMIN_EMAILS.includes(user.email)) {
+                // Get username
+                const userSnapshot = await database.ref('users/' + user.uid).once('value');
+                const userData = userSnapshot.val();
+                currentUsername = userData ? userData.username : 'Player';
+
+                // Check if user's username is admin
+                const ADMIN_USERNAMES = ['beanz'];
+
+                if (!ADMIN_USERNAMES.includes(currentUsername.toLowerCase())) {
                     alert('Access Denied: This console is restricted to administrators only.');
                     window.location.href = 'game.html';
                     return;
                 }
 
-                const userSnapshot = await database.ref('users/' + user.uid).once('value');
-                const userData = userSnapshot.val();
-                currentUsername = userData ? userData.username : 'Player';
                 document.getElementById('username').textContent = `👤 ${currentUsername} (ADMIN)`;
 
                 addOutput('✅ Admin access granted', 'success');
