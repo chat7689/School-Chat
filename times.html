@@ -295,7 +295,13 @@
 
                 // Delete the time from history
                 if (timeId !== 'legacy') {
-                    await database.ref('times_history/' + currentUser.uid + '/' + mapId + '/' + timeId).remove();
+                    // Verify the time exists before deleting
+                    const timeRef = database.ref('times_history/' + currentUser.uid + '/' + mapId + '/' + timeId);
+                    const timeExists = await timeRef.once('value');
+
+                    if (timeExists.exists()) {
+                        await timeRef.remove();
+                    }
 
                     // Get all remaining times for this map to find new best
                     const remainingTimes = [];
@@ -335,10 +341,13 @@
                 // Reload times
                 await loadTimes();
             } catch (error) {
+                console.error('Delete error:', error);
                 if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
                     alert('Incorrect password');
+                } else if (error.code === 'PERMISSION_DENIED') {
+                    alert('Permission denied. Please ensure you are logged in.');
                 } else {
-                    alert('Error deleting time. Please try again.');
+                    alert('Error deleting time: ' + (error.message || 'Unknown error'));
                 }
             }
         }
