@@ -12,13 +12,14 @@
         }
 
         body {
-            overflow: hidden;
+            overflow-y: auto;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             font-family: 'Arial', sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            padding: 20px 0;
         }
 
         .container {
@@ -265,13 +266,14 @@
     <script>
         // Firebase configuration
         const firebaseConfig = {
-            apiKey: "AIzaSyDRIth4dvEudWjBdW-FnHWphBI2zNQnpIo",
-            authDomain: "school-chat-4db6e.firebaseapp.com",
-            databaseURL: "https://school-chat-4db6e-default-rtdb.firebaseio.com",
-            projectId: "school-chat-4db6e",
-            storageBucket: "school-chat-4db6e.firebasestorage.app",
-            messagingSenderId: "584815123515",
-            appId: "1:584815123515:web:21e42e8cf2a8f7f7e4bc5b"
+            apiKey: "AIzaSyBLkFMipRS631fDNr8uwgozmxXBnqLd5_o",
+            authDomain: "base-control-b391e.firebaseapp.com",
+            databaseURL: "https://base-control-b391e-default-rtdb.firebaseio.com",
+            projectId: "base-control-b391e",
+            storageBucket: "base-control-b391e.firebasestorage.app",
+            messagingSenderId: "116375376675",
+            appId: "1:116375376675:web:cdc8688222c7c35accf296",
+            measurementId: "G-JY7P6D49HM"
         };
 
         firebase.initializeApp(firebaseConfig);
@@ -345,15 +347,17 @@
                     window.location.href = 'game.html';
                 }, 1000);
             } catch (error) {
-                let errorMessage = 'Login failed. ';
+                let errorMessage = '';
                 if (error.code === 'auth/user-not-found') {
-                    errorMessage += 'Account not found.';
+                    errorMessage = 'This account does not exist';
                 } else if (error.code === 'auth/wrong-password') {
-                    errorMessage += 'Incorrect password.';
-                } else if (error.code === 'auth/invalid-email') {
-                    errorMessage += 'Invalid username.';
+                    errorMessage = 'Incorrect password';
+                } else if (error.code === 'auth/invalid-email' || error.code === 'auth/invalid-credential') {
+                    errorMessage = 'This account does not exist';
+                } else if (error.code === 'auth/too-many-requests') {
+                    errorMessage = 'Too many failed attempts. Please try again later';
                 } else {
-                    errorMessage += error.message;
+                    errorMessage = 'Login failed. Please check your credentials';
                 }
                 showError(errorMessage);
                 loginBtn.disabled = false;
@@ -436,13 +440,18 @@
                     window.location.href = 'game.html';
                 }, 1000);
             } catch (error) {
-                let errorMessage = 'Registration failed. ';
+                console.error('Registration error:', error);
+                let errorMessage = '';
                 if (error.code === 'auth/email-already-in-use') {
-                    errorMessage += 'Username already taken.';
+                    errorMessage = 'Username already taken';
                 } else if (error.code === 'auth/weak-password') {
-                    errorMessage += 'Password is too weak.';
+                    errorMessage = 'Password must be at least 6 characters';
+                } else if (error.code === 'auth/operation-not-allowed') {
+                    errorMessage = 'Account creation is currently disabled. Please contact support';
+                } else if (error.code === 'auth/network-request-failed') {
+                    errorMessage = 'Network error. Please check your connection';
                 } else {
-                    errorMessage += error.message;
+                    errorMessage = 'Registration failed. Please try again';
                 }
                 showError(errorMessage);
                 registerBtn.disabled = false;
