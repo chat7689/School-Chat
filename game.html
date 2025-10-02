@@ -13,7 +13,7 @@
 
         body {
             overflow: hidden;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: white;
             font-family: 'Arial', sans-serif;
             display: flex;
             justify-content: center;
@@ -121,7 +121,7 @@
 
         #velocityIndicator {
             position: absolute;
-            bottom: 20px;
+            top: 120px;
             right: 20px;
             width: 120px;
             height: 120px;
@@ -403,8 +403,8 @@
         // Game variables
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        canvas.width = 800;
-        canvas.height = 600;
+        canvas.width = 1200;
+        canvas.height = 800;
 
         let player = {
             x: 0,
