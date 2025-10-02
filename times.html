@@ -290,64 +290,44 @@
             try {
                 const email = currentUser.email;
                 const credential = firebase.auth.EmailAuthProvider.credential(email, password);
-
                 await currentUser.reauthenticateWithCredential(credential);
 
-                // Delete the time from history
-                if (timeId !== 'legacy') {
-                    // Verify the time exists before deleting
-                    const timeRef = database.ref('times_history/' + currentUser.uid + '/' + mapId + '/' + timeId);
-                    const timeExists = await timeRef.once('value');
+                const uid = currentUser.uid;
 
-                    if (timeExists.exists()) {
-                        await timeRef.remove();
-                    }
+                // Delete the specific time from history
+                await database.ref('times_history/' + uid + '/' + mapId + '/' + timeId).remove();
 
-                    // Get all remaining times for this map to find new best
-                    const remainingTimes = [];
-                    const mapTimesSnapshot = await database.ref('times_history/' + currentUser.uid + '/' + mapId).once('value');
+                // Get all remaining times for this map
+                const mapTimesSnapshot = await database.ref('times_history/' + uid + '/' + mapId).once('value');
+                const remainingTimes = [];
 
-                    mapTimesSnapshot.forEach((timeSnapshot) => {
-                        remainingTimes.push(timeSnapshot.val());
+                mapTimesSnapshot.forEach((timeSnapshot) => {
+                    remainingTimes.push(timeSnapshot.val());
+                });
+
+                if (remainingTimes.length > 0) {
+                    // Find best time and update scores
+                    const bestTime = Math.min(...remainingTimes.map(t => t.time));
+                    const bestTimeData = remainingTimes.find(t => t.time === bestTime);
+
+                    await database.ref('scores/' + mapId + '/' + uid).set({
+                        username: currentUsername,
+                        time: bestTime,
+                        timestamp: bestTimeData.timestamp
                     });
-
-                    if (remainingTimes.length > 0) {
-                        // Find best time and update scores
-                        const bestTime = Math.min(...remainingTimes.map(t => t.time));
-                        const bestTimeData = remainingTimes.find(t => t.time === bestTime);
-
-                        await database.ref('scores/' + mapId + '/' + currentUser.uid).set({
-                            username: currentUsername,
-                            time: bestTime,
-                            timestamp: bestTimeData.timestamp
-                        });
-                    } else {
-                        // No times left for this map, remove from global leaderboard
-                        await database.ref('scores/' + mapId + '/' + currentUser.uid).remove();
-
-                        // Also check if ALL maps have no times left, if so remove entire history node
-                        const allHistorySnapshot = await database.ref('times_history/' + currentUser.uid).once('value');
-                        if (!allHistorySnapshot.exists() || !allHistorySnapshot.hasChildren()) {
-                            await database.ref('times_history/' + currentUser.uid).remove();
-                        }
-                    }
                 } else {
-                    // Deleting legacy time - just remove from scores
-                    await database.ref('scores/' + mapId + '/' + currentUser.uid).remove();
+                    // No times left for this map, remove from global leaderboard
+                    await database.ref('scores/' + mapId + '/' + uid).remove();
                 }
 
                 alert('Time deleted successfully!');
-
-                // Reload times
                 await loadTimes();
             } catch (error) {
                 console.error('Delete error:', error);
                 if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
                     alert('Incorrect password');
-                } else if (error.code === 'PERMISSION_DENIED') {
-                    alert('Permission denied. Please ensure you are logged in.');
                 } else {
-                    alert('Error deleting time: ' + (error.message || 'Unknown error'));
+                    alert('Error deleting time. Please try again.');
                 }
             }
         }
