@@ -13,7 +13,7 @@
 
         body {
             overflow: hidden;
-            background: white;
+            background: #2c2c2c;
             font-family: 'Arial', sans-serif;
             display: flex;
             justify-content: center;
@@ -43,12 +43,13 @@
         }
 
         #mapInfo {
-            position: absolute;
-            top: 80px;
+            position: fixed;
+            top: 10px;
             left: 50%;
             transform: translateX(-50%);
             color: white;
-            font-size: 20px;
+            font-size: 24px;
+            font-weight: bold;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
             pointer-events: none;
             z-index: 10;
@@ -121,8 +122,8 @@
 
         #velocityIndicator {
             position: absolute;
-            top: 120px;
-            right: 20px;
+            top: 20px;
+            left: 20px;
             width: 120px;
             height: 120px;
             z-index: 10;
@@ -442,8 +443,8 @@
         const maps = [
             {
                 id: 'custom_level',
-                name: 'Custom Level',
-                difficulty: 'Custom',
+                name: 'Original Map',
+                difficulty: '',
                 description: 'A custom designed level',
                 platforms: [
                     { x: 0, y: 400, width: 40, height: 200 },
@@ -1015,7 +1016,7 @@
             document.getElementById('gameLeaderboard').style.display = 'block';
             document.getElementById('velocityIndicator').style.display = 'block';
             document.getElementById('versionLabel').style.display = 'block';
-            document.getElementById('mapInfo').textContent = map.name + ' - ' + map.difficulty;
+            document.getElementById('mapInfo').textContent = map.name;
             updateVelocityIndicator();
 
             // Load and display leaderboard for this map
