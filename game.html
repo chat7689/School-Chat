@@ -138,8 +138,9 @@
             height: 100%;
             width: 0%;
             background: linear-gradient(90deg, #00ff88, #00ccff);
-            transition: width 0.1s ease;
+            transition: width 0.05s linear;
             box-shadow: 0 0 10px rgba(0,255,136,0.5);
+            min-width: 0%;
         }
 
         #gameLeaderboard h3 {
@@ -330,7 +331,7 @@
     <div id="userInfo"></div>
 
     <div id="controls">
-        A/D: Move | W/UP: Jump | S/DOWN: Fast Fall | Hold SPACE: Charge Boost | R: Restart
+        A/D: Move | W/UP: Jump | S/DOWN: Fast Fall | Hold SPACE: Speed Boost | R: Restart
     </div>
 
     <div id="energyBar">
@@ -400,10 +401,7 @@
         let hazards = [];
         let keys = {};
         let isGrounded = false;
-        let hasJumped = false;
         let energy = 0;  // Starts at 0
-        let boostCharge = 0;
-        let isChargingBoost = false;
         let cameraX = 0;
         let cameraY = 0;
         let gameActive = false;
@@ -417,13 +415,11 @@
         // Constants
         const GRAVITY = 0.125;
         const MOVE_SPEED = 0.25;
+        const BOOST_MOVE_SPEED = 0.5;  // Speed when holding SPACE
         const MAX_SPEED = 2.5;
-        const AIR_RESISTANCE = 0.88;
-        const GROUND_FRICTION = 0.82;
+        const MAX_BOOST_SPEED = 4.0;  // Max speed when boosting
         const JUMP_POWER = 5.9;
-        const BOOST_CHARGE_RATE = 2;  // How fast boost charges per frame
-        const MAX_BOOST_CHARGE = 100;
-        const BOOST_POWER = 8;  // Velocity multiplier for boost
+        const ENERGY_COST_PER_FRAME = 1.5;  // Energy cost per frame while boosting
         const ENERGY_REGEN_RATE = 0.15;  // Energy regeneration per frame
         const MAX_ENERGY = 100;
 
@@ -907,8 +903,6 @@
             cameraX = 0;
             cameraY = 0;
             energy = 0;  // Reset energy to 0
-            boostCharge = 0;
-            isChargingBoost = false;
 
             document.getElementById('menu').style.display = 'none';
             document.getElementById('gameCanvas').style.display = 'block';
@@ -1137,64 +1131,33 @@
                 updateEnergyBar();
             }
 
-            // Movement
+            // Check if boost is active
+            const isBoosting = keys['Space'] && energy > 0;
+
+            // Consume energy while boosting
+            if (isBoosting) {
+                energy -= ENERGY_COST_PER_FRAME;
+                if (energy < 0) energy = 0;
+                updateEnergyBar();
+            }
+
+            // Movement (faster when boosting)
+            const moveSpeed = isBoosting ? BOOST_MOVE_SPEED : MOVE_SPEED;
             if (keys['KeyA'] || keys['ArrowLeft']) {
-                player.velocityX -= MOVE_SPEED;
+                player.velocityX -= moveSpeed;
             }
             if (keys['KeyD'] || keys['ArrowRight']) {
-                player.velocityX += MOVE_SPEED;
+                player.velocityX += moveSpeed;
             }
 
-            // Jump (W or UP arrow only, not SPACE)
-            if ((keys['ArrowUp'] || keys['KeyW']) && isGrounded && !hasJumped) {
+            // Jump (continuous while holding W or UP arrow)
+            if ((keys['ArrowUp'] || keys['KeyW']) && isGrounded) {
                 player.velocityY = -JUMP_POWER;
-                hasJumped = true;
             }
 
-            // Reset jump when grounded
-            if (isGrounded && !keys['ArrowUp'] && !keys['KeyW']) {
-                hasJumped = false;
-            }
-
-            // Boost charging (SPACE key only)
-            if (keys['Space'] && !isChargingBoost) {
-                isChargingBoost = true;
-                boostCharge = 0;
-            }
-
-            // Charge boost while holding space
-            if (keys['Space'] && isChargingBoost) {
-                boostCharge += BOOST_CHARGE_RATE;
-                if (boostCharge > MAX_BOOST_CHARGE) boostCharge = MAX_BOOST_CHARGE;
-            }
-
-            // Apply boost when space is released
-            if (!keys['Space'] && isChargingBoost && boostCharge > 0) {
-                const energyCost = (boostCharge / MAX_BOOST_CHARGE) * 50;  // Max 50 energy cost
-                if (energy >= energyCost) {
-                    const boostAmount = (boostCharge / MAX_BOOST_CHARGE) * BOOST_POWER;
-
-                    // Apply boost in movement direction
-                    if (Math.abs(player.velocityX) > 0.1) {
-                        player.velocityX += (player.velocityX > 0 ? boostAmount : -boostAmount);
-                    }
-
-                    energy -= energyCost;
-                    if (energy < 0) energy = 0;
-                    updateEnergyBar();
-                }
-
-                isChargingBoost = false;
-                boostCharge = 0;
-            }
-
-            if (isGrounded) {
-                player.velocityX *= GROUND_FRICTION;
-            } else {
-                player.velocityX *= AIR_RESISTANCE;
-            }
-
-            player.velocityX = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, player.velocityX));
+            // Use different max speed based on boost
+            const maxSpeed = isBoosting ? MAX_BOOST_SPEED : MAX_SPEED;
+            player.velocityX = Math.max(-maxSpeed, Math.min(maxSpeed, player.velocityX));
 
             player.x += player.velocityX;
             player.y += player.velocityY;
