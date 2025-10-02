@@ -349,6 +349,7 @@
         <p style="color: #888; font-size: 14px; margin-bottom: 20px;">v10.0 - Online Edition</p>
         <h2>Select a Map</h2>
         <div class="maps-container" id="mapsContainer"></div>
+        <a href="creator.html" style="position: fixed; bottom: 20px; left: 20px; padding: 12px 20px; background: rgba(79, 172, 254, 0.3); color: #4facfe; border: 2px solid #4facfe; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 16px; transition: all 0.3s;">📝 Level Creator</a>
     </div>
 
     <canvas id="gameCanvas"></canvas>
@@ -891,7 +892,7 @@
                 document.getElementById('userInfo').innerHTML = `
                     <div style="font-size: 18px; font-weight: bold;">👤 ${currentUsername}</div>
                     <button onclick="window.location.href='times.html'" class="main-page-btn">My Times</button>
-                    <button onclick="window.location.href='index.html'" class="main-page-btn">Main Page</button>
+                    <button onclick="backToMenu()" class="main-page-btn">Map Select</button>
                     <button onclick="logout()">Logout</button>
                 `;
                 loadUserStats();
