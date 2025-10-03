@@ -601,6 +601,13 @@
         function updateCycleTime() {
             movementCycleTime = parseInt(document.getElementById('cycleTime').value);
             document.getElementById('cycleTimeValue').textContent = movementCycleTime;
+
+            // If a movement path is selected, update its cycle time too
+            if (selectedMovementPath && selectedMovementPath.movement) {
+                selectedMovementPath.movement.cycleTime = movementCycleTime;
+                updateLevelData();
+                updateElementsList();
+            }
         }
 
         function updateSelectedCycleTime() {
@@ -614,23 +621,14 @@
         }
 
         function selectMovementPath(block) {
-            // Prompt for cycle time
-            const currentTime = block.movement.cycleTime;
-            const newTime = prompt(`Enter cycle time in seconds (1-10):\nCurrent: ${currentTime}s`, currentTime);
-
-            if (newTime !== null) {
-                const time = parseInt(newTime);
-                if (!isNaN(time) && time >= 1 && time <= 10) {
-                    block.movement.cycleTime = time;
-                    updateLevelData();
-                    updateElementsList();
-                } else {
-                    alert('Please enter a valid number between 1 and 10');
-                }
-            }
-
             // Update UI
             selectedMovementPath = block;
+
+            // Sync the main slider with the selected path's cycle time
+            document.getElementById('cycleTime').value = block.movement.cycleTime;
+            document.getElementById('cycleTimeValue').textContent = block.movement.cycleTime;
+            movementCycleTime = block.movement.cycleTime;
+
             document.getElementById('selectedMovementInfo').style.display = 'block';
             const blockType = platforms.includes(block) ? 'Platform' : 'Hazard';
             const blockIndex = platforms.includes(block) ? platforms.indexOf(block) + 1 : hazards.indexOf(block) + 1;
