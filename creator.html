@@ -1042,11 +1042,24 @@
                 playerPreview.visible = true;
                 draw();
             } else {
+                // For drawing tools, allow both click-to-place and drag-to-draw
                 isDrawing = true;
                 dragStart = {
                     x: snapToGrid(worldPos.x),
                     y: snapToGrid(worldPos.y)
                 };
+
+                // Immediately create a single grid-sized block at click position
+                const clickBlock = {
+                    x: dragStart.x,
+                    y: dragStart.y,
+                    width: gridSize,
+                    height: gridSize
+                };
+
+                // Show preview immediately
+                currentRect = clickBlock;
+                draw();
             }
         });
 
