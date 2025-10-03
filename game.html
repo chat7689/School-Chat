@@ -436,6 +436,7 @@
         let sizeTransitioning = false;
         let sizeTransitionProgress = 0;
         let targetSize = 40;
+        let isJumping = false;  // Track if currently in jump
         let cameraX = 0;
         let cameraY = 0;
         let gameActive = false;
@@ -1498,9 +1499,23 @@
                     player.velocityX += moveSpeed * deltaTime;
                 }
 
-                // Jump (W, UP arrow, or SPACE)
+                // Jump (W, UP arrow, or SPACE) - Variable height
                 if ((keys['ArrowUp'] || keys['KeyW'] || keys['Space']) && isGrounded) {
                     player.velocityY = -JUMP_POWER;
+                    isJumping = true;
+                }
+
+                // Cut jump short if button released (variable jump height)
+                if (isJumping && !keys['ArrowUp'] && !keys['KeyW'] && !keys['Space']) {
+                    if (player.velocityY < 0) {  // Only if going up
+                        player.velocityY *= 0.5;  // Cut jump velocity in half
+                    }
+                    isJumping = false;
+                }
+
+                // Reset jump state when grounded
+                if (isGrounded && player.velocityY >= 0) {
+                    isJumping = false;
                 }
 
                 // Apply friction (using exponential decay for frame-rate independence)

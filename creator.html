@@ -407,6 +407,7 @@
         let sizeTransitioning = false;
         let sizeTransitionProgress = 0;
         let targetSize = 40;
+        let isJumping = false;
 
         function setTool(tool) {
             currentTool = tool;
@@ -976,9 +977,23 @@
                     player.velocityX += physics.moveSpeed * deltaTime;
                 }
 
-                // Jump
+                // Jump - Variable height
                 if ((keys['KeyW'] || keys['ArrowUp'] || keys['Space']) && isGrounded) {
                     player.velocityY = -physics.jumpPower;
+                    isJumping = true;
+                }
+
+                // Cut jump short if button released (variable jump height)
+                if (isJumping && !keys['KeyW'] && !keys['ArrowUp'] && !keys['Space']) {
+                    if (player.velocityY < 0) {
+                        player.velocityY *= 0.5;
+                    }
+                    isJumping = false;
+                }
+
+                // Reset jump state when grounded
+                if (isGrounded && player.velocityY >= 0) {
+                    isJumping = false;
                 }
 
                 // Apply friction (using exponential decay for frame-rate independence)
