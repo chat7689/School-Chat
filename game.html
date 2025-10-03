@@ -547,10 +547,10 @@
 
         // Constants
         const GRAVITY = 0.042;  // 150% of 0.028
-        const MOVE_SPEED = 0.12;  // Acceleration per frame (reduced for more gradual control)
-        const MAX_SPEED = 1.5;  // 150% of 1
-        const AIR_RESISTANCE = 0.96;  // More drag in air (was 0.99)
-        const GROUND_FRICTION = 0.88;  // Less drag on ground (was 0.94)
+        const MOVE_SPEED = 0.21;  // 1.75x faster: 0.12 * 1.75 = 0.21
+        const MAX_SPEED = 2.625;  // 1.75x faster: 1.5 * 1.75 = 2.625
+        const AIR_RESISTANCE = 0.92;  // More air resistance (was 0.96)
+        const GROUND_FRICTION = 0.80;  // More slippery ground (was 0.88)
         const JUMP_POWER = 3.67;  // Calculated to clear 160px: sqrt(160 * 2 * 0.042) ≈ 3.67
         const FAST_FALL_MULTIPLIER = 1.75;  // Down arrow fall speed multiplier
 
