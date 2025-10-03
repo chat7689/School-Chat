@@ -1206,25 +1206,26 @@
             } else if (isDrawing) {
                 // Use appropriate grid based on tool
                 const grid = currentTool === 'finish' ? startGrid : gridSize;
-                const endX = snapToGrid(worldPos.x, grid);
-                const endY = snapToGrid(worldPos.y, grid);
 
-                // Only include grid cells that the cursor has actually entered
-                const minX = Math.min(dragStart.x, endX);
-                const maxX = Math.max(dragStart.x, endX);
-                const minY = Math.min(dragStart.y, endY);
-                const maxY = Math.max(dragStart.y, endY);
+                // Calculate the raw drag rectangle (before snapping)
+                const rawMinX = Math.min(dragStart.x, worldPos.x);
+                const rawMaxX = Math.max(dragStart.x, worldPos.x);
+                const rawMinY = Math.min(dragStart.y, worldPos.y);
+                const rawMaxY = Math.max(dragStart.y, worldPos.y);
 
+                // Find all grid cells that the raw rectangle touches
+                const startCellX = Math.floor(rawMinX / grid) * grid;
+                const endCellX = Math.floor(rawMaxX / grid) * grid;
+                const startCellY = Math.floor(rawMinY / grid) * grid;
+                const endCellY = Math.floor(rawMaxY / grid) * grid;
+
+                // Create rectangle covering all touched cells
                 currentRect = {
-                    x: minX,
-                    y: minY,
-                    width: maxX - minX + (endX === dragStart.x ? grid : 0),
-                    height: maxY - minY + (endY === dragStart.y ? grid : 0)
+                    x: startCellX,
+                    y: startCellY,
+                    width: endCellX - startCellX + grid,
+                    height: endCellY - startCellY + grid
                 };
-
-                // Ensure minimum size of one grid cell
-                if (currentRect.width === 0) currentRect.width = grid;
-                if (currentRect.height === 0) currentRect.height = grid;
 
                 draw();
             }
