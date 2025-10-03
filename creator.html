@@ -1420,6 +1420,19 @@
             cameraY = player.y - canvas.height / (2 * zoom);
         }
 
+        function canFitInGap(x, y, width, height) {
+            // Check if this position would collide with any platform
+            for (let platform of platforms) {
+                if (x + width > platform.x &&
+                    x < platform.x + platform.width &&
+                    y + height > platform.y &&
+                    y < platform.y + platform.height) {
+                    return false; // Collision found, can't fit
+                }
+            }
+            return true; // No collision, can fit
+        }
+
         function checkCollision() {
             isGrounded = false;
 
@@ -1437,19 +1450,59 @@
                     const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
 
                     if (minOverlap === overlapTop && player.velocityY >= 0) {
-                        player.y = platform.y - player.height;
-                        player.velocityY = 0;
-                        isGrounded = true;
+                        // Check if player can fall into a gap to the side
+                        let foundGap = false;
+
+                        // Check for gap on the left
+                        if (player.velocityX < 0 && player.x < platform.x) {
+                            const gapX = player.x;
+                            const gapY = platform.y;
+                            if (canFitInGap(gapX, gapY, player.width, player.height)) {
+                                foundGap = true;
+                            }
+                        }
+                        // Check for gap on the right
+                        else if (player.velocityX > 0 && player.x + player.width > platform.x + platform.width) {
+                            const gapX = platform.x + platform.width;
+                            const gapY = platform.y;
+                            if (canFitInGap(gapX, gapY, player.width, player.height)) {
+                                foundGap = true;
+                            }
+                        }
+
+                        if (!foundGap) {
+                            player.y = platform.y - player.height;
+                            player.velocityY = 0;
+                            isGrounded = true;
+                        }
                     }
                     else if (minOverlap === overlapBottom && player.velocityY < 0) {
                         player.y = platform.y + platform.height;
                         player.velocityY = 0;
                     }
                     else if (minOverlap === overlapLeft) {
+                        // Check if player can slide into a gap below
+                        if (player.velocityY > 0) {
+                            const gapX = platform.x - player.width;
+                            const gapY = player.y;
+                            if (canFitInGap(gapX, gapY, player.width, player.height)) {
+                                // Allow sliding into the gap
+                                return;
+                            }
+                        }
                         player.x = platform.x - player.width;
                         player.velocityX = 0;
                     }
                     else if (minOverlap === overlapRight) {
+                        // Check if player can slide into a gap below
+                        if (player.velocityY > 0) {
+                            const gapX = platform.x + platform.width;
+                            const gapY = player.y;
+                            if (canFitInGap(gapX, gapY, player.width, player.height)) {
+                                // Allow sliding into the gap
+                                return;
+                            }
+                        }
                         player.x = platform.x + platform.width;
                         player.velocityX = 0;
                     }

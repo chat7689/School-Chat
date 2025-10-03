@@ -1357,6 +1357,20 @@
             return seconds + '.' + (milliseconds < 10 ? '0' : '') + milliseconds + 's';
         }
 
+        // Check if there's a gap the player can fit into
+        function canFitInGap(x, y, width, height) {
+            // Check if this position would collide with any platform
+            for (let platform of platforms) {
+                if (x + width > platform.x &&
+                    x < platform.x + platform.width &&
+                    y + height > platform.y &&
+                    y < platform.y + platform.height) {
+                    return false; // Collision found, can't fit
+                }
+            }
+            return true; // No collision, can fit
+        }
+
         // Check collision
         function checkCollision() {
             isGrounded = false;
@@ -1379,9 +1393,32 @@
 
                     // Floor collision (landing on top)
                     if (minOverlap === overlapTop && player.velocityY >= 0) {
-                        player.y = platform.y - player.height;
-                        player.velocityY = 0;
-                        isGrounded = true;
+                        // Check if player can fall into a gap to the side
+                        const gapCheckDistance = player.width;
+                        let foundGap = false;
+
+                        // Check for gap on the left
+                        if (player.velocityX < 0 && player.x < platform.x) {
+                            const gapX = player.x;
+                            const gapY = platform.y;
+                            if (canFitInGap(gapX, gapY, player.width, player.height)) {
+                                foundGap = true;
+                            }
+                        }
+                        // Check for gap on the right
+                        else if (player.velocityX > 0 && player.x + player.width > platform.x + platform.width) {
+                            const gapX = platform.x + platform.width;
+                            const gapY = platform.y;
+                            if (canFitInGap(gapX, gapY, player.width, player.height)) {
+                                foundGap = true;
+                            }
+                        }
+
+                        if (!foundGap) {
+                            player.y = platform.y - player.height;
+                            player.velocityY = 0;
+                            isGrounded = true;
+                        }
                     }
                     // Ceiling collision (hitting from below)
                     else if (minOverlap === overlapBottom && player.velocityY < 0) {
@@ -1390,11 +1427,29 @@
                     }
                     // Left wall collision
                     else if (minOverlap === overlapLeft) {
+                        // Check if player can slide into a gap below
+                        if (player.velocityY > 0) {
+                            const gapX = platform.x - player.width;
+                            const gapY = player.y;
+                            if (canFitInGap(gapX, gapY, player.width, player.height)) {
+                                // Allow sliding into the gap
+                                return;
+                            }
+                        }
                         player.x = platform.x - player.width;
                         player.velocityX = 0;
                     }
                     // Right wall collision
                     else if (minOverlap === overlapRight) {
+                        // Check if player can slide into a gap below
+                        if (player.velocityY > 0) {
+                            const gapX = platform.x + platform.width;
+                            const gapY = player.y;
+                            if (canFitInGap(gapX, gapY, player.width, player.height)) {
+                                // Allow sliding into the gap
+                                return;
+                            }
+                        }
                         player.x = platform.x + platform.width;
                         player.velocityX = 0;
                     }
