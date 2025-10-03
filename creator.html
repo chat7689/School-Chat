@@ -1947,11 +1947,23 @@
             checkHazards();
             checkGrowers();
             checkShrinkers();
+            checkDefaultSize();
             checkFinish();
 
             // Keep camera centered on player
             cameraX = player.x - canvas.width / (2 * zoom);
             cameraY = player.y - canvas.height / (2 * zoom);
+
+            // Death boundary
+            if (player.y > 1000) {
+                player.x = startPos.x;
+                player.y = startPos.y;
+                player.velocityX = 0;
+                player.velocityY = 0;
+                player.currentSize = 40;
+                player.width = 40;
+                player.height = 40;
+            }
         }
 
         function canFitInGap(x, y, width, height) {
@@ -2069,6 +2081,21 @@
                     player.y < shrinker.y + shrinker.height) {
                     if (player.currentSize !== 20 && !sizeTransitioning) {
                         startSizeTransition(20);
+                    }
+                    return;
+                }
+            }
+        }
+
+        function checkDefaultSize() {
+            for (let defaultBlock of defaultSizeBlocks) {
+                if (player.x + player.width > defaultBlock.x &&
+                    player.x < defaultBlock.x + defaultBlock.width &&
+                    player.y + player.height > defaultBlock.y &&
+                    player.y < defaultBlock.y + defaultBlock.height) {
+                    // Default size block - sets to 40
+                    if (player.currentSize !== 40 && !sizeTransitioning) {
+                        startSizeTransition(40);
                     }
                     return;
                 }
