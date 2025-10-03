@@ -1719,6 +1719,10 @@
 
                 player.velocityX = Math.max(-MAX_SPEED * sizeScale, Math.min(MAX_SPEED * sizeScale, player.velocityX));
 
+                // Cap vertical velocity to prevent tunneling through platforms
+                const maxFallSpeed = 10 * sizeScale; // Terminal velocity
+                player.velocityY = Math.min(player.velocityY, maxFallSpeed);
+
                 player.x += player.velocityX * deltaTime;
                 player.y += player.velocityY * deltaTime;
             }
