@@ -818,7 +818,7 @@
         }
 
         function snapToGrid(value, grid = gridSize) {
-            return Math.round(value / grid) * grid;
+            return Math.floor(value / grid) * grid;
         }
 
         function screenToWorld(x, y) {
