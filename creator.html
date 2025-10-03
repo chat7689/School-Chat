@@ -2027,31 +2027,10 @@
                     const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
 
                     if (minOverlap === overlapTop && player.velocityY >= 0) {
-                        // Check if player can fall into a gap to the side
-                        let foundGap = false;
-
-                        // Check for gap on the left - only if player is significantly past the edge
-                        if (player.velocityX < 0 && player.x + player.width < platform.x + player.width * 0.5) {
-                            const gapX = player.x;
-                            const gapY = platform.y;
-                            if (canFitInGap(gapX, gapY, player.width, player.height)) {
-                                foundGap = true;
-                            }
-                        }
-                        // Check for gap on the right - only if player is significantly past the edge
-                        else if (player.velocityX > 0 && player.x > platform.x + platform.width - player.width * 0.5) {
-                            const gapX = platform.x + platform.width;
-                            const gapY = platform.y;
-                            if (canFitInGap(gapX, gapY, player.width, player.height)) {
-                                foundGap = true;
-                            }
-                        }
-
-                        if (!foundGap) {
-                            player.y = platform.y - player.height;
-                            player.velocityY = 0;
-                            isGrounded = true;
-                        }
+                        // Don't allow gap sliding - always stop at platform edges
+                        player.y = platform.y - player.height;
+                        player.velocityY = 0;
+                        isGrounded = true;
                     }
                     else if (minOverlap === overlapBottom && player.velocityY < 0) {
                         player.y = platform.y + platform.height;
