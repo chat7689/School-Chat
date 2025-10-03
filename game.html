@@ -1367,12 +1367,15 @@
 
         // Check if there's a gap the player can fit into
         function canFitInGap(x, y, width, height) {
+            // Add a small buffer (1px) to prevent phasing through tight gaps
+            const buffer = 1;
+
             // Check if this position would collide with any platform
             for (let platform of platforms) {
-                if (x + width > platform.x &&
-                    x < platform.x + platform.width &&
-                    y + height > platform.y &&
-                    y < platform.y + platform.height) {
+                if (x + width - buffer > platform.x &&
+                    x + buffer < platform.x + platform.width &&
+                    y + height - buffer > platform.y &&
+                    y + buffer < platform.y + platform.height) {
                     return false; // Collision found, can't fit
                 }
             }
