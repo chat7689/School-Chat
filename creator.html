@@ -428,6 +428,10 @@
         let dragStart = null;
         let currentRect = null;
         let selectedBlock = null;
+        let selectedBlocks = [];  // Multiple selected blocks
+        let isMultiSelecting = false;  // Dragging selection box
+        let selectionStart = null;
+        let selectionBox = null;
         let isDraggingBlock = false;
         let dragOffset = { x: 0, y: 0 };
         let playerPreview = { x: 0, y: 0, visible: false };
@@ -939,21 +943,53 @@
 
                     // If no movement node or path clicked, check for regular dragging
                     if (!foundNode) {
+                        let clickedBlock = false;
+
                         // Check finish block
                         if (worldPos.x >= finishPos.x && worldPos.x <= finishPos.x + finishPos.width &&
                             worldPos.y >= finishPos.y && worldPos.y <= finishPos.y + finishPos.height) {
                             selectedBlock = { type: 'finish', obj: finishPos, grid: startGrid };
                             isDraggingBlock = true;
+                            clickedBlock = true;
+                            selectedBlocks = [];  // Clear multi-selection
                         } else {
-                            // Check other blocks for dragging
-                            for (const block of allBlocks) {
-                                if (worldPos.x >= block.obj.x && worldPos.x <= block.obj.x + block.obj.width &&
-                                    worldPos.y >= block.obj.y && worldPos.y <= block.obj.y + block.obj.height) {
-                                    selectedBlock = block;
-                                    isDraggingBlock = true;
-                                    break;
+                            // Check if clicking on a block in the current selection
+                            let clickedSelectedBlock = false;
+                            if (selectedBlocks.length > 0) {
+                                for (const block of selectedBlocks) {
+                                    if (worldPos.x >= block.obj.x && worldPos.x <= block.obj.x + block.obj.width &&
+                                        worldPos.y >= block.obj.y && worldPos.y <= block.obj.y + block.obj.height) {
+                                        isDraggingBlock = true;
+                                        clickedBlock = true;
+                                        clickedSelectedBlock = true;
+                                        selectionStart = { x: worldPos.x, y: worldPos.y };
+                                        break;
+                                    }
                                 }
                             }
+
+                            // If not clicking on selected block, check other blocks for dragging
+                            if (!clickedSelectedBlock) {
+                                for (const block of allBlocks) {
+                                    if (worldPos.x >= block.obj.x && worldPos.x <= block.obj.x + block.obj.width &&
+                                        worldPos.y >= block.obj.y && worldPos.y <= block.obj.y + block.obj.height) {
+                                        selectedBlock = block;
+                                        isDraggingBlock = true;
+                                        clickedBlock = true;
+                                        selectedBlocks = [];  // Clear multi-selection
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        // If clicked on empty space, start multi-selection box
+                        if (!clickedBlock) {
+                            isMultiSelecting = true;
+                            selectionStart = { x: worldPos.x, y: worldPos.y };
+                            selectionBox = { x: worldPos.x, y: worldPos.y, width: 0, height: 0 };
+                            selectedBlock = null;
+                            selectedBlocks = [];
                         }
                     }
                 }
@@ -1114,6 +1150,41 @@
                     draggingNodeBlock.movement.point2.y = snapToGrid(worldPos.y);
                 }
                 draw();
+            } else if (isMultiSelecting) {
+                // Update selection box
+                const minX = Math.min(selectionStart.x, worldPos.x);
+                const minY = Math.min(selectionStart.y, worldPos.y);
+                const maxX = Math.max(selectionStart.x, worldPos.x);
+                const maxY = Math.max(selectionStart.y, worldPos.y);
+
+                selectionBox = {
+                    x: minX,
+                    y: minY,
+                    width: maxX - minX,
+                    height: maxY - minY
+                };
+                draw();
+            } else if (isDraggingBlock && selectedBlocks.length > 0) {
+                // Drag multiple selected blocks
+                const deltaX = snapToGrid(worldPos.x) - snapToGrid(selectionStart.x);
+                const deltaY = snapToGrid(worldPos.y) - snapToGrid(selectionStart.y);
+
+                if (deltaX !== 0 || deltaY !== 0) {
+                    for (const block of selectedBlocks) {
+                        block.obj.x += deltaX;
+                        block.obj.y += deltaY;
+
+                        // Update movement points if present
+                        if (block.obj.movement) {
+                            block.obj.movement.point1.x += deltaX;
+                            block.obj.movement.point1.y += deltaY;
+                            block.obj.movement.point2.x += deltaX;
+                            block.obj.movement.point2.y += deltaY;
+                        }
+                    }
+                    selectionStart = { x: worldPos.x, y: worldPos.y };
+                    draw();
+                }
             } else if (isDraggingBlock && selectedBlock) {
                 // Snap mouse position directly to grid
                 const grid = selectedBlock.grid || gridSize;
@@ -1171,9 +1242,44 @@
                 updateLevelData();
             }
 
+            if (isMultiSelecting) {
+                // Finalize multi-selection
+                isMultiSelecting = false;
+
+                if (selectionBox && (selectionBox.width > 0 || selectionBox.height > 0)) {
+                    // Find all blocks within selection box
+                    const allBlocks = [
+                        ...platforms.map((p, i) => ({ type: 'platform', index: i, obj: p, grid: gridSize })),
+                        ...hazards.map((h, i) => ({ type: 'hazard', index: i, obj: h, grid: gridSize })),
+                        ...growers.map((g, i) => ({ type: 'grower', index: i, obj: g, grid: gridSize })),
+                        ...shrinkers.map((s, i) => ({ type: 'shrinker', index: i, obj: s, grid: gridSize })),
+                        ...defaultSizeBlocks.map((d, i) => ({ type: 'default', index: i, obj: d, grid: gridSize })),
+                        ...backgroundBlocks.map((b, i) => ({ type: 'background', index: i, obj: b, grid: gridSize })),
+                        ...foregroundBlocks.map((f, i) => ({ type: 'foreground', index: i, obj: f, grid: gridSize }))
+                    ];
+
+                    selectedBlocks = allBlocks.filter(block => {
+                        return block.obj.x < selectionBox.x + selectionBox.width &&
+                               block.obj.x + block.obj.width > selectionBox.x &&
+                               block.obj.y < selectionBox.y + selectionBox.height &&
+                               block.obj.y + block.obj.height > selectionBox.y;
+                    });
+
+                    // If we have selected blocks, prepare for dragging
+                    if (selectedBlocks.length > 0) {
+                        selectionStart = screenToWorld(lastMouseX, lastMouseY);
+                    }
+                }
+
+                selectionBox = null;
+                draw();
+            }
+
             if (isDraggingBlock) {
                 isDraggingBlock = false;
-                selectedBlock = null;
+                if (selectedBlocks.length === 0) {
+                    selectedBlock = null;
+                }
                 updateLevelData();
             }
 
@@ -1699,8 +1805,30 @@
                 ctx.strokeRect(playerPreview.x, playerPreview.y, 40, 40);
             }
 
+            // Multi-selection box
+            if (isMultiSelecting && selectionBox) {
+                ctx.strokeStyle = '#4facfe';
+                ctx.fillStyle = 'rgba(79, 172, 254, 0.1)';
+                ctx.lineWidth = 2 / zoom;
+                ctx.setLineDash([5 / zoom, 5 / zoom]);
+                ctx.fillRect(selectionBox.x, selectionBox.y, selectionBox.width, selectionBox.height);
+                ctx.strokeRect(selectionBox.x, selectionBox.y, selectionBox.width, selectionBox.height);
+                ctx.setLineDash([]);
+            }
+
+            // Selected blocks highlight
+            if (selectedBlocks.length > 0) {
+                ctx.strokeStyle = '#4facfe';
+                ctx.lineWidth = 3 / zoom;
+                ctx.setLineDash([10 / zoom, 5 / zoom]);
+                for (const block of selectedBlocks) {
+                    ctx.strokeRect(block.obj.x, block.obj.y, block.obj.width, block.obj.height);
+                }
+                ctx.setLineDash([]);
+            }
+
             // Selected block highlight
-            if (selectedBlock && isDraggingBlock) {
+            if (selectedBlock && isDraggingBlock && selectedBlocks.length === 0) {
                 ctx.strokeStyle = '#FFD700';
                 ctx.lineWidth = 3 / zoom;
                 ctx.setLineDash([10 / zoom, 5 / zoom]);
