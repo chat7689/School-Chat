@@ -258,29 +258,31 @@
     <div id="topbar">
         <button onclick="testLevel()">▶ Test Level</button>
         <button onclick="stopTest()" class="secondary">⏹ Stop Test</button>
-        <button onclick="autoMergeBlocks()" style="background: #27ae60;">🔗 Auto-Merge Overlaps</button>
-        <button onclick="clearLevel()" class="secondary">🗑 Clear All</button>
+        <button onclick="undo()" title="Undo (Ctrl+Z)">↶ Undo</button>
+        <button onclick="redo()" title="Redo (Ctrl+Y)">↷ Redo</button>
+        <button onclick="clearAutoSave()" class="secondary">🗑 New Level</button>
         <button onclick="copyLevelData()">📋 Copy Level Data</button>
         <button onclick="showImportDialog()" style="background: #9b59b6;">📥 Import Level</button>
-        <span style="margin-left: auto; font-size: 12px;" id="cameraInfo">Camera: 0, 0 | Zoom: 1.0x</span>
+        <span style="margin-left: auto; font-size: 12px; color: #999;" id="saveStatus">No auto-save</span>
+        <span style="font-size: 12px; margin-left: 15px;" id="cameraInfo">Camera: 0, 0 | Zoom: 1.0x</span>
     </div>
 
     <div id="sidebar">
         <h2 style="color: #4facfe; margin-bottom: 20px;">Level Creator</h2>
 
         <div class="section">
-            <h3>Tools</h3>
-            <button class="tool-button active" onclick="setTool('platform')">🟦 Platform (Drag)</button>
-            <button class="tool-button" onclick="setTool('hazard')">🟥 Hazard (Drag)</button>
-            <button class="tool-button" onclick="setTool('grower')">🟩 Grower (2x Size)</button>
-            <button class="tool-button" onclick="setTool('shrinker')">🟪 Shrinker (0.5x Size)</button>
-            <button class="tool-button" onclick="setTool('background')">🔲 Background (Visual)</button>
-            <button class="tool-button" onclick="setTool('foreground')">⬜ Foreground (Visual)</button>
-            <button class="tool-button" onclick="setTool('start')">🟢 Start (40x40 Click)</button>
-            <button class="tool-button" onclick="setTool('finish')">🏁 Finish (Drag 40x40)</button>
-            <button class="tool-button" onclick="setTool('player')">👤 Player Preview</button>
-            <button class="tool-button" onclick="setTool('select')">✋ Select/Move</button>
-            <button class="tool-button delete" onclick="setTool('delete')">🗑 Delete (Click)</button>
+            <h3>Tools <span style="font-size: 10px; color: #999;">(or press 1-6)</span></h3>
+            <button class="tool-button active" onclick="setTool('platform')">🟦 Platform <span style="float:right;color:#999;">1</span></button>
+            <button class="tool-button" onclick="setTool('hazard')">🟥 Hazard <span style="float:right;color:#999;">2</span></button>
+            <button class="tool-button" onclick="setTool('grower')">🟩 Grower (2x) <span style="float:right;color:#999;">3</span></button>
+            <button class="tool-button" onclick="setTool('shrinker')">🟪 Shrinker (0.5x) <span style="float:right;color:#999;">4</span></button>
+            <button class="tool-button" onclick="setTool('background')">🔲 Background</button>
+            <button class="tool-button" onclick="setTool('foreground')">⬜ Foreground</button>
+            <button class="tool-button" onclick="setTool('start')">🟢 Start Position</button>
+            <button class="tool-button" onclick="setTool('finish')">🏁 Finish Line</button>
+            <button class="tool-button" onclick="setTool('player')">👤 Preview Player</button>
+            <button class="tool-button" onclick="setTool('select')">✋ Select/Move <span style="float:right;color:#999;">5</span></button>
+            <button class="tool-button delete" onclick="setTool('delete')">🗑 Delete <span style="float:right;color:#999;">6</span></button>
         </div>
 
         <div class="section">
@@ -327,18 +329,24 @@
         </div>
 
         <div class="section">
-            <h3>Controls</h3>
-            <div class="controls-info">
-                <strong>Creator Mode:</strong><br>
-                • Mouse: Drag to create<br>
-                • Scroll: Zoom in/out<br>
+            <h3>Keyboard Shortcuts</h3>
+            <div class="controls-info" style="font-size: 11px; line-height: 1.6;">
+                <strong>Tools:</strong><br>
+                • 1-6: Select tools<br>
+                • G: Toggle grid<br>
+                <br>
+                <strong>Editing:</strong><br>
+                • Ctrl+Z: Undo<br>
+                • Ctrl+Y: Redo<br>
+                • Ctrl+C: Copy block<br>
+                • Ctrl+V: Paste block<br>
+                • Delete: Delete selected<br>
+                <br>
+                <strong>Camera:</strong><br>
                 • WASD: Pan camera<br>
-                • Click: Place start/finish<br>
+                • Scroll: Zoom in/out<br>
                 <br>
                 <strong>Test Mode:</strong><br>
-                • Arrow Keys: Move<br>
-                • WASD: Move<br>
-                • Space: Boost<br>
                 • R: Restart<br>
                 • ESC: Exit test
             </div>
@@ -425,10 +433,111 @@
         let targetSize = 40;
         let isJumping = false;
 
+        // Undo/Redo system
+        let undoStack = [];
+        let redoStack = [];
+        const MAX_UNDO_STEPS = 50;
+
+        function saveState() {
+            const state = {
+                platforms: JSON.parse(JSON.stringify(platforms)),
+                hazards: JSON.parse(JSON.stringify(hazards)),
+                growers: JSON.parse(JSON.stringify(growers)),
+                shrinkers: JSON.parse(JSON.stringify(shrinkers)),
+                backgroundBlocks: JSON.parse(JSON.stringify(backgroundBlocks)),
+                foregroundBlocks: JSON.parse(JSON.stringify(foregroundBlocks)),
+                startPos: JSON.parse(JSON.stringify(startPos)),
+                finishPos: JSON.parse(JSON.stringify(finishPos))
+            };
+            undoStack.push(state);
+            if (undoStack.length > MAX_UNDO_STEPS) {
+                undoStack.shift();
+            }
+            redoStack = []; // Clear redo stack on new action
+        }
+
+        function undo() {
+            if (undoStack.length > 0) {
+                const currentState = {
+                    platforms: JSON.parse(JSON.stringify(platforms)),
+                    hazards: JSON.parse(JSON.stringify(hazards)),
+                    growers: JSON.parse(JSON.stringify(growers)),
+                    shrinkers: JSON.parse(JSON.stringify(shrinkers)),
+                    backgroundBlocks: JSON.parse(JSON.stringify(backgroundBlocks)),
+                    foregroundBlocks: JSON.parse(JSON.stringify(foregroundBlocks)),
+                    startPos: JSON.parse(JSON.stringify(startPos)),
+                    finishPos: JSON.parse(JSON.stringify(finishPos))
+                };
+                redoStack.push(currentState);
+
+                const state = undoStack.pop();
+                platforms = state.platforms;
+                hazards = state.hazards;
+                growers = state.growers;
+                shrinkers = state.shrinkers;
+                backgroundBlocks = state.backgroundBlocks;
+                foregroundBlocks = state.foregroundBlocks;
+                startPos = state.startPos;
+                finishPos = state.finishPos;
+
+                updateStats();
+                updateLevelData();
+                draw();
+            }
+        }
+
+        function redo() {
+            if (redoStack.length > 0) {
+                const currentState = {
+                    platforms: JSON.parse(JSON.stringify(platforms)),
+                    hazards: JSON.parse(JSON.stringify(hazards)),
+                    growers: JSON.parse(JSON.stringify(growers)),
+                    shrinkers: JSON.parse(JSON.stringify(shrinkers)),
+                    backgroundBlocks: JSON.parse(JSON.stringify(backgroundBlocks)),
+                    foregroundBlocks: JSON.parse(JSON.stringify(foregroundBlocks)),
+                    startPos: JSON.parse(JSON.stringify(startPos)),
+                    finishPos: JSON.parse(JSON.stringify(finishPos))
+                };
+                undoStack.push(currentState);
+
+                const state = redoStack.pop();
+                platforms = state.platforms;
+                hazards = state.hazards;
+                growers = state.growers;
+                shrinkers = state.shrinkers;
+                backgroundBlocks = state.backgroundBlocks;
+                foregroundBlocks = state.foregroundBlocks;
+                startPos = state.startPos;
+                finishPos = state.finishPos;
+
+                updateStats();
+                updateLevelData();
+                draw();
+            }
+        }
+
         function setTool(tool) {
             currentTool = tool;
             document.querySelectorAll('.tool-button').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
+        }
+
+        function setToolByName(toolName) {
+            currentTool = toolName;
+            document.querySelectorAll('.tool-button').forEach(btn => btn.classList.remove('active'));
+            const buttons = document.querySelectorAll('.tool-button');
+            buttons.forEach(btn => {
+                if (btn.onclick && btn.onclick.toString().includes(`'${toolName}'`)) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+        // Grid toggle
+        let gridVisible = true;
+        function toggleGrid() {
+            gridVisible = !gridVisible;
+            draw();
         }
 
         function updateGrid() {
@@ -641,6 +750,7 @@
             if (!isDrawing || testMode) return;
 
             if (currentRect && currentRect.width > 0 && currentRect.height > 0) {
+                saveState(); // Save for undo
                 if (currentTool === 'platform') {
                     platforms.push({...currentRect});
                 } else if (currentTool === 'hazard') {
@@ -695,6 +805,7 @@
         });
 
         function deleteAtPosition(x, y) {
+            saveState(); // Save for undo
             platforms = platforms.filter(p => !(x >= p.x && x <= p.x + p.width && y >= p.y && y <= p.y + p.height));
             hazards = hazards.filter(h => !(x >= h.x && x <= h.x + h.width && y >= h.y && y <= h.y + h.height));
             growers = growers.filter(g => !(x >= g.x && x <= g.x + g.width && y >= g.y && y <= g.y + g.height));
@@ -725,6 +836,90 @@
                 physics: physics
             };
             document.getElementById('levelData').value = JSON.stringify(data, null, 2);
+            // Auto-save to localStorage
+            autoSave();
+        }
+
+        // Auto-save system
+        function autoSave() {
+            const data = {
+                platforms: platforms,
+                hazards: hazards,
+                growers: growers,
+                shrinkers: shrinkers,
+                backgroundBlocks: backgroundBlocks,
+                foregroundBlocks: foregroundBlocks,
+                start: startPos,
+                finish: finishPos,
+                physics: physics,
+                camera: { x: cameraX, y: cameraY, zoom: zoom }
+            };
+            localStorage.setItem('levelCreator_autoSave', JSON.stringify(data));
+            localStorage.setItem('levelCreator_lastSaved', new Date().toISOString());
+            updateSaveStatus();
+        }
+
+        function updateSaveStatus() {
+            const lastSaved = localStorage.getItem('levelCreator_lastSaved');
+            if (lastSaved) {
+                const date = new Date(lastSaved);
+                const timeStr = date.toLocaleTimeString();
+                document.getElementById('saveStatus').textContent = `Auto-saved at ${timeStr}`;
+                document.getElementById('saveStatus').style.color = '#4facfe';
+            }
+        }
+
+        function loadAutoSave() {
+            const saved = localStorage.getItem('levelCreator_autoSave');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    platforms = data.platforms || [];
+                    hazards = data.hazards || [];
+                    growers = data.growers || [];
+                    shrinkers = data.shrinkers || [];
+                    backgroundBlocks = data.backgroundBlocks || [];
+                    foregroundBlocks = data.foregroundBlocks || [];
+                    startPos = data.start || { x: 40, y: 520, width: 40, height: 40 };
+                    finishPos = data.finish || { x: 700, y: 480, width: 40, height: 40 };
+                    if (data.camera) {
+                        cameraX = data.camera.x;
+                        cameraY = data.camera.y;
+                        zoom = data.camera.zoom;
+                    }
+                    updateStats();
+                    updateLevelData();
+                    updateSaveStatus();
+                    draw();
+                    return true;
+                } catch (e) {
+                    console.error('Failed to load auto-save:', e);
+                }
+            }
+            return false;
+        }
+
+        function clearAutoSave() {
+            if (confirm('Clear auto-saved level and start fresh?')) {
+                localStorage.removeItem('levelCreator_autoSave');
+                localStorage.removeItem('levelCreator_lastSaved');
+                platforms = [];
+                hazards = [];
+                growers = [];
+                shrinkers = [];
+                backgroundBlocks = [];
+                foregroundBlocks = [];
+                startPos = { x: 40, y: 520, width: 40, height: 40 };
+                finishPos = { x: 700, y: 480, width: 40, height: 40 };
+                cameraX = 0;
+                cameraY = 0;
+                zoom = 1;
+                updateStats();
+                updateLevelData();
+                document.getElementById('saveStatus').textContent = 'No auto-save';
+                document.getElementById('saveStatus').style.color = '#999';
+                draw();
+            }
         }
 
         function copyLevelData() {
@@ -828,26 +1023,28 @@
             ctx.lineTo(0, cameraY + canvas.height / zoom);
             ctx.stroke();
 
-            // Grid
-            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-            ctx.lineWidth = 1 / zoom;
-            const startGridX = Math.floor(cameraX / gridSize) * gridSize;
-            const startGridY = Math.floor(cameraY / gridSize) * gridSize;
-            const endGridX = startGridX + (canvas.width / zoom) + gridSize;
-            const endGridY = startGridY + (canvas.height / zoom) + gridSize;
+            // Grid (toggle with G key)
+            if (gridVisible) {
+                ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                ctx.lineWidth = 1 / zoom;
+                const startGridX = Math.floor(cameraX / gridSize) * gridSize;
+                const startGridY = Math.floor(cameraY / gridSize) * gridSize;
+                const endGridX = startGridX + (canvas.width / zoom) + gridSize;
+                const endGridY = startGridY + (canvas.height / zoom) + gridSize;
 
-            for (let x = startGridX; x < endGridX; x += gridSize) {
-                ctx.beginPath();
-                ctx.moveTo(x, startGridY);
-                ctx.lineTo(x, endGridY);
-                ctx.stroke();
-            }
+                for (let x = startGridX; x < endGridX; x += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, startGridY);
+                    ctx.lineTo(x, endGridY);
+                    ctx.stroke();
+                }
 
-            for (let y = startGridY; y < endGridY; y += gridSize) {
-                ctx.beginPath();
-                ctx.moveTo(startGridX, y);
-                ctx.lineTo(endGridX, y);
-                ctx.stroke();
+                for (let y = startGridY; y < endGridY; y += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(startGridX, y);
+                    ctx.lineTo(endGridX, y);
+                    ctx.stroke();
+                }
             }
 
             // Coordinate labels
@@ -1244,6 +1441,9 @@
             }
         }
 
+        // Copy/Paste for blocks
+        let copiedBlock = null;
+
         // Keyboard events
         document.addEventListener('keydown', (e) => {
             // Don't capture keys when modal is open
@@ -1258,6 +1458,75 @@
 
             keys[e.code] = true;
 
+            // Undo/Redo shortcuts
+            if (e.ctrlKey && e.code === 'KeyZ' && !testMode) {
+                undo();
+                e.preventDefault();
+                return;
+            }
+            if (e.ctrlKey && e.code === 'KeyY' && !testMode) {
+                redo();
+                e.preventDefault();
+                return;
+            }
+
+            // Copy selected block
+            if (e.ctrlKey && e.code === 'KeyC' && selectedBlock && !testMode) {
+                copiedBlock = JSON.parse(JSON.stringify(selectedBlock.obj));
+                e.preventDefault();
+                return;
+            }
+
+            // Paste block
+            if (e.ctrlKey && e.code === 'KeyV' && copiedBlock && !testMode) {
+                saveState();
+                const newBlock = JSON.parse(JSON.stringify(copiedBlock));
+                newBlock.x += 20;
+                newBlock.y += 20;
+
+                if (selectedBlock) {
+                    if (selectedBlock.type === 'platform') platforms.push(newBlock);
+                    else if (selectedBlock.type === 'hazard') hazards.push(newBlock);
+                    else if (selectedBlock.type === 'grower') growers.push(newBlock);
+                    else if (selectedBlock.type === 'shrinker') shrinkers.push(newBlock);
+                    else if (selectedBlock.type === 'background') backgroundBlocks.push(newBlock);
+                    else if (selectedBlock.type === 'foreground') foregroundBlocks.push(newBlock);
+                }
+                updateStats();
+                updateLevelData();
+                draw();
+                e.preventDefault();
+                return;
+            }
+
+            // Delete selected block
+            if (e.code === 'Delete' && selectedBlock && !testMode) {
+                saveState();
+                if (selectedBlock.type === 'platform') platforms.splice(selectedBlock.index, 1);
+                else if (selectedBlock.type === 'hazard') hazards.splice(selectedBlock.index, 1);
+                else if (selectedBlock.type === 'grower') growers.splice(selectedBlock.index, 1);
+                else if (selectedBlock.type === 'shrinker') shrinkers.splice(selectedBlock.index, 1);
+                else if (selectedBlock.type === 'background') backgroundBlocks.splice(selectedBlock.index, 1);
+                else if (selectedBlock.type === 'foreground') foregroundBlocks.splice(selectedBlock.index, 1);
+                selectedBlock = null;
+                updateStats();
+                updateLevelData();
+                draw();
+                e.preventDefault();
+                return;
+            }
+
+            // Tool shortcuts (1-9 keys)
+            if (!testMode) {
+                if (e.code === 'Digit1') setToolByName('platform');
+                else if (e.code === 'Digit2') setToolByName('hazard');
+                else if (e.code === 'Digit3') setToolByName('grower');
+                else if (e.code === 'Digit4') setToolByName('shrinker');
+                else if (e.code === 'Digit5') setToolByName('select');
+                else if (e.code === 'Digit6') setToolByName('delete');
+                else if (e.code === 'KeyG') toggleGrid();
+            }
+
             if (e.code === 'KeyR' && testMode) {
                 player.x = startPos.x;
                 player.y = startPos.y;
@@ -1269,7 +1538,9 @@
                 stopTest();
             }
 
-            e.preventDefault();
+            if (e.code === 'Space' && !testMode) {
+                e.preventDefault();
+            }
         });
 
         document.addEventListener('keyup', (e) => {
@@ -1302,9 +1573,13 @@
             draw();
         });
 
-        // Initial draw
-        updateLevelData();
-        draw();
+        // Initial setup
+        // Try to load auto-save on startup
+        const hasAutoSave = loadAutoSave();
+        if (!hasAutoSave) {
+            updateLevelData();
+            draw();
+        }
     </script>
 </body>
 </html>
