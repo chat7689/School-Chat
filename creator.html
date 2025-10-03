@@ -283,6 +283,7 @@
             <button class="tool-button" onclick="setTool('player')">👤 Preview Player</button>
             <button class="tool-button" onclick="setTool('select')">✋ Select/Move <span style="float:right;color:#999;">5</span></button>
             <button class="tool-button delete" onclick="setTool('delete')">🗑 Delete <span style="float:right;color:#999;">6</span></button>
+            <button class="tool-button" onclick="setTool('void')" style="background: rgba(0,0,0,0.5);">⬛ Void (Cut)</button>
         </div>
 
         <div class="section">
@@ -643,6 +644,13 @@
             } else if (currentTool === 'delete') {
                 deleteAtPosition(worldPos.x, worldPos.y);
                 isDeleting = true;  // Enable drag-delete
+            } else if (currentTool === 'void') {
+                // Start void dragging
+                isDrawing = true;
+                dragStart = {
+                    x: snapToGrid(worldPos.x),
+                    y: snapToGrid(worldPos.y)
+                };
             } else if (currentTool === 'start') {
                 startPos.x = snapToGrid(worldPos.x, startGrid);
                 startPos.y = snapToGrid(worldPos.y, startGrid);
@@ -762,7 +770,10 @@
 
             if (currentRect && currentRect.width > 0 && currentRect.height > 0) {
                 saveState(); // Save for undo
-                if (currentTool === 'platform') {
+                if (currentTool === 'void') {
+                    // Cut out the void area from all blocks
+                    cutVoid(currentRect);
+                } else if (currentTool === 'platform') {
                     platforms.push({...currentRect});
                 } else if (currentTool === 'hazard') {
                     hazards.push({...currentRect});
@@ -826,6 +837,80 @@
             updateStats();
             updateLevelData();
             draw();
+        }
+
+        function cutVoid(voidRect) {
+            // Cut void from all block types
+            platforms = cutVoidFromBlocks(platforms, voidRect);
+            hazards = cutVoidFromBlocks(hazards, voidRect);
+            growers = cutVoidFromBlocks(growers, voidRect);
+            shrinkers = cutVoidFromBlocks(shrinkers, voidRect);
+            backgroundBlocks = cutVoidFromBlocks(backgroundBlocks, voidRect);
+            foregroundBlocks = cutVoidFromBlocks(foregroundBlocks, voidRect);
+        }
+
+        function cutVoidFromBlocks(blocks, voidRect) {
+            const newBlocks = [];
+
+            for (let block of blocks) {
+                // Check if void overlaps with block
+                if (!(block.x + block.width <= voidRect.x ||
+                      voidRect.x + voidRect.width <= block.x ||
+                      block.y + block.height <= voidRect.y ||
+                      voidRect.y + voidRect.height <= block.y)) {
+
+                    // Void overlaps - split the block into up to 4 pieces
+
+                    // Top piece (above void)
+                    if (block.y < voidRect.y) {
+                        newBlocks.push({
+                            x: block.x,
+                            y: block.y,
+                            width: block.width,
+                            height: voidRect.y - block.y
+                        });
+                    }
+
+                    // Bottom piece (below void)
+                    if (block.y + block.height > voidRect.y + voidRect.height) {
+                        newBlocks.push({
+                            x: block.x,
+                            y: voidRect.y + voidRect.height,
+                            width: block.width,
+                            height: (block.y + block.height) - (voidRect.y + voidRect.height)
+                        });
+                    }
+
+                    // Left piece (left of void)
+                    if (block.x < voidRect.x) {
+                        const topY = Math.max(block.y, voidRect.y);
+                        const bottomY = Math.min(block.y + block.height, voidRect.y + voidRect.height);
+                        newBlocks.push({
+                            x: block.x,
+                            y: topY,
+                            width: voidRect.x - block.x,
+                            height: bottomY - topY
+                        });
+                    }
+
+                    // Right piece (right of void)
+                    if (block.x + block.width > voidRect.x + voidRect.width) {
+                        const topY = Math.max(block.y, voidRect.y);
+                        const bottomY = Math.min(block.y + block.height, voidRect.y + voidRect.height);
+                        newBlocks.push({
+                            x: voidRect.x + voidRect.width,
+                            y: topY,
+                            width: (block.x + block.width) - (voidRect.x + voidRect.width),
+                            height: bottomY - topY
+                        });
+                    }
+                } else {
+                    // No overlap - keep block as is
+                    newBlocks.push(block);
+                }
+            }
+
+            return newBlocks;
         }
 
 
@@ -1139,6 +1224,9 @@
                 } else if (currentTool === 'foreground') {
                     ctx.fillStyle = 'rgba(200, 200, 200, 0.4)';
                     ctx.strokeStyle = 'rgba(180, 180, 180, 0.6)';
+                } else if (currentTool === 'void') {
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                    ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
                 } else if (currentTool === 'finish') {
                     ctx.fillStyle = 'rgba(255, 215, 0, 0.5)';
                     ctx.strokeStyle = '#FFD700';
