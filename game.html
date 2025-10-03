@@ -1570,22 +1570,12 @@
             }
 
             for (let hazard of hazards) {
+                // Simple red rectangles for hazards - cleaner and more consistent
                 ctx.fillStyle = '#FF3333';
-                const spikeCount = Math.floor(hazard.width / 15);
-                const spikeWidth = hazard.width / spikeCount;
-
-                for (let i = 0; i < spikeCount; i++) {
-                    ctx.beginPath();
-                    ctx.moveTo(hazard.x + i * spikeWidth, hazard.y + hazard.height);
-                    ctx.lineTo(hazard.x + i * spikeWidth + spikeWidth / 2, hazard.y);
-                    ctx.lineTo(hazard.x + i * spikeWidth + spikeWidth, hazard.y + hazard.height);
-                    ctx.closePath();
-                    ctx.fill();
-
-                    ctx.strokeStyle = '#CC0000';
-                    ctx.lineWidth = 1.5;
-                    ctx.stroke();
-                }
+                ctx.fillRect(hazard.x, hazard.y, hazard.width, hazard.height);
+                ctx.strokeStyle = '#CC0000';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(hazard.x, hazard.y, hazard.width, hazard.height);
             }
 
             for (let grower of growers) {
