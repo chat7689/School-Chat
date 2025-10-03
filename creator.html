@@ -387,6 +387,7 @@
         let resizeEdge = null;  // 'left', 'right', 'top', 'bottom'
         let resizeStartPos = { x: 0, y: 0 };
         let resizeOriginal = null;
+        let isDeleting = false;  // Track if currently in delete-drag mode
 
         // Camera
         let cameraX = 0;
@@ -518,6 +519,7 @@
                 }
             } else if (currentTool === 'delete') {
                 deleteAtPosition(worldPos.x, worldPos.y);
+                isDeleting = true;  // Enable drag-delete
             } else if (currentTool === 'start') {
                 startPos.x = snapToGrid(worldPos.x, startGrid);
                 startPos.y = snapToGrid(worldPos.y, startGrid);
@@ -549,7 +551,10 @@
             const rect = canvas.getBoundingClientRect();
             const worldPos = screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
 
-            if (isResizing && selectedBlock) {
+            if (isDeleting) {
+                // Continuously delete blocks while dragging
+                deleteAtPosition(worldPos.x, worldPos.y);
+            } else if (isResizing && selectedBlock) {
                 // Handle resizing
                 const grid = selectedBlock.grid || gridSize;
                 const snappedX = snapToGrid(worldPos.x, grid);
@@ -603,6 +608,10 @@
         });
 
         canvas.addEventListener('mouseup', (e) => {
+            if (isDeleting) {
+                isDeleting = false;
+            }
+
             if (isResizing) {
                 isResizing = false;
                 resizeEdge = null;
