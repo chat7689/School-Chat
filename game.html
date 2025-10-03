@@ -423,13 +423,19 @@
             height: 40,  // Square shape
             velocityX: 0,
             velocityY: 0,
-            color: '#FF5722'
+            color: '#FF5722',
+            currentSize: 40
         };
 
         let platforms = [];
         let hazards = [];
+        let growers = [];
+        let shrinkers = [];
         let keys = {};
         let isGrounded = false;
+        let sizeTransitioning = false;
+        let sizeTransitionProgress = 0;
+        let targetSize = 40;
         let cameraX = 0;
         let cameraY = 0;
         let gameActive = false;
@@ -1111,6 +1117,20 @@
                 height: h.height
             })) : [];
 
+            growers = map.growers ? map.growers.map(g => ({
+                x: g.x,
+                y: g.y,
+                width: g.width,
+                height: g.height
+            })) : [];
+
+            shrinkers = map.shrinkers ? map.shrinkers.map(s => ({
+                x: s.x,
+                y: s.y,
+                width: s.width,
+                height: s.height
+            })) : [];
+
             finishLine = {
                 x: map.finish.x,
                 y: map.finish.y,
@@ -1122,6 +1142,10 @@
             player.y = map.start.y;
             player.velocityX = 0;
             player.velocityY = 0;
+            player.width = 40;
+            player.height = 40;
+            player.currentSize = 40;
+            sizeTransitioning = false;
 
             cameraX = 0;
             cameraY = 0;
@@ -1284,6 +1308,61 @@
             }
         }
 
+        // Check growers
+        function checkGrowers() {
+            for (let grower of growers) {
+                if (player.x + player.width > grower.x &&
+                    player.x < grower.x + grower.width &&
+                    player.y + player.height > grower.y &&
+                    player.y < grower.y + grower.height) {
+                    if (player.currentSize !== 80 && !sizeTransitioning) {
+                        startSizeTransition(80);
+                    }
+                    return;
+                }
+            }
+        }
+
+        // Check shrinkers
+        function checkShrinkers() {
+            for (let shrinker of shrinkers) {
+                if (player.x + player.width > shrinker.x &&
+                    player.x < shrinker.x + shrinker.width &&
+                    player.y + player.height > shrinker.y &&
+                    player.y < shrinker.y + shrinker.height) {
+                    if (player.currentSize !== 20 && !sizeTransitioning) {
+                        startSizeTransition(20);
+                    }
+                    return;
+                }
+            }
+        }
+
+        function startSizeTransition(newSize) {
+            sizeTransitioning = true;
+            targetSize = newSize;
+            sizeTransitionProgress = 0;
+        }
+
+        function updateSizeTransition(deltaTime) {
+            if (!sizeTransitioning) return;
+
+            sizeTransitionProgress += deltaTime * 0.1;
+
+            if (sizeTransitionProgress >= 1) {
+                sizeTransitioning = false;
+                player.currentSize = targetSize;
+                player.width = targetSize;
+                player.height = targetSize;
+            } else {
+                const startSize = player.currentSize;
+                const t = sizeTransitionProgress;
+                const newSize = startSize + (targetSize - startSize) * t;
+                player.width = newSize;
+                player.height = newSize;
+            }
+        }
+
         // Check finish line
         function checkFinish() {
             if (finishLine &&
@@ -1398,41 +1477,49 @@
         function updatePlayer(deltaTime = 1) {
             if (!gameActive) return;
 
-            // Gravity (with fast fall)
-            if ((keys['KeyS'] || keys['ArrowDown']) && !isGrounded) {
-                player.velocityY += GRAVITY * 3 * deltaTime;  // Fall 3x faster
-            } else {
-                player.velocityY += GRAVITY * deltaTime;
-            }
+            // Update size transition
+            updateSizeTransition(deltaTime);
 
-            // Movement (normal acceleration-based)
-            const moveSpeed = MOVE_SPEED;
-            if (keys['KeyA'] || keys['ArrowLeft']) {
-                player.velocityX -= moveSpeed * deltaTime;
-            }
-            if (keys['KeyD'] || keys['ArrowRight']) {
-                player.velocityX += moveSpeed * deltaTime;
-            }
+            // Freeze movement during transition
+            if (!sizeTransitioning) {
+                // Gravity (with fast fall)
+                if ((keys['KeyS'] || keys['ArrowDown']) && !isGrounded) {
+                    player.velocityY += GRAVITY * 3 * deltaTime;  // Fall 3x faster
+                } else {
+                    player.velocityY += GRAVITY * deltaTime;
+                }
 
-            // Jump (W, UP arrow, or SPACE)
-            if ((keys['ArrowUp'] || keys['KeyW'] || keys['Space']) && isGrounded) {
-                player.velocityY = -JUMP_POWER;
+                // Movement (normal acceleration-based)
+                const moveSpeed = MOVE_SPEED;
+                if (keys['KeyA'] || keys['ArrowLeft']) {
+                    player.velocityX -= moveSpeed * deltaTime;
+                }
+                if (keys['KeyD'] || keys['ArrowRight']) {
+                    player.velocityX += moveSpeed * deltaTime;
+                }
+
+                // Jump (W, UP arrow, or SPACE)
+                if ((keys['ArrowUp'] || keys['KeyW'] || keys['Space']) && isGrounded) {
+                    player.velocityY = -JUMP_POWER;
+                }
+
+                // Apply friction (using exponential decay for frame-rate independence)
+                if (isGrounded) {
+                    player.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
+                } else {
+                    player.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
+                }
+
+                player.velocityX = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, player.velocityX));
+
+                player.x += player.velocityX * deltaTime;
+                player.y += player.velocityY * deltaTime;
             }
-
-            // Apply friction (using exponential decay for frame-rate independence)
-            if (isGrounded) {
-                player.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
-            } else {
-                player.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
-            }
-
-            player.velocityX = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, player.velocityX));
-
-            player.x += player.velocityX * deltaTime;
-            player.y += player.velocityY * deltaTime;
 
             checkCollision();
             checkHazards();
+            checkGrowers();
+            checkShrinkers();
             checkFinish();
 
             // Update velocity indicator (after collision so it shows actual velocity)
@@ -1481,6 +1568,22 @@
                     ctx.lineWidth = 1.5;
                     ctx.stroke();
                 }
+            }
+
+            for (let grower of growers) {
+                ctx.fillStyle = '#00FF88';
+                ctx.fillRect(grower.x, grower.y, grower.width, grower.height);
+                ctx.strokeStyle = '#00CC66';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(grower.x, grower.y, grower.width, grower.height);
+            }
+
+            for (let shrinker of shrinkers) {
+                ctx.fillStyle = '#BB66FF';
+                ctx.fillRect(shrinker.x, shrinker.y, shrinker.width, shrinker.height);
+                ctx.strokeStyle = '#9944DD';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(shrinker.x, shrinker.y, shrinker.width, shrinker.height);
             }
 
             if (finishLine) {
