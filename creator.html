@@ -294,6 +294,22 @@
                 <label>Cycle Time: <span class="value" id="cycleTimeValue">5</span>s</label>
                 <input type="range" min="1" max="10" value="5" id="cycleTime" oninput="updateCycleTime()">
             </div>
+            <div id="selectedMovementInfo" style="display: none; margin-top: 15px; padding: 10px; background: rgba(100,150,255,0.2); border-radius: 5px;">
+                <div style="font-size: 11px; color: #aaa; margin-bottom: 8px;">Selected Movement Path:</div>
+                <div style="font-size: 12px; color: #6496FF; margin-bottom: 10px;" id="selectedMovementType"></div>
+                <div class="slider-group">
+                    <label>Duration: <span class="value" id="selectedCycleTimeValue">5</span>s</label>
+                    <input type="range" min="1" max="10" value="5" id="selectedCycleTime" oninput="updateSelectedCycleTime()">
+                </div>
+                <button onclick="deselectMovement()" style="width: 100%; padding: 6px; font-size: 11px; margin-top: 8px;">Deselect</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Elements <span style="font-size: 10px; color: #999;">(click to jump)</span></h3>
+            <div id="elementsList" style="max-height: 300px; overflow-y: auto; font-size: 11px;">
+                <!-- Elements will be populated here -->
+            </div>
         </div>
 
         <div class="section">
@@ -301,6 +317,7 @@
             <div class="slider-group">
                 <label>Grid Size: <span class="value" id="gridValue">20</span>px</label>
                 <select id="gridSize" onchange="updateGrid()" style="width: 100%; padding: 8px; background: #2a2a3e; color: white; border: 1px solid #444; border-radius: 5px; margin-top: 5px;">
+                    <option value="5">5px</option>
                     <option value="10">10px</option>
                     <option value="20" selected>20px</option>
                     <option value="40">40px</option>
@@ -575,13 +592,210 @@
         let isDraggingMovementNode = false;
         let draggingNodeBlock = null;
         let draggingNodeType = null; // 'point1' or 'point2'
+        let selectedMovementPath = null; // For editing existing movement paths
 
         function updateCycleTime() {
             movementCycleTime = parseInt(document.getElementById('cycleTime').value);
             document.getElementById('cycleTimeValue').textContent = movementCycleTime;
         }
 
+        function updateSelectedCycleTime() {
+            if (selectedMovementPath) {
+                const newTime = parseInt(document.getElementById('selectedCycleTime').value);
+                selectedMovementPath.movement.cycleTime = newTime;
+                document.getElementById('selectedCycleTimeValue').textContent = newTime;
+                updateLevelData();
+                updateElementsList();
+            }
+        }
+
+        function selectMovementPath(block) {
+            selectedMovementPath = block;
+            document.getElementById('selectedMovementInfo').style.display = 'block';
+            const blockType = platforms.includes(block) ? 'Platform' : 'Hazard';
+            const blockIndex = platforms.includes(block) ? platforms.indexOf(block) + 1 : hazards.indexOf(block) + 1;
+            document.getElementById('selectedMovementType').textContent = `${blockType} #${blockIndex}`;
+            document.getElementById('selectedCycleTime').value = block.movement.cycleTime;
+            document.getElementById('selectedCycleTimeValue').textContent = block.movement.cycleTime;
+        }
+
+        function deselectMovement() {
+            selectedMovementPath = null;
+            document.getElementById('selectedMovementInfo').style.display = 'none';
+        }
+
+        function updateElementsList() {
+            const list = document.getElementById('elementsList');
+            list.innerHTML = '';
+
+            const elements = [];
+
+            // Add platforms
+            platforms.forEach((p, i) => {
+                elements.push({
+                    type: 'Platform',
+                    index: i + 1,
+                    obj: p,
+                    color: '#4A90E2',
+                    icon: '🟦',
+                    hasMovement: !!p.movement
+                });
+            });
+
+            // Add hazards
+            hazards.forEach((h, i) => {
+                elements.push({
+                    type: 'Hazard',
+                    index: i + 1,
+                    obj: h,
+                    color: '#E74C3C',
+                    icon: '🟥',
+                    hasMovement: !!h.movement
+                });
+            });
+
+            // Add size blocks
+            shrinkers.forEach((s, i) => {
+                elements.push({
+                    type: 'Small Size',
+                    index: i + 1,
+                    obj: s,
+                    color: '#9B59B6',
+                    icon: '🟪'
+                });
+            });
+
+            defaultSizeBlocks.forEach((d, i) => {
+                elements.push({
+                    type: 'Default Size',
+                    index: i + 1,
+                    obj: d,
+                    color: '#FFC107',
+                    icon: '🟨'
+                });
+            });
+
+            growers.forEach((g, i) => {
+                elements.push({
+                    type: 'Large Size',
+                    index: i + 1,
+                    obj: g,
+                    color: '#4CAF50',
+                    icon: '🟩'
+                });
+            });
+
+            // Add background blocks
+            backgroundBlocks.forEach((b, i) => {
+                elements.push({
+                    type: 'Background',
+                    index: i + 1,
+                    obj: b,
+                    color: '#666',
+                    icon: '🔲'
+                });
+            });
+
+            // Add foreground blocks
+            foregroundBlocks.forEach((f, i) => {
+                elements.push({
+                    type: 'Foreground',
+                    index: i + 1,
+                    obj: f,
+                    color: '#999',
+                    icon: '⬜'
+                });
+            });
+
+            // Add start and finish
+            elements.push({
+                type: 'Start',
+                index: 1,
+                obj: startPos,
+                color: '#4CAF50',
+                icon: '🟢'
+            });
+
+            elements.push({
+                type: 'Finish',
+                index: 1,
+                obj: finishPos,
+                color: '#FFC107',
+                icon: '🏁'
+            });
+
+            if (elements.length === 0) {
+                list.innerHTML = '<div style="color: #666; padding: 10px;">No elements yet</div>';
+                return;
+            }
+
+            elements.forEach(elem => {
+                const div = document.createElement('div');
+                div.style.cssText = `
+                    padding: 8px;
+                    margin: 4px 0;
+                    background: rgba(255,255,255,0.05);
+                    border-left: 3px solid ${elem.color};
+                    border-radius: 3px;
+                    cursor: pointer;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                `;
+                div.innerHTML = `
+                    <span>${elem.icon} ${elem.type} #${elem.index}</span>
+                    ${elem.hasMovement ? '<span style="color: #6496FF;">🔄</span>' : ''}
+                `;
+                div.onclick = () => {
+                    cameraX = elem.obj.x - canvas.width / (2 * zoom);
+                    cameraY = elem.obj.y - canvas.height / (2 * zoom);
+                    document.getElementById('cameraInfo').textContent =
+                        `Camera: ${Math.round(cameraX)}, ${Math.round(cameraY)} | Zoom: ${zoom.toFixed(1)}x`;
+
+                    // If it has movement, select it for editing
+                    if (elem.hasMovement) {
+                        selectMovementPath(elem.obj);
+                    }
+
+                    draw();
+                };
+                list.appendChild(div);
+            });
+        }
+
         // Physics are now fixed, no need for update function
+
+        function pointToLineDistance(px, py, x1, y1, x2, y2) {
+            const A = px - x1;
+            const B = py - y1;
+            const C = x2 - x1;
+            const D = y2 - y1;
+
+            const dot = A * C + B * D;
+            const lenSq = C * C + D * D;
+            let param = -1;
+
+            if (lenSq !== 0) {
+                param = dot / lenSq;
+            }
+
+            let xx, yy;
+
+            if (param < 0) {
+                xx = x1;
+                yy = y1;
+            } else if (param > 1) {
+                xx = x2;
+                yy = y2;
+            } else {
+                xx = x1 + param * C;
+                yy = y1 + param * D;
+            }
+
+            const dx = px - xx;
+            const dy = py - yy;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
 
         function snapToGrid(value, grid = gridSize) {
             return Math.round(value / grid) * grid;
@@ -688,7 +902,26 @@
                         }
                     }
 
-                    // If no movement node clicked, check for regular dragging
+                    // If no movement node clicked, check for clicking movement paths
+                    if (!foundNode) {
+                        for (const block of [...platforms, ...hazards]) {
+                            if (block.movement) {
+                                const { point1, point2 } = block.movement;
+
+                                // Check if clicking near the movement line
+                                const lineDistThreshold = 15 / zoom;
+                                const dist = pointToLineDistance(worldPos.x, worldPos.y, point1.x, point1.y, point2.x, point2.y);
+
+                                if (dist <= lineDistThreshold) {
+                                    selectMovementPath(block);
+                                    foundNode = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // If no movement node or path clicked, check for regular dragging
                     if (!foundNode) {
                         // Check finish block
                         if (worldPos.x >= finishPos.x && worldPos.x <= finishPos.x + finishPos.width &&
@@ -1077,6 +1310,7 @@
         function updateStats() {
             document.getElementById('blockCount').textContent = platforms.length;
             document.getElementById('hazardCount').textContent = hazards.length;
+            updateElementsList();
         }
 
         function updateLevelData() {
@@ -1576,6 +1810,7 @@
             player.currentSize = 40;
             sizeTransitioning = false;
             lastFrameTime = performance.now(); // Reset frame time for delta calculation
+            testStartTime = performance.now(); // Reset test start time for movement animations
             requestAnimationFrame(gameLoop);
         }
 
@@ -1585,6 +1820,8 @@
         }
 
         let lastFrameTime = performance.now();
+        let testStartTime = 0;
+
         function gameLoop(currentTime) {
             if (!testMode) return;
 
@@ -1592,10 +1829,61 @@
             const deltaTime = (currentTime - lastFrameTime) / 16.67;
             lastFrameTime = currentTime;
 
+            // Update moving blocks
+            const elapsed = (currentTime - testStartTime) / 1000; // Convert to seconds
+            updateMovingBlocks(elapsed);
+
             updatePlayer(deltaTime);
             draw();
 
             requestAnimationFrame(gameLoop);
+        }
+
+        function updateMovingBlocks(elapsed) {
+            // Update platform positions based on movement paths
+            platforms.forEach(platform => {
+                if (platform.movement) {
+                    const { point1, point2, cycleTime } = platform.movement;
+                    const progress = (elapsed % cycleTime) / cycleTime;
+
+                    // Ping-pong between point1 and point2
+                    let t;
+                    if (progress < 0.5) {
+                        t = progress * 2; // 0 to 1 (point1 to point2)
+                    } else {
+                        t = (1 - progress) * 2; // 1 to 0 (point2 to point1)
+                    }
+
+                    // Calculate center position
+                    const centerX = point1.x + (point2.x - point1.x) * t;
+                    const centerY = point1.y + (point2.y - point1.y) * t;
+
+                    // Set block position (accounting for block size)
+                    platform.x = centerX - platform.width / 2;
+                    platform.y = centerY - platform.height / 2;
+                }
+            });
+
+            // Update hazard positions
+            hazards.forEach(hazard => {
+                if (hazard.movement) {
+                    const { point1, point2, cycleTime } = hazard.movement;
+                    const progress = (elapsed % cycleTime) / cycleTime;
+
+                    let t;
+                    if (progress < 0.5) {
+                        t = progress * 2;
+                    } else {
+                        t = (1 - progress) * 2;
+                    }
+
+                    const centerX = point1.x + (point2.x - point1.x) * t;
+                    const centerY = point1.y + (point2.y - point1.y) * t;
+
+                    hazard.x = centerX - hazard.width / 2;
+                    hazard.y = centerY - hazard.height / 2;
+                }
+            });
         }
 
         function updatePlayer(deltaTime = 1) {
@@ -1805,12 +2093,22 @@
                 player.width = targetSize;
                 player.height = targetSize;
             } else {
-                // Interpolate size
+                // Interpolate size from center
                 const startSize = player.currentSize;
                 const t = sizeTransitionProgress;
                 const newSize = startSize + (targetSize - startSize) * t;
+
+                // Calculate center point before resize
+                const centerX = player.x + player.width / 2;
+                const centerY = player.y + player.height / 2;
+
+                // Update size
                 player.width = newSize;
                 player.height = newSize;
+
+                // Reposition to keep center point fixed
+                player.x = centerX - player.width / 2;
+                player.y = centerY - player.height / 2;
             }
         }
 

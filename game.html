@@ -1528,11 +1528,22 @@
                 player.width = targetSize;
                 player.height = targetSize;
             } else {
+                // Interpolate size from center
                 const startSize = player.currentSize;
                 const t = sizeTransitionProgress;
                 const newSize = startSize + (targetSize - startSize) * t;
+
+                // Calculate center point before resize
+                const centerX = player.x + player.width / 2;
+                const centerY = player.y + player.height / 2;
+
+                // Update size
                 player.width = newSize;
                 player.height = newSize;
+
+                // Reposition to keep center point fixed
+                player.x = centerX - player.width / 2;
+                player.y = centerY - player.height / 2;
             }
         }
 
