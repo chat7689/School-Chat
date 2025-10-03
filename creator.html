@@ -285,6 +285,15 @@
             <button class="tool-button" onclick="setTool('select')">✋ Select/Move <span style="float:right;color:#999;">5</span></button>
             <button class="tool-button delete" onclick="setTool('delete')">🗑 Delete <span style="float:right;color:#999;">6</span></button>
             <button class="tool-button" onclick="setTool('void')" style="background: rgba(0,0,0,0.5);">⬛ Void (Cut)</button>
+            <button class="tool-button" onclick="setTool('movement')" style="background: rgba(100,150,255,0.7);">🔄 Add Movement</button>
+        </div>
+
+        <div class="section">
+            <h3>Movement Settings</h3>
+            <div class="slider-group">
+                <label>Cycle Time: <span class="value" id="cycleTimeValue">5</span>s</label>
+                <input type="range" min="1" max="10" value="5" id="cycleTime" oninput="updateCycleTime()">
+            </div>
         </div>
 
         <div class="section">
@@ -555,6 +564,20 @@
             draw();
         }
 
+        // Movement system
+        let movementCycleTime = 5;
+        let movementSelectedBlock = null;
+        let movementStep = 0; // 0 = select block, 1 = set point 1, 2 = set point 2
+        let movementPoint1 = null;
+        let movementPoint2 = null;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+
+        function updateCycleTime() {
+            movementCycleTime = parseInt(document.getElementById('cycleTime').value);
+            document.getElementById('cycleTimeValue').textContent = movementCycleTime;
+        }
+
         // Physics are now fixed, no need for update function
 
         function snapToGrid(value, grid = gridSize) {
@@ -649,6 +672,64 @@
                         }
                     }
                 }
+            } else if (currentTool === 'movement') {
+                // Movement tool - 3 step process
+                if (movementStep === 0) {
+                    // Step 1: Select a block (only platforms and hazards can move)
+                    const movableBlocks = [
+                        ...platforms.map((p, i) => ({ type: 'platform', index: i, obj: p })),
+                        ...hazards.map((h, i) => ({ type: 'hazard', index: i, obj: h }))
+                    ];
+
+                    for (const block of movableBlocks) {
+                        if (worldPos.x >= block.obj.x && worldPos.x <= block.obj.x + block.obj.width &&
+                            worldPos.y >= block.obj.y && worldPos.y <= block.obj.y + block.obj.height) {
+                            movementSelectedBlock = block;
+                            movementStep = 1;
+                            movementPoint1 = null;
+                            movementPoint2 = null;
+                            draw();
+                            break;
+                        }
+                    }
+                } else if (movementStep === 1) {
+                    // Step 2: Set point 1 (must be on the block, snapped to grid center)
+                    const blockCenterX = movementSelectedBlock.obj.x + movementSelectedBlock.obj.width / 2;
+                    const blockCenterY = movementSelectedBlock.obj.y + movementSelectedBlock.obj.height / 2;
+
+                    // Check if click is on the selected block
+                    if (worldPos.x >= movementSelectedBlock.obj.x && worldPos.x <= movementSelectedBlock.obj.x + movementSelectedBlock.obj.width &&
+                        worldPos.y >= movementSelectedBlock.obj.y && worldPos.y <= movementSelectedBlock.obj.y + movementSelectedBlock.obj.height) {
+
+                        movementPoint1 = {
+                            x: snapToGrid(blockCenterX),
+                            y: snapToGrid(blockCenterY)
+                        };
+                        movementStep = 2;
+                        draw();
+                    }
+                } else if (movementStep === 2) {
+                    // Step 3: Set point 2 (can be anywhere, snapped to grid center)
+                    movementPoint2 = {
+                        x: snapToGrid(worldPos.x),
+                        y: snapToGrid(worldPos.y)
+                    };
+
+                    // Save the movement data to the block
+                    movementSelectedBlock.obj.movement = {
+                        point1: movementPoint1,
+                        point2: movementPoint2,
+                        cycleTime: movementCycleTime
+                    };
+
+                    // Reset movement tool state
+                    movementSelectedBlock = null;
+                    movementStep = 0;
+                    movementPoint1 = null;
+                    movementPoint2 = null;
+                    updateLevelData();
+                    draw();
+                }
             } else if (currentTool === 'delete') {
                 deleteAtPosition(worldPos.x, worldPos.y);
                 isDeleting = true;  // Enable drag-delete
@@ -688,7 +769,9 @@
             if (testMode) return;
 
             const rect = canvas.getBoundingClientRect();
-            const worldPos = screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
+            lastMouseX = e.clientX - rect.left;
+            lastMouseY = e.clientY - rect.top;
+            const worldPos = screenToWorld(lastMouseX, lastMouseY);
 
             if (isDeleting) {
                 // Continuously delete blocks while dragging
@@ -1304,6 +1387,75 @@
                 ctx.strokeStyle = '#333';
                 ctx.lineWidth = 2 / zoom;
                 ctx.strokeRect(player.x, player.y, player.width, player.height);
+            }
+
+            // Draw movement paths for blocks with movement
+            [...platforms, ...hazards].forEach(block => {
+                if (block.movement) {
+                    const { point1, point2 } = block.movement;
+
+                    // Draw path line
+                    ctx.strokeStyle = 'rgba(100, 150, 255, 0.6)';
+                    ctx.lineWidth = 3 / zoom;
+                    ctx.setLineDash([10 / zoom, 5 / zoom]);
+                    ctx.beginPath();
+                    ctx.moveTo(point1.x, point1.y);
+                    ctx.lineTo(point2.x, point2.y);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    // Draw point1 (starting point - blue circle)
+                    ctx.fillStyle = 'rgba(100, 150, 255, 0.8)';
+                    ctx.beginPath();
+                    ctx.arc(point1.x, point1.y, 8 / zoom, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#6496FF';
+                    ctx.lineWidth = 2 / zoom;
+                    ctx.stroke();
+
+                    // Draw point2 (end point - cyan circle)
+                    ctx.fillStyle = 'rgba(0, 255, 255, 0.8)';
+                    ctx.beginPath();
+                    ctx.arc(point2.x, point2.y, 8 / zoom, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#00FFFF';
+                    ctx.lineWidth = 2 / zoom;
+                    ctx.stroke();
+                }
+            });
+
+            // Movement tool visualization
+            if (currentTool === 'movement') {
+                // Highlight selected block
+                if (movementSelectedBlock) {
+                    ctx.strokeStyle = '#6496FF';
+                    ctx.lineWidth = 4 / zoom;
+                    ctx.setLineDash([10 / zoom, 5 / zoom]);
+                    ctx.strokeRect(movementSelectedBlock.obj.x, movementSelectedBlock.obj.y,
+                        movementSelectedBlock.obj.width, movementSelectedBlock.obj.height);
+                    ctx.setLineDash([]);
+                }
+
+                // Show point 1 if set
+                if (movementPoint1) {
+                    ctx.fillStyle = 'rgba(100, 150, 255, 0.8)';
+                    ctx.beginPath();
+                    ctx.arc(movementPoint1.x, movementPoint1.y, 10 / zoom, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Show line to mouse if in step 2
+                if (movementStep === 2 && movementPoint1) {
+                    const mouseWorld = screenToWorld(lastMouseX || 0, lastMouseY || 0);
+                    ctx.strokeStyle = 'rgba(100, 150, 255, 0.4)';
+                    ctx.lineWidth = 2 / zoom;
+                    ctx.setLineDash([5 / zoom, 5 / zoom]);
+                    ctx.beginPath();
+                    ctx.moveTo(movementPoint1.x, movementPoint1.y);
+                    ctx.lineTo(mouseWorld.x, mouseWorld.y);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
             }
 
             // Foreground blocks (visual only, rendered on top)
