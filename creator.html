@@ -258,6 +258,7 @@
     <div id="topbar">
         <button onclick="testLevel()">▶ Test Level</button>
         <button onclick="stopTest()" class="secondary">⏹ Stop Test</button>
+        <button onclick="autoMergeBlocks()" style="background: #27ae60;">🔗 Auto-Merge Overlaps</button>
         <button onclick="clearLevel()" class="secondary">🗑 Clear All</button>
         <button onclick="copyLevelData()">📋 Copy Level Data</button>
         <button onclick="showImportDialog()" style="background: #9b59b6;">📥 Import Level</button>
@@ -682,6 +683,59 @@
             hazards = hazards.filter(h => !(x >= h.x && x <= h.x + h.width && y >= h.y && y <= h.y + h.height));
             growers = growers.filter(g => !(x >= g.x && x <= g.x + g.width && y >= g.y && y <= g.y + g.height));
             shrinkers = shrinkers.filter(s => !(x >= s.x && x <= s.x + s.width && y >= s.y && y <= s.y + s.height));
+            updateStats();
+            updateLevelData();
+            draw();
+        }
+
+        function rectsOverlap(r1, r2) {
+            return !(r1.x + r1.width <= r2.x ||
+                     r2.x + r2.width <= r1.x ||
+                     r1.y + r1.height <= r2.y ||
+                     r2.y + r2.height <= r1.y);
+        }
+
+        function mergeOverlappingRects(blocks) {
+            if (blocks.length === 0) return blocks;
+
+            let merged = true;
+            let result = [...blocks];
+
+            while (merged) {
+                merged = false;
+                for (let i = 0; i < result.length; i++) {
+                    for (let j = i + 1; j < result.length; j++) {
+                        if (rectsOverlap(result[i], result[j])) {
+                            // Merge the two rectangles into a bounding box
+                            const minX = Math.min(result[i].x, result[j].x);
+                            const minY = Math.min(result[i].y, result[j].y);
+                            const maxX = Math.max(result[i].x + result[i].width, result[j].x + result[j].width);
+                            const maxY = Math.max(result[i].y + result[i].height, result[j].y + result[j].height);
+
+                            result[i] = {
+                                x: minX,
+                                y: minY,
+                                width: maxX - minX,
+                                height: maxY - minY
+                            };
+
+                            result.splice(j, 1);
+                            merged = true;
+                            break;
+                        }
+                    }
+                    if (merged) break;
+                }
+            }
+
+            return result;
+        }
+
+        function autoMergeBlocks() {
+            platforms = mergeOverlappingRects(platforms);
+            hazards = mergeOverlappingRects(hazards);
+            growers = mergeOverlappingRects(growers);
+            shrinkers = mergeOverlappingRects(shrinkers);
             updateStats();
             updateLevelData();
             draw();
