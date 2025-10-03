@@ -274,6 +274,8 @@
             <button class="tool-button" onclick="setTool('hazard')">🟥 Hazard (Drag)</button>
             <button class="tool-button" onclick="setTool('grower')">🟩 Grower (2x Size)</button>
             <button class="tool-button" onclick="setTool('shrinker')">🟪 Shrinker (0.5x Size)</button>
+            <button class="tool-button" onclick="setTool('background')">🔲 Background (Visual)</button>
+            <button class="tool-button" onclick="setTool('foreground')">⬜ Foreground (Visual)</button>
             <button class="tool-button" onclick="setTool('start')">🟢 Start (40x40 Click)</button>
             <button class="tool-button" onclick="setTool('finish')">🏁 Finish (Drag 40x40)</button>
             <button class="tool-button" onclick="setTool('player')">👤 Player Preview</button>
@@ -285,7 +287,13 @@
             <h3>Grid Settings</h3>
             <div class="slider-group">
                 <label>Grid Size: <span class="value" id="gridValue">20</span>px</label>
-                <input type="range" min="5" max="50" value="20" id="gridSize" oninput="updateGrid()">
+                <select id="gridSize" onchange="updateGrid()" style="width: 100%; padding: 8px; background: #2a2a3e; color: white; border: 1px solid #444; border-radius: 5px; margin-top: 5px;">
+                    <option value="10">10px</option>
+                    <option value="20" selected>20px</option>
+                    <option value="40">40px</option>
+                    <option value="80">80px</option>
+                    <option value="160">160px</option>
+                </select>
             </div>
             <div class="stats">Blocks: <span id="blockCount">0</span> | Hazards: <span id="hazardCount">0</span></div>
         </div>
@@ -370,6 +378,8 @@
         let hazards = [];
         let growers = [];  // 2x size pads
         let shrinkers = [];  // 0.5x size pads
+        let backgroundBlocks = [];  // Visual only, no collision
+        let foregroundBlocks = [];  // Visual only, rendered on top
         let startPos = { x: 40, y: 520, width: 40, height: 40 };  // 40x40 grid
         let finishPos = { x: 700, y: 480, width: 40, height: 40 };  // Drag-able finish (40x40)
 
@@ -478,7 +488,9 @@
                     ...platforms.map((p, i) => ({ type: 'platform', index: i, obj: p, grid: gridSize })),
                     ...hazards.map((h, i) => ({ type: 'hazard', index: i, obj: h, grid: gridSize })),
                     ...growers.map((g, i) => ({ type: 'grower', index: i, obj: g, grid: gridSize })),
-                    ...shrinkers.map((s, i) => ({ type: 'shrinker', index: i, obj: s, grid: gridSize }))
+                    ...shrinkers.map((s, i) => ({ type: 'shrinker', index: i, obj: s, grid: gridSize })),
+                    ...backgroundBlocks.map((b, i) => ({ type: 'background', index: i, obj: b, grid: gridSize })),
+                    ...foregroundBlocks.map((f, i) => ({ type: 'foreground', index: i, obj: f, grid: gridSize }))
                 ];
 
                 // Check for edge resizing
@@ -637,6 +649,10 @@
                     growers.push({...currentRect});
                 } else if (currentTool === 'shrinker') {
                     shrinkers.push({...currentRect});
+                } else if (currentTool === 'background') {
+                    backgroundBlocks.push({...currentRect});
+                } else if (currentTool === 'foreground') {
+                    foregroundBlocks.push({...currentRect});
                 } else if (currentTool === 'finish') {
                     // Replace finish position with new drag-created one
                     finishPos.x = currentRect.x;
@@ -683,63 +699,13 @@
             hazards = hazards.filter(h => !(x >= h.x && x <= h.x + h.width && y >= h.y && y <= h.y + h.height));
             growers = growers.filter(g => !(x >= g.x && x <= g.x + g.width && y >= g.y && y <= g.y + g.height));
             shrinkers = shrinkers.filter(s => !(x >= s.x && x <= s.x + s.width && y >= s.y && y <= s.y + s.height));
+            backgroundBlocks = backgroundBlocks.filter(b => !(x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height));
+            foregroundBlocks = foregroundBlocks.filter(f => !(x >= f.x && x <= f.x + f.width && y >= f.y && y <= f.y + f.height));
             updateStats();
             updateLevelData();
             draw();
         }
 
-        function rectsOverlap(r1, r2) {
-            return !(r1.x + r1.width <= r2.x ||
-                     r2.x + r2.width <= r1.x ||
-                     r1.y + r1.height <= r2.y ||
-                     r2.y + r2.height <= r1.y);
-        }
-
-        function mergeOverlappingRects(blocks) {
-            if (blocks.length === 0) return blocks;
-
-            let merged = true;
-            let result = [...blocks];
-
-            while (merged) {
-                merged = false;
-                for (let i = 0; i < result.length; i++) {
-                    for (let j = i + 1; j < result.length; j++) {
-                        if (rectsOverlap(result[i], result[j])) {
-                            // Merge the two rectangles into a bounding box
-                            const minX = Math.min(result[i].x, result[j].x);
-                            const minY = Math.min(result[i].y, result[j].y);
-                            const maxX = Math.max(result[i].x + result[i].width, result[j].x + result[j].width);
-                            const maxY = Math.max(result[i].y + result[i].height, result[j].y + result[j].height);
-
-                            result[i] = {
-                                x: minX,
-                                y: minY,
-                                width: maxX - minX,
-                                height: maxY - minY
-                            };
-
-                            result.splice(j, 1);
-                            merged = true;
-                            break;
-                        }
-                    }
-                    if (merged) break;
-                }
-            }
-
-            return result;
-        }
-
-        function autoMergeBlocks() {
-            platforms = mergeOverlappingRects(platforms);
-            hazards = mergeOverlappingRects(hazards);
-            growers = mergeOverlappingRects(growers);
-            shrinkers = mergeOverlappingRects(shrinkers);
-            updateStats();
-            updateLevelData();
-            draw();
-        }
 
         function updateStats() {
             document.getElementById('blockCount').textContent = platforms.length;
@@ -752,6 +718,8 @@
                 hazards: hazards,
                 growers: growers,
                 shrinkers: shrinkers,
+                backgroundBlocks: backgroundBlocks,
+                foregroundBlocks: foregroundBlocks,
                 start: startPos,
                 finish: finishPos,
                 physics: physics
@@ -817,6 +785,8 @@
                 hazards = data.hazards || [];
                 growers = data.growers || [];
                 shrinkers = data.shrinkers || [];
+                backgroundBlocks = data.backgroundBlocks || [];
+                foregroundBlocks = data.foregroundBlocks || [];
                 startPos = data.start || { x: 40, y: 520, width: 40, height: 40 };
                 finishPos = data.finish || { x: 700, y: 480, width: 40, height: 40 };
 
@@ -896,6 +866,15 @@
                 ctx.fillText(y.toString(), 0 + 5 / zoom, y);
             }
 
+            // Background blocks (visual only, rendered first)
+            backgroundBlocks.forEach(b => {
+                ctx.fillStyle = 'rgba(100, 100, 100, 0.3)';
+                ctx.fillRect(b.x, b.y, b.width, b.height);
+                ctx.strokeStyle = 'rgba(80, 80, 80, 0.5)';
+                ctx.lineWidth = 2 / zoom;
+                ctx.strokeRect(b.x, b.y, b.width, b.height);
+            });
+
             // Platforms
             platforms.forEach(p => {
                 ctx.fillStyle = '#4CAF50';
@@ -946,6 +925,12 @@
                 } else if (currentTool === 'shrinker') {
                     ctx.fillStyle = 'rgba(187, 102, 255, 0.5)';
                     ctx.strokeStyle = '#BB66FF';
+                } else if (currentTool === 'background') {
+                    ctx.fillStyle = 'rgba(100, 100, 100, 0.3)';
+                    ctx.strokeStyle = 'rgba(80, 80, 80, 0.5)';
+                } else if (currentTool === 'foreground') {
+                    ctx.fillStyle = 'rgba(200, 200, 200, 0.4)';
+                    ctx.strokeStyle = 'rgba(180, 180, 180, 0.6)';
                 } else if (currentTool === 'finish') {
                     ctx.fillStyle = 'rgba(255, 215, 0, 0.5)';
                     ctx.strokeStyle = '#FFD700';
@@ -995,6 +980,15 @@
                 ctx.lineWidth = 2 / zoom;
                 ctx.strokeRect(player.x, player.y, player.width, player.height);
             }
+
+            // Foreground blocks (visual only, rendered on top)
+            foregroundBlocks.forEach(f => {
+                ctx.fillStyle = 'rgba(200, 200, 200, 0.4)';
+                ctx.fillRect(f.x, f.y, f.width, f.height);
+                ctx.strokeStyle = 'rgba(180, 180, 180, 0.6)';
+                ctx.lineWidth = 2 / zoom;
+                ctx.strokeRect(f.x, f.y, f.width, f.height);
+            });
 
             ctx.restore();
         }
