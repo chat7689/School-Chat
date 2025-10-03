@@ -1441,8 +1441,11 @@
                         // Check if player can slide into a gap below
                         if (player.velocityY > 0) {
                             const gapX = platform.x - player.width;
-                            const gapY = player.y;
-                            if (canFitInGap(gapX, gapY, player.width, player.height)) {
+                            const gapY = player.y + player.height; // Check below the player
+                            // Only allow sliding if there's a vertical gap below the platform edge
+                            // and the player is actually past the edge of the platform
+                            if (player.y + player.height > platform.y + platform.height &&
+                                canFitInGap(gapX, gapY, player.width, player.height * 0.5)) {
                                 // Allow sliding into the gap
                                 return;
                             }
@@ -1455,8 +1458,11 @@
                         // Check if player can slide into a gap below
                         if (player.velocityY > 0) {
                             const gapX = platform.x + platform.width;
-                            const gapY = player.y;
-                            if (canFitInGap(gapX, gapY, player.width, player.height)) {
+                            const gapY = player.y + player.height; // Check below the player
+                            // Only allow sliding if there's a vertical gap below the platform edge
+                            // and the player is actually past the edge of the platform
+                            if (player.y + player.height > platform.y + platform.height &&
+                                canFitInGap(gapX, gapY, player.width, player.height * 0.5)) {
                                 // Allow sliding into the gap
                                 return;
                             }
