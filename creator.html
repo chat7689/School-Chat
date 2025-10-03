@@ -416,11 +416,12 @@
         // Physics settings (fixed values matching main game)
         const physics = {
             gravity: 0.042,  // 150% of 0.028
-            moveSpeed: 1.5,  // 150% of 1
+            moveSpeed: 0.12,  // Acceleration per frame (reduced for more gradual control)
             jumpPower: 3.67,  // Calculated to clear 160px: sqrt(160 * 2 * 0.042) ≈ 3.67
             maxSpeed: 1.5,  // 150% of 1
-            friction: 0.94,
-            airRes: 0.99
+            friction: 0.88,  // Less drag on ground (was 0.94)
+            airRes: 0.96,  // More drag in air (was 0.99)
+            fastFallMultiplier: 1.75  // Down arrow fall speed
         };
 
         // Test mode
@@ -1264,7 +1265,7 @@
 
                 // Gravity (with fast fall)
                 if ((keys['KeyS'] || keys['ArrowDown']) && !isGrounded) {
-                    player.velocityY += physics.gravity * 3 * deltaTime;  // Fall 3x faster
+                    player.velocityY += physics.gravity * physics.fastFallMultiplier * deltaTime;  // Fall 1.75x faster
                 } else {
                     player.velocityY += physics.gravity * deltaTime;
                 }

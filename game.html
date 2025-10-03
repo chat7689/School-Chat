@@ -341,6 +341,81 @@
             font-size: 24px;
             margin: 10px 0;
         }
+
+        #settingsModal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        #settingsModal.show {
+            display: flex;
+        }
+
+        .settings-content {
+            background: rgba(30,30,40,0.98);
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.5);
+        }
+
+        .settings-content h2 {
+            color: #4facfe;
+            margin-bottom: 30px;
+            font-size: 32px;
+        }
+
+        .settings-section {
+            margin: 25px 0;
+            padding: 20px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+        }
+
+        .settings-section h3 {
+            color: #FFC107;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .settings-info {
+            color: #ccc;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .settings-section button {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .settings-section button:hover {
+            transform: scale(1.02);
+        }
+
+        .danger-btn {
+            background: rgba(255,0,0,0.7);
+            color: white;
+        }
+
+        .danger-btn:hover {
+            background: rgba(255,0,0,0.9);
+        }
     </style>
 </head>
 <body>
@@ -383,6 +458,28 @@
         <div>
             <button onclick="restartMap()">Retry Map</button>
             <button onclick="backToMenu()" class="secondary">Map Select</button>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal">
+        <div class="settings-content">
+            <h2>⚙️ Settings</h2>
+
+            <div class="settings-section">
+                <h3>🔐 Account Security</h3>
+                <button onclick="changePassword()" class="main-page-btn">Change Password</button>
+            </div>
+
+            <div class="settings-section">
+                <h3>⚠️ Danger Zone</h3>
+                <div class="settings-info">This action cannot be undone. All your times and data will be permanently deleted.</div>
+                <button onclick="deleteAccount()" class="danger-btn">Delete Account</button>
+            </div>
+
+            <div style="text-align: center; margin-top: 30px;">
+                <button onclick="closeSettings()" class="main-page-btn" style="background: #666;">Close</button>
+            </div>
         </div>
     </div>
 
@@ -449,11 +546,12 @@
 
         // Constants
         const GRAVITY = 0.042;  // 150% of 0.028
-        const MOVE_SPEED = 1.5;  // 150% of 1
+        const MOVE_SPEED = 0.12;  // Acceleration per frame (reduced for more gradual control)
         const MAX_SPEED = 1.5;  // 150% of 1
-        const AIR_RESISTANCE = 0.99;
-        const GROUND_FRICTION = 0.94;
+        const AIR_RESISTANCE = 0.96;  // More drag in air (was 0.99)
+        const GROUND_FRICTION = 0.88;  // Less drag on ground (was 0.94)
         const JUMP_POWER = 3.67;  // Calculated to clear 160px: sqrt(160 * 2 * 0.042) ≈ 3.67
+        const FAST_FALL_MULTIPLIER = 1.75;  // Down arrow fall speed multiplier
 
         // Map definitions
         const maps = [
@@ -919,8 +1017,7 @@
                     <button onclick="window.location.href='times.html'" class="main-page-btn">My Times</button>
                     ${consoleButton}
                     <button onclick="backToMenu()" class="main-page-btn">Map Select</button>
-                    <button onclick="changePassword()" class="main-page-btn">Change Password</button>
-                    <button onclick="deleteAccount()" style="background: rgba(255,0,0,0.7);">Delete Account</button>
+                    <button onclick="showSettings()" class="main-page-btn">⚙️ Settings</button>
                     <button onclick="logout()">Logout</button>
                 `;
                 loadUserStats();
@@ -936,6 +1033,14 @@
             } catch (error) {
                 console.error('Logout failed:', error);
             }
+        }
+
+        function showSettings() {
+            document.getElementById('settingsModal').classList.add('show');
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('show');
         }
 
         async function changePassword() {
@@ -964,6 +1069,7 @@
                 await currentUser.updatePassword(newPassword);
 
                 alert('Password changed successfully!');
+                closeSettings();
             } catch (error) {
                 if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
                     alert('Current password is incorrect');
@@ -1488,7 +1594,7 @@
 
                 // Gravity (with fast fall)
                 if ((keys['KeyS'] || keys['ArrowDown']) && !isGrounded) {
-                    player.velocityY += GRAVITY * 3 * deltaTime;  // Fall 3x faster
+                    player.velocityY += GRAVITY * FAST_FALL_MULTIPLIER * deltaTime;  // Fall 1.75x faster
                 } else {
                     player.velocityY += GRAVITY * deltaTime;
                 }
