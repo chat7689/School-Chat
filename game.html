@@ -1664,6 +1664,34 @@
             // Update size transition
             updateSizeTransition(deltaTime);
 
+            // If size changed, check for collisions and adjust position if needed
+            if (sizeTransitioning) {
+                // Simple collision correction during size transition
+                for (let platform of platforms) {
+                    if (player.x + player.width > platform.x &&
+                        player.x < platform.x + platform.width &&
+                        player.y + player.height > platform.y &&
+                        player.y < platform.y + platform.height) {
+                        // Push player out of collision
+                        const overlapLeft = (player.x + player.width) - platform.x;
+                        const overlapRight = (platform.x + platform.width) - player.x;
+                        const overlapTop = (player.y + player.height) - platform.y;
+                        const overlapBottom = (platform.y + platform.height) - player.y;
+                        const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+
+                        if (minOverlap === overlapTop) {
+                            player.y = platform.y - player.height;
+                        } else if (minOverlap === overlapBottom) {
+                            player.y = platform.y + platform.height;
+                        } else if (minOverlap === overlapLeft) {
+                            player.x = platform.x - player.width;
+                        } else if (minOverlap === overlapRight) {
+                            player.x = platform.x + platform.width;
+                        }
+                    }
+                }
+            }
+
             // Freeze movement during transition
             if (!sizeTransitioning) {
                 // Scale factors based on player size (40 is base) - linear scaling
