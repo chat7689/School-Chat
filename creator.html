@@ -383,6 +383,10 @@
         let isDraggingBlock = false;
         let dragOffset = { x: 0, y: 0 };
         let playerPreview = { x: 0, y: 0, visible: false };
+        let isResizing = false;
+        let resizeEdge = null;  // 'left', 'right', 'top', 'bottom'
+        let resizeStartPos = { x: 0, y: 0 };
+        let resizeOriginal = null;
 
         // Camera
         let cameraX = 0;
@@ -434,6 +438,20 @@
             };
         }
 
+        function getEdgeNearMouse(block, mouseX, mouseY, threshold = 10) {
+            // Check if mouse is near any edge of the block
+            const left = Math.abs(mouseX - block.x) < threshold && mouseY >= block.y && mouseY <= block.y + block.height;
+            const right = Math.abs(mouseX - (block.x + block.width)) < threshold && mouseY >= block.y && mouseY <= block.y + block.height;
+            const top = Math.abs(mouseY - block.y) < threshold && mouseX >= block.x && mouseX <= block.x + block.width;
+            const bottom = Math.abs(mouseY - (block.y + block.height)) < threshold && mouseX >= block.x && mouseX <= block.x + block.width;
+
+            if (left) return 'left';
+            if (right) return 'right';
+            if (top) return 'top';
+            if (bottom) return 'bottom';
+            return null;
+        }
+
         function worldToScreen(x, y) {
             return {
                 x: (x - cameraX) * zoom,
@@ -450,63 +468,51 @@
             if (currentTool === 'select') {
                 // Check if clicking on an existing block
                 selectedBlock = null;
+                isResizing = false;
+                resizeEdge = null;
 
-                // Check finish block first
-                if (worldPos.x >= finishPos.x && worldPos.x <= finishPos.x + finishPos.width &&
-                    worldPos.y >= finishPos.y && worldPos.y <= finishPos.y + finishPos.height) {
-                    selectedBlock = { type: 'finish', obj: finishPos, grid: startGrid };
-                    isDraggingBlock = true;
-                    dragOffset.x = 0;  // Don't use offset, snap directly
-                    dragOffset.y = 0;
-                } else {
-                    for (let i = platforms.length - 1; i >= 0; i--) {
-                        const p = platforms[i];
-                        if (worldPos.x >= p.x && worldPos.x <= p.x + p.width &&
-                            worldPos.y >= p.y && worldPos.y <= p.y + p.height) {
-                            selectedBlock = { type: 'platform', index: i, obj: p, grid: gridSize };
-                            isDraggingBlock = true;
-                            dragOffset.x = 0;  // Don't use offset, snap directly
-                            dragOffset.y = 0;
-                            break;
-                        }
+                // Check all blocks for edge resizing first (prioritize edges)
+                const allBlocks = [
+                    ...platforms.map((p, i) => ({ type: 'platform', index: i, obj: p, grid: gridSize })),
+                    ...hazards.map((h, i) => ({ type: 'hazard', index: i, obj: h, grid: gridSize })),
+                    ...growers.map((g, i) => ({ type: 'grower', index: i, obj: g, grid: gridSize })),
+                    ...shrinkers.map((s, i) => ({ type: 'shrinker', index: i, obj: s, grid: gridSize }))
+                ];
+
+                // Check for edge resizing
+                for (const block of allBlocks) {
+                    const edge = getEdgeNearMouse(block.obj, worldPos.x, worldPos.y);
+                    if (edge) {
+                        selectedBlock = block;
+                        isResizing = true;
+                        resizeEdge = edge;
+                        resizeStartPos = { x: worldPos.x, y: worldPos.y };
+                        resizeOriginal = {
+                            x: block.obj.x,
+                            y: block.obj.y,
+                            width: block.obj.width,
+                            height: block.obj.height
+                        };
+                        break;
                     }
                 }
-                if (!selectedBlock) {
-                    for (let i = hazards.length - 1; i >= 0; i--) {
-                        const h = hazards[i];
-                        if (worldPos.x >= h.x && worldPos.x <= h.x + h.width &&
-                            worldPos.y >= h.y && worldPos.y <= h.y + h.height) {
-                            selectedBlock = { type: 'hazard', index: i, obj: h, grid: gridSize };
-                            isDraggingBlock = true;
-                            dragOffset.x = 0;
-                            dragOffset.y = 0;
-                            break;
-                        }
-                    }
-                }
-                if (!selectedBlock) {
-                    for (let i = growers.length - 1; i >= 0; i--) {
-                        const g = growers[i];
-                        if (worldPos.x >= g.x && worldPos.x <= g.x + g.width &&
-                            worldPos.y >= g.y && worldPos.y <= g.y + g.height) {
-                            selectedBlock = { type: 'grower', index: i, obj: g, grid: gridSize };
-                            isDraggingBlock = true;
-                            dragOffset.x = 0;
-                            dragOffset.y = 0;
-                            break;
-                        }
-                    }
-                }
-                if (!selectedBlock) {
-                    for (let i = shrinkers.length - 1; i >= 0; i--) {
-                        const s = shrinkers[i];
-                        if (worldPos.x >= s.x && worldPos.x <= s.x + s.width &&
-                            worldPos.y >= s.y && worldPos.y <= s.y + s.height) {
-                            selectedBlock = { type: 'shrinker', index: i, obj: s, grid: gridSize };
-                            isDraggingBlock = true;
-                            dragOffset.x = 0;
-                            dragOffset.y = 0;
-                            break;
+
+                // If not resizing, check for regular dragging
+                if (!isResizing) {
+                    // Check finish block
+                    if (worldPos.x >= finishPos.x && worldPos.x <= finishPos.x + finishPos.width &&
+                        worldPos.y >= finishPos.y && worldPos.y <= finishPos.y + finishPos.height) {
+                        selectedBlock = { type: 'finish', obj: finishPos, grid: startGrid };
+                        isDraggingBlock = true;
+                    } else {
+                        // Check other blocks for dragging
+                        for (const block of allBlocks) {
+                            if (worldPos.x >= block.obj.x && worldPos.x <= block.obj.x + block.obj.width &&
+                                worldPos.y >= block.obj.y && worldPos.y <= block.obj.y + block.obj.height) {
+                                selectedBlock = block;
+                                isDraggingBlock = true;
+                                break;
+                            }
                         }
                     }
                 }
@@ -543,7 +549,37 @@
             const rect = canvas.getBoundingClientRect();
             const worldPos = screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
 
-            if (isDraggingBlock && selectedBlock) {
+            if (isResizing && selectedBlock) {
+                // Handle resizing
+                const grid = selectedBlock.grid || gridSize;
+                const snappedX = snapToGrid(worldPos.x, grid);
+                const snappedY = snapToGrid(worldPos.y, grid);
+
+                if (resizeEdge === 'left') {
+                    const newWidth = resizeOriginal.x + resizeOriginal.width - snappedX;
+                    if (newWidth > grid) {
+                        selectedBlock.obj.x = snappedX;
+                        selectedBlock.obj.width = newWidth;
+                    }
+                } else if (resizeEdge === 'right') {
+                    const newWidth = snappedX - selectedBlock.obj.x;
+                    if (newWidth > grid) {
+                        selectedBlock.obj.width = newWidth;
+                    }
+                } else if (resizeEdge === 'top') {
+                    const newHeight = resizeOriginal.y + resizeOriginal.height - snappedY;
+                    if (newHeight > grid) {
+                        selectedBlock.obj.y = snappedY;
+                        selectedBlock.obj.height = newHeight;
+                    }
+                } else if (resizeEdge === 'bottom') {
+                    const newHeight = snappedY - selectedBlock.obj.y;
+                    if (newHeight > grid) {
+                        selectedBlock.obj.height = newHeight;
+                    }
+                }
+                draw();
+            } else if (isDraggingBlock && selectedBlock) {
                 // Snap mouse position directly to grid
                 const grid = selectedBlock.grid || gridSize;
                 selectedBlock.obj.x = snapToGrid(worldPos.x, grid);
@@ -567,6 +603,13 @@
         });
 
         canvas.addEventListener('mouseup', (e) => {
+            if (isResizing) {
+                isResizing = false;
+                resizeEdge = null;
+                selectedBlock = null;
+                updateLevelData();
+            }
+
             if (isDraggingBlock) {
                 isDraggingBlock = false;
                 selectedBlock = null;
