@@ -2139,16 +2139,6 @@
             cameraX = player.x - canvas.width / (2 * zoom);
             cameraY = player.y - canvas.height / (2 * zoom);
 
-            // Death boundary
-            if (player.y > 1000) {
-                player.x = startPos.x;
-                player.y = startPos.y;
-                player.velocityX = 0;
-                player.velocityY = 0;
-                player.currentSize = 40;
-                player.width = 40;
-                player.height = 40;
-            }
         }
 
         function canFitInGap(x, y, width, height) {
