@@ -271,6 +271,8 @@
             <h3>Tools</h3>
             <button class="tool-button active" onclick="setTool('platform')">🟦 Platform (Drag)</button>
             <button class="tool-button" onclick="setTool('hazard')">🟥 Hazard (Drag)</button>
+            <button class="tool-button" onclick="setTool('grower')">🟩 Grower (2x Size)</button>
+            <button class="tool-button" onclick="setTool('shrinker')">🟪 Shrinker (0.5x Size)</button>
             <button class="tool-button" onclick="setTool('start')">🟢 Start (40x40 Click)</button>
             <button class="tool-button" onclick="setTool('finish')">🏁 Finish (Drag 40x40)</button>
             <button class="tool-button" onclick="setTool('player')">👤 Player Preview</button>
@@ -365,6 +367,8 @@
         // Level data
         let platforms = [];
         let hazards = [];
+        let growers = [];  // 2x size pads
+        let shrinkers = [];  // 0.5x size pads
         let startPos = { x: 40, y: 520, width: 40, height: 40 };  // 40x40 grid
         let finishPos = { x: 700, y: 480, width: 40, height: 40 };  // Drag-able finish (40x40)
 
@@ -397,9 +401,12 @@
 
         // Test mode
         let testMode = false;
-        let player = { x: 0, y: 0, width: 40, height: 40, velocityX: 0, velocityY: 0 };
+        let player = { x: 0, y: 0, width: 40, height: 40, velocityX: 0, velocityY: 0, baseSize: 40, currentSize: 40 };
         let keys = {};
         let isGrounded = false;
+        let sizeTransitioning = false;
+        let sizeTransitionProgress = 0;
+        let targetSize = 40;
 
         function setTool(tool) {
             currentTool = tool;
@@ -470,7 +477,33 @@
                             worldPos.y >= h.y && worldPos.y <= h.y + h.height) {
                             selectedBlock = { type: 'hazard', index: i, obj: h, grid: gridSize };
                             isDraggingBlock = true;
-                            dragOffset.x = 0;  // Don't use offset, snap directly
+                            dragOffset.x = 0;
+                            dragOffset.y = 0;
+                            break;
+                        }
+                    }
+                }
+                if (!selectedBlock) {
+                    for (let i = growers.length - 1; i >= 0; i--) {
+                        const g = growers[i];
+                        if (worldPos.x >= g.x && worldPos.x <= g.x + g.width &&
+                            worldPos.y >= g.y && worldPos.y <= g.y + g.height) {
+                            selectedBlock = { type: 'grower', index: i, obj: g, grid: gridSize };
+                            isDraggingBlock = true;
+                            dragOffset.x = 0;
+                            dragOffset.y = 0;
+                            break;
+                        }
+                    }
+                }
+                if (!selectedBlock) {
+                    for (let i = shrinkers.length - 1; i >= 0; i--) {
+                        const s = shrinkers[i];
+                        if (worldPos.x >= s.x && worldPos.x <= s.x + s.width &&
+                            worldPos.y >= s.y && worldPos.y <= s.y + s.height) {
+                            selectedBlock = { type: 'shrinker', index: i, obj: s, grid: gridSize };
+                            isDraggingBlock = true;
+                            dragOffset.x = 0;
                             dragOffset.y = 0;
                             break;
                         }
@@ -546,6 +579,10 @@
                     platforms.push({...currentRect});
                 } else if (currentTool === 'hazard') {
                     hazards.push({...currentRect});
+                } else if (currentTool === 'grower') {
+                    growers.push({...currentRect});
+                } else if (currentTool === 'shrinker') {
+                    shrinkers.push({...currentRect});
                 } else if (currentTool === 'finish') {
                     // Replace finish position with new drag-created one
                     finishPos.x = currentRect.x;
@@ -590,6 +627,8 @@
         function deleteAtPosition(x, y) {
             platforms = platforms.filter(p => !(x >= p.x && x <= p.x + p.width && y >= p.y && y <= p.y + p.height));
             hazards = hazards.filter(h => !(x >= h.x && x <= h.x + h.width && y >= h.y && y <= h.y + h.height));
+            growers = growers.filter(g => !(x >= g.x && x <= g.x + g.width && y >= g.y && y <= g.y + g.height));
+            shrinkers = shrinkers.filter(s => !(x >= s.x && x <= s.x + s.width && y >= s.y && y <= s.y + s.height));
             updateStats();
             updateLevelData();
             draw();
@@ -604,6 +643,8 @@
             const data = {
                 platforms: platforms,
                 hazards: hazards,
+                growers: growers,
+                shrinkers: shrinkers,
                 start: startPos,
                 finish: finishPos,
                 physics: physics
@@ -667,6 +708,8 @@
                 // Import the data
                 platforms = data.platforms || [];
                 hazards = data.hazards || [];
+                growers = data.growers || [];
+                shrinkers = data.shrinkers || [];
                 startPos = data.start || { x: 40, y: 520, width: 40, height: 40 };
                 finishPos = data.finish || { x: 700, y: 480, width: 40, height: 40 };
 
@@ -764,6 +807,24 @@
                 ctx.strokeRect(h.x, h.y, h.width, h.height);
             });
 
+            // Growers (green pads - 2x size)
+            growers.forEach(g => {
+                ctx.fillStyle = '#00FF88';
+                ctx.fillRect(g.x, g.y, g.width, g.height);
+                ctx.strokeStyle = '#00CC66';
+                ctx.lineWidth = 2 / zoom;
+                ctx.strokeRect(g.x, g.y, g.width, g.height);
+            });
+
+            // Shrinkers (purple pads - 0.5x size)
+            shrinkers.forEach(s => {
+                ctx.fillStyle = '#BB66FF';
+                ctx.fillRect(s.x, s.y, s.width, s.height);
+                ctx.strokeStyle = '#9944DD';
+                ctx.lineWidth = 2 / zoom;
+                ctx.strokeRect(s.x, s.y, s.width, s.height);
+            });
+
             // Current drawing
             if (currentRect) {
                 if (currentTool === 'platform') {
@@ -772,6 +833,12 @@
                 } else if (currentTool === 'hazard') {
                     ctx.fillStyle = 'rgba(255, 51, 51, 0.5)';
                     ctx.strokeStyle = '#FF3333';
+                } else if (currentTool === 'grower') {
+                    ctx.fillStyle = 'rgba(0, 255, 136, 0.5)';
+                    ctx.strokeStyle = '#00FF88';
+                } else if (currentTool === 'shrinker') {
+                    ctx.fillStyle = 'rgba(187, 102, 255, 0.5)';
+                    ctx.strokeStyle = '#BB66FF';
                 } else if (currentTool === 'finish') {
                     ctx.fillStyle = 'rgba(255, 215, 0, 0.5)';
                     ctx.strokeStyle = '#FFD700';
@@ -861,6 +928,10 @@
             player.y = startPos.y;
             player.velocityX = 0;
             player.velocityY = 0;
+            player.width = 40;
+            player.height = 40;
+            player.currentSize = 40;
+            sizeTransitioning = false;
             lastFrameTime = performance.now(); // Reset frame time for delta calculation
             requestAnimationFrame(gameLoop);
         }
@@ -885,40 +956,48 @@
         }
 
         function updatePlayer(deltaTime = 1) {
-            // Gravity (with fast fall)
-            if ((keys['KeyS'] || keys['ArrowDown']) && !isGrounded) {
-                player.velocityY += physics.gravity * 3 * deltaTime;  // Fall 3x faster
-            } else {
-                player.velocityY += physics.gravity * deltaTime;
-            }
+            // Update size transition
+            updateSizeTransition(deltaTime);
 
-            // Movement
-            if (keys['KeyA'] || keys['ArrowLeft']) {
-                player.velocityX -= physics.moveSpeed * deltaTime;
-            }
-            if (keys['KeyD'] || keys['ArrowRight']) {
-                player.velocityX += physics.moveSpeed * deltaTime;
-            }
+            // Freeze movement during transition
+            if (!sizeTransitioning) {
+                // Gravity (with fast fall)
+                if ((keys['KeyS'] || keys['ArrowDown']) && !isGrounded) {
+                    player.velocityY += physics.gravity * 3 * deltaTime;  // Fall 3x faster
+                } else {
+                    player.velocityY += physics.gravity * deltaTime;
+                }
 
-            // Jump
-            if ((keys['KeyW'] || keys['ArrowUp'] || keys['Space']) && isGrounded) {
-                player.velocityY = -physics.jumpPower;
+                // Movement
+                if (keys['KeyA'] || keys['ArrowLeft']) {
+                    player.velocityX -= physics.moveSpeed * deltaTime;
+                }
+                if (keys['KeyD'] || keys['ArrowRight']) {
+                    player.velocityX += physics.moveSpeed * deltaTime;
+                }
+
+                // Jump
+                if ((keys['KeyW'] || keys['ArrowUp'] || keys['Space']) && isGrounded) {
+                    player.velocityY = -physics.jumpPower;
+                }
+
+                // Apply friction (using exponential decay for frame-rate independence)
+                if (isGrounded) {
+                    player.velocityX *= Math.pow(physics.friction, deltaTime);
+                } else {
+                    player.velocityX *= Math.pow(physics.airRes, deltaTime);
+                }
+
+                player.velocityX = Math.max(-physics.maxSpeed, Math.min(physics.maxSpeed, player.velocityX));
+
+                player.x += player.velocityX * deltaTime;
+                player.y += player.velocityY * deltaTime;
             }
-
-            // Apply friction (using exponential decay for frame-rate independence)
-            if (isGrounded) {
-                player.velocityX *= Math.pow(physics.friction, deltaTime);
-            } else {
-                player.velocityX *= Math.pow(physics.airRes, deltaTime);
-            }
-
-            player.velocityX = Math.max(-physics.maxSpeed, Math.min(physics.maxSpeed, player.velocityX));
-
-            player.x += player.velocityX * deltaTime;
-            player.y += player.velocityY * deltaTime;
 
             checkCollision();
             checkHazards();
+            checkGrowers();
+            checkShrinkers();
             checkFinish();
 
             // Keep camera centered on player
@@ -973,8 +1052,66 @@
                     player.y = startPos.y;
                     player.velocityX = 0;
                     player.velocityY = 0;
+                    player.currentSize = 40;
+                    player.width = 40;
+                    player.height = 40;
                     return;
                 }
+            }
+        }
+
+        function checkGrowers() {
+            for (let grower of growers) {
+                if (player.x + player.width > grower.x &&
+                    player.x < grower.x + grower.width &&
+                    player.y + player.height > grower.y &&
+                    player.y < grower.y + grower.height) {
+                    if (player.currentSize !== 80 && !sizeTransitioning) {
+                        startSizeTransition(80);
+                    }
+                    return;
+                }
+            }
+        }
+
+        function checkShrinkers() {
+            for (let shrinker of shrinkers) {
+                if (player.x + player.width > shrinker.x &&
+                    player.x < shrinker.x + shrinker.width &&
+                    player.y + player.height > shrinker.y &&
+                    player.y < shrinker.y + shrinker.height) {
+                    if (player.currentSize !== 20 && !sizeTransitioning) {
+                        startSizeTransition(20);
+                    }
+                    return;
+                }
+            }
+        }
+
+        function startSizeTransition(newSize) {
+            sizeTransitioning = true;
+            targetSize = newSize;
+            sizeTransitionProgress = 0;
+        }
+
+        function updateSizeTransition(deltaTime) {
+            if (!sizeTransitioning) return;
+
+            sizeTransitionProgress += deltaTime * 0.1;  // Transition speed
+
+            if (sizeTransitionProgress >= 1) {
+                // Transition complete
+                sizeTransitioning = false;
+                player.currentSize = targetSize;
+                player.width = targetSize;
+                player.height = targetSize;
+            } else {
+                // Interpolate size
+                const startSize = player.currentSize;
+                const t = sizeTransitionProgress;
+                const newSize = startSize + (targetSize - startSize) * t;
+                player.width = newSize;
+                player.height = newSize;
             }
         }
 
