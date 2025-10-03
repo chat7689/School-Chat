@@ -825,6 +825,7 @@
             player.y = startPos.y;
             player.velocityX = 0;
             player.velocityY = 0;
+            lastFrameTime = performance.now(); // Reset frame time for delta calculation
             requestAnimationFrame(gameLoop);
         }
 
@@ -833,29 +834,34 @@
             draw();
         }
 
-        function gameLoop() {
+        let lastFrameTime = performance.now();
+        function gameLoop(currentTime) {
             if (!testMode) return;
 
-            updatePlayer();
+            // Calculate delta time (normalize to 60fps baseline)
+            const deltaTime = (currentTime - lastFrameTime) / 16.67;
+            lastFrameTime = currentTime;
+
+            updatePlayer(deltaTime);
             draw();
 
             requestAnimationFrame(gameLoop);
         }
 
-        function updatePlayer() {
+        function updatePlayer(deltaTime = 1) {
             // Gravity (with fast fall)
             if ((keys['KeyS'] || keys['ArrowDown']) && !isGrounded) {
-                player.velocityY += physics.gravity * 3;  // Fall 3x faster
+                player.velocityY += physics.gravity * 3 * deltaTime;  // Fall 3x faster
             } else {
-                player.velocityY += physics.gravity;
+                player.velocityY += physics.gravity * deltaTime;
             }
 
             // Movement
             if (keys['KeyA'] || keys['ArrowLeft']) {
-                player.velocityX -= physics.moveSpeed;
+                player.velocityX -= physics.moveSpeed * deltaTime;
             }
             if (keys['KeyD'] || keys['ArrowRight']) {
-                player.velocityX += physics.moveSpeed;
+                player.velocityX += physics.moveSpeed * deltaTime;
             }
 
             // Jump
@@ -863,17 +869,17 @@
                 player.velocityY = -physics.jumpPower;
             }
 
-            // Apply friction
+            // Apply friction (using exponential decay for frame-rate independence)
             if (isGrounded) {
-                player.velocityX *= physics.friction;
+                player.velocityX *= Math.pow(physics.friction, deltaTime);
             } else {
-                player.velocityX *= physics.airRes;
+                player.velocityX *= Math.pow(physics.airRes, deltaTime);
             }
 
             player.velocityX = Math.max(-physics.maxSpeed, Math.min(physics.maxSpeed, player.velocityX));
 
-            player.x += player.velocityX;
-            player.y += player.velocityY;
+            player.x += player.velocityX * deltaTime;
+            player.y += player.velocityY * deltaTime;
 
             checkCollision();
             checkHazards();

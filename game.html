@@ -1169,6 +1169,7 @@
                     // Start the actual game
                     startTime = Date.now();
                     currentTime = 0;
+                    lastFrameTime = performance.now(); // Reset frame time for delta calculation
                     gameActive = true;
 
                     timerInterval = setInterval(() => {
@@ -1394,23 +1395,23 @@
         }
 
         // Update player
-        function updatePlayer() {
+        function updatePlayer(deltaTime = 1) {
             if (!gameActive) return;
 
             // Gravity (with fast fall)
             if ((keys['KeyS'] || keys['ArrowDown']) && !isGrounded) {
-                player.velocityY += GRAVITY * 3;  // Fall 3x faster
+                player.velocityY += GRAVITY * 3 * deltaTime;  // Fall 3x faster
             } else {
-                player.velocityY += GRAVITY;
+                player.velocityY += GRAVITY * deltaTime;
             }
 
             // Movement (normal acceleration-based)
             const moveSpeed = MOVE_SPEED;
             if (keys['KeyA'] || keys['ArrowLeft']) {
-                player.velocityX -= moveSpeed;
+                player.velocityX -= moveSpeed * deltaTime;
             }
             if (keys['KeyD'] || keys['ArrowRight']) {
-                player.velocityX += moveSpeed;
+                player.velocityX += moveSpeed * deltaTime;
             }
 
             // Jump (W, UP arrow, or SPACE)
@@ -1418,17 +1419,17 @@
                 player.velocityY = -JUMP_POWER;
             }
 
-            // Apply friction
+            // Apply friction (using exponential decay for frame-rate independence)
             if (isGrounded) {
-                player.velocityX *= GROUND_FRICTION;
+                player.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
             } else {
-                player.velocityX *= AIR_RESISTANCE;
+                player.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
             }
 
             player.velocityX = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, player.velocityX));
 
-            player.x += player.velocityX;
-            player.y += player.velocityY;
+            player.x += player.velocityX * deltaTime;
+            player.y += player.velocityY * deltaTime;
 
             checkCollision();
             checkHazards();
@@ -1439,8 +1440,8 @@
 
             const targetCameraX = player.x - canvas.width / 2;
             const targetCameraY = player.y - canvas.height / 2;
-            cameraX += (targetCameraX - cameraX) * 0.08;
-            cameraY += (targetCameraY - cameraY) * 0.08;
+            cameraX += (targetCameraX - cameraX) * 0.08 * deltaTime;
+            cameraY += (targetCameraY - cameraY) * 0.08 * deltaTime;
 
             if (player.y > 1000) {
                 restartMap();
@@ -1506,11 +1507,16 @@
             ctx.restore();
         }
 
-        // Game loop
-        function gameLoop() {
+        // Game loop with delta time for consistent physics
+        let lastFrameTime = performance.now();
+        function gameLoop(currentTime) {
             requestAnimationFrame(gameLoop);
             if (gameActive) {
-                updatePlayer();
+                // Calculate delta time (normalize to 60fps baseline)
+                const deltaTime = (currentTime - lastFrameTime) / 16.67;
+                lastFrameTime = currentTime;
+
+                updatePlayer(deltaTime);
                 draw();
             }
         }
