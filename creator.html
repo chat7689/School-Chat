@@ -572,6 +572,9 @@
         let movementPoint2 = null;
         let lastMouseX = 0;
         let lastMouseY = 0;
+        let isDraggingMovementNode = false;
+        let draggingNodeBlock = null;
+        let draggingNodeType = null; // 'point1' or 'point2'
 
         function updateCycleTime() {
             movementCycleTime = parseInt(document.getElementById('cycleTime').value);
@@ -653,21 +656,54 @@
                     }
                 }
 
-                // If not resizing, check for regular dragging
+                // If not resizing, check for movement nodes first, then regular dragging
                 if (!isResizing) {
-                    // Check finish block
-                    if (worldPos.x >= finishPos.x && worldPos.x <= finishPos.x + finishPos.width &&
-                        worldPos.y >= finishPos.y && worldPos.y <= finishPos.y + finishPos.height) {
-                        selectedBlock = { type: 'finish', obj: finishPos, grid: startGrid };
-                        isDraggingBlock = true;
-                    } else {
-                        // Check other blocks for dragging
-                        for (const block of allBlocks) {
-                            if (worldPos.x >= block.obj.x && worldPos.x <= block.obj.x + block.obj.width &&
-                                worldPos.y >= block.obj.y && worldPos.y <= block.obj.y + block.obj.height) {
-                                selectedBlock = block;
-                                isDraggingBlock = true;
+                    // Check if clicking on a movement node
+                    const nodeRadius = 10 / zoom;
+                    let foundNode = false;
+
+                    for (const block of [...platforms, ...hazards]) {
+                        if (block.movement) {
+                            const { point1, point2 } = block.movement;
+
+                            // Check point1
+                            const dist1 = Math.sqrt(Math.pow(worldPos.x - point1.x, 2) + Math.pow(worldPos.y - point1.y, 2));
+                            if (dist1 <= nodeRadius * 3) {
+                                isDraggingMovementNode = true;
+                                draggingNodeBlock = block;
+                                draggingNodeType = 'point1';
+                                foundNode = true;
                                 break;
+                            }
+
+                            // Check point2
+                            const dist2 = Math.sqrt(Math.pow(worldPos.x - point2.x, 2) + Math.pow(worldPos.y - point2.y, 2));
+                            if (dist2 <= nodeRadius * 3) {
+                                isDraggingMovementNode = true;
+                                draggingNodeBlock = block;
+                                draggingNodeType = 'point2';
+                                foundNode = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    // If no movement node clicked, check for regular dragging
+                    if (!foundNode) {
+                        // Check finish block
+                        if (worldPos.x >= finishPos.x && worldPos.x <= finishPos.x + finishPos.width &&
+                            worldPos.y >= finishPos.y && worldPos.y <= finishPos.y + finishPos.height) {
+                            selectedBlock = { type: 'finish', obj: finishPos, grid: startGrid };
+                            isDraggingBlock = true;
+                        } else {
+                            // Check other blocks for dragging
+                            for (const block of allBlocks) {
+                                if (worldPos.x >= block.obj.x && worldPos.x <= block.obj.x + block.obj.width &&
+                                    worldPos.y >= block.obj.y && worldPos.y <= block.obj.y + block.obj.height) {
+                                    selectedBlock = block;
+                                    isDraggingBlock = true;
+                                    break;
+                                }
                             }
                         }
                     }
@@ -806,11 +842,33 @@
                     }
                 }
                 draw();
+            } else if (isDraggingMovementNode && draggingNodeBlock) {
+                // Drag movement node
+                if (draggingNodeType === 'point1') {
+                    draggingNodeBlock.movement.point1.x = snapToGrid(worldPos.x);
+                    draggingNodeBlock.movement.point1.y = snapToGrid(worldPos.y);
+                } else if (draggingNodeType === 'point2') {
+                    draggingNodeBlock.movement.point2.x = snapToGrid(worldPos.x);
+                    draggingNodeBlock.movement.point2.y = snapToGrid(worldPos.y);
+                }
+                draw();
             } else if (isDraggingBlock && selectedBlock) {
                 // Snap mouse position directly to grid
                 const grid = selectedBlock.grid || gridSize;
+                const oldX = selectedBlock.obj.x;
+                const oldY = selectedBlock.obj.y;
                 selectedBlock.obj.x = snapToGrid(worldPos.x, grid);
                 selectedBlock.obj.y = snapToGrid(worldPos.y, grid);
+
+                // If this block has movement, update its movement points
+                if (selectedBlock.obj.movement) {
+                    const deltaX = selectedBlock.obj.x - oldX;
+                    const deltaY = selectedBlock.obj.y - oldY;
+                    selectedBlock.obj.movement.point1.x += deltaX;
+                    selectedBlock.obj.movement.point1.y += deltaY;
+                    selectedBlock.obj.movement.point2.x += deltaX;
+                    selectedBlock.obj.movement.point2.y += deltaY;
+                }
                 draw();
             } else if (isDrawing) {
                 // Use appropriate grid based on tool
@@ -854,6 +912,13 @@
             if (isDraggingBlock) {
                 isDraggingBlock = false;
                 selectedBlock = null;
+                updateLevelData();
+            }
+
+            if (isDraggingMovementNode) {
+                isDraggingMovementNode = false;
+                draggingNodeBlock = null;
+                draggingNodeType = null;
                 updateLevelData();
             }
 
@@ -1665,34 +1730,10 @@
                         player.velocityY = 0;
                     }
                     else if (minOverlap === overlapLeft) {
-                        // Check if player can slide into a gap below
-                        if (player.velocityY > 0) {
-                            const gapX = platform.x - player.width;
-                            const gapY = player.y + player.height; // Check below the player
-                            // Only allow sliding if there's a vertical gap below the platform edge
-                            // and the player is actually past the edge of the platform
-                            if (player.y + player.height > platform.y + platform.height &&
-                                canFitInGap(gapX, gapY, player.width, player.height * 0.5)) {
-                                // Allow sliding into the gap
-                                return;
-                            }
-                        }
                         player.x = platform.x - player.width;
                         player.velocityX = 0;
                     }
                     else if (minOverlap === overlapRight) {
-                        // Check if player can slide into a gap below
-                        if (player.velocityY > 0) {
-                            const gapX = platform.x + platform.width;
-                            const gapY = player.y + player.height; // Check below the player
-                            // Only allow sliding if there's a vertical gap below the platform edge
-                            // and the player is actually past the edge of the platform
-                            if (player.y + player.height > platform.y + platform.height &&
-                                canFitInGap(gapX, gapY, player.width, player.height * 0.5)) {
-                                // Allow sliding into the gap
-                                return;
-                            }
-                        }
                         player.x = platform.x + platform.width;
                         player.velocityX = 0;
                     }
