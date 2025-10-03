@@ -2030,16 +2030,16 @@
                         // Check if player can fall into a gap to the side
                         let foundGap = false;
 
-                        // Check for gap on the left
-                        if (player.velocityX < 0 && player.x < platform.x) {
+                        // Check for gap on the left - only if player is significantly past the edge
+                        if (player.velocityX < 0 && player.x + player.width < platform.x + player.width * 0.5) {
                             const gapX = player.x;
                             const gapY = platform.y;
                             if (canFitInGap(gapX, gapY, player.width, player.height)) {
                                 foundGap = true;
                             }
                         }
-                        // Check for gap on the right
-                        else if (player.velocityX > 0 && player.x + player.width > platform.x + platform.width) {
+                        // Check for gap on the right - only if player is significantly past the edge
+                        else if (player.velocityX > 0 && player.x > platform.x + platform.width - player.width * 0.5) {
                             const gapX = platform.x + platform.width;
                             const gapY = platform.y;
                             if (canFitInGap(gapX, gapY, player.width, player.height)) {
