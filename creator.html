@@ -274,8 +274,9 @@
             <h3>Tools <span style="font-size: 10px; color: #999;">(or press 1-6)</span></h3>
             <button class="tool-button active" onclick="setTool('platform')">🟦 Platform <span style="float:right;color:#999;">1</span></button>
             <button class="tool-button" onclick="setTool('hazard')">🟥 Hazard <span style="float:right;color:#999;">2</span></button>
-            <button class="tool-button" onclick="setTool('grower')">🟩 Grower (2x) <span style="float:right;color:#999;">3</span></button>
-            <button class="tool-button" onclick="setTool('shrinker')">🟪 Shrinker (0.5x) <span style="float:right;color:#999;">4</span></button>
+            <button class="tool-button" onclick="setTool('shrinker')">🟪 Small Size (20px) <span style="float:right;color:#999;">3</span></button>
+            <button class="tool-button" onclick="setTool('default')">🟨 Default Size (40px) <span style="float:right;color:#999;">4</span></button>
+            <button class="tool-button" onclick="setTool('grower')">🟩 Large Size (80px)</button>
             <button class="tool-button" onclick="setTool('background')">🔲 Background</button>
             <button class="tool-button" onclick="setTool('foreground')">⬜ Foreground</button>
             <button class="tool-button" onclick="setTool('start')">🟢 Start Position</button>
@@ -385,8 +386,9 @@
         // Level data
         let platforms = [];
         let hazards = [];
-        let growers = [];  // 2x size pads
-        let shrinkers = [];  // 0.5x size pads
+        let growers = [];  // Large size blocks (80px)
+        let shrinkers = [];  // Small size blocks (20px)
+        let defaultSizeBlocks = [];  // Default size blocks (40px)
         let backgroundBlocks = [];  // Visual only, no collision
         let foregroundBlocks = [];  // Visual only, rendered on top
         let startPos = { x: 40, y: 520, width: 40, height: 40 };  // 40x40 grid
@@ -446,6 +448,7 @@
                 hazards: JSON.parse(JSON.stringify(hazards)),
                 growers: JSON.parse(JSON.stringify(growers)),
                 shrinkers: JSON.parse(JSON.stringify(shrinkers)),
+                defaultSizeBlocks: JSON.parse(JSON.stringify(defaultSizeBlocks)),
                 backgroundBlocks: JSON.parse(JSON.stringify(backgroundBlocks)),
                 foregroundBlocks: JSON.parse(JSON.stringify(foregroundBlocks)),
                 startPos: JSON.parse(JSON.stringify(startPos)),
@@ -465,6 +468,7 @@
                     hazards: JSON.parse(JSON.stringify(hazards)),
                     growers: JSON.parse(JSON.stringify(growers)),
                     shrinkers: JSON.parse(JSON.stringify(shrinkers)),
+                    defaultSizeBlocks: JSON.parse(JSON.stringify(defaultSizeBlocks)),
                     backgroundBlocks: JSON.parse(JSON.stringify(backgroundBlocks)),
                     foregroundBlocks: JSON.parse(JSON.stringify(foregroundBlocks)),
                     startPos: JSON.parse(JSON.stringify(startPos)),
@@ -477,6 +481,7 @@
                 hazards = state.hazards;
                 growers = state.growers;
                 shrinkers = state.shrinkers;
+                defaultSizeBlocks = state.defaultSizeBlocks || [];
                 backgroundBlocks = state.backgroundBlocks;
                 foregroundBlocks = state.foregroundBlocks;
                 startPos = state.startPos;
@@ -495,6 +500,7 @@
                     hazards: JSON.parse(JSON.stringify(hazards)),
                     growers: JSON.parse(JSON.stringify(growers)),
                     shrinkers: JSON.parse(JSON.stringify(shrinkers)),
+                    defaultSizeBlocks: JSON.parse(JSON.stringify(defaultSizeBlocks)),
                     backgroundBlocks: JSON.parse(JSON.stringify(backgroundBlocks)),
                     foregroundBlocks: JSON.parse(JSON.stringify(foregroundBlocks)),
                     startPos: JSON.parse(JSON.stringify(startPos)),
@@ -507,6 +513,7 @@
                 hazards = state.hazards;
                 growers = state.growers;
                 shrinkers = state.shrinkers;
+                defaultSizeBlocks = state.defaultSizeBlocks || [];
                 backgroundBlocks = state.backgroundBlocks;
                 foregroundBlocks = state.foregroundBlocks;
                 startPos = state.startPos;
@@ -600,6 +607,7 @@
                     ...hazards.map((h, i) => ({ type: 'hazard', index: i, obj: h, grid: gridSize })),
                     ...growers.map((g, i) => ({ type: 'grower', index: i, obj: g, grid: gridSize })),
                     ...shrinkers.map((s, i) => ({ type: 'shrinker', index: i, obj: s, grid: gridSize })),
+                    ...defaultSizeBlocks.map((d, i) => ({ type: 'default', index: i, obj: d, grid: gridSize })),
                     ...backgroundBlocks.map((b, i) => ({ type: 'background', index: i, obj: b, grid: gridSize })),
                     ...foregroundBlocks.map((f, i) => ({ type: 'foreground', index: i, obj: f, grid: gridSize }))
                 ];
@@ -777,10 +785,12 @@
                     platforms.push({...currentRect});
                 } else if (currentTool === 'hazard') {
                     hazards.push({...currentRect});
-                } else if (currentTool === 'grower') {
-                    growers.push({...currentRect});
                 } else if (currentTool === 'shrinker') {
                     shrinkers.push({...currentRect});
+                } else if (currentTool === 'default') {
+                    defaultSizeBlocks.push({...currentRect});
+                } else if (currentTool === 'grower') {
+                    growers.push({...currentRect});
                 } else if (currentTool === 'background') {
                     backgroundBlocks.push({...currentRect});
                 } else if (currentTool === 'foreground') {
@@ -832,6 +842,7 @@
             hazards = hazards.filter(h => !(x >= h.x && x <= h.x + h.width && y >= h.y && y <= h.y + h.height));
             growers = growers.filter(g => !(x >= g.x && x <= g.x + g.width && y >= g.y && y <= g.y + g.height));
             shrinkers = shrinkers.filter(s => !(x >= s.x && x <= s.x + s.width && y >= s.y && y <= s.y + s.height));
+            defaultSizeBlocks = defaultSizeBlocks.filter(d => !(x >= d.x && x <= d.x + d.width && y >= d.y && y <= d.y + d.height));
             backgroundBlocks = backgroundBlocks.filter(b => !(x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height));
             foregroundBlocks = foregroundBlocks.filter(f => !(x >= f.x && x <= f.x + f.width && y >= f.y && y <= f.y + f.height));
             updateStats();
@@ -845,6 +856,7 @@
             hazards = cutVoidFromBlocks(hazards, voidRect);
             growers = cutVoidFromBlocks(growers, voidRect);
             shrinkers = cutVoidFromBlocks(shrinkers, voidRect);
+            defaultSizeBlocks = cutVoidFromBlocks(defaultSizeBlocks, voidRect);
             backgroundBlocks = cutVoidFromBlocks(backgroundBlocks, voidRect);
             foregroundBlocks = cutVoidFromBlocks(foregroundBlocks, voidRect);
         }
@@ -925,6 +937,7 @@
                 hazards: hazards,
                 growers: growers,
                 shrinkers: shrinkers,
+                defaultSizeBlocks: defaultSizeBlocks,
                 backgroundBlocks: backgroundBlocks,
                 foregroundBlocks: foregroundBlocks,
                 start: startPos,
@@ -943,6 +956,7 @@
                 hazards: hazards,
                 growers: growers,
                 shrinkers: shrinkers,
+                defaultSizeBlocks: defaultSizeBlocks,
                 backgroundBlocks: backgroundBlocks,
                 foregroundBlocks: foregroundBlocks,
                 start: startPos,
@@ -974,6 +988,7 @@
                     hazards = data.hazards || [];
                     growers = data.growers || [];
                     shrinkers = data.shrinkers || [];
+                    defaultSizeBlocks = data.defaultSizeBlocks || [];
                     backgroundBlocks = data.backgroundBlocks || [];
                     foregroundBlocks = data.foregroundBlocks || [];
                     startPos = data.start || { x: 40, y: 520, width: 40, height: 40 };
@@ -1003,6 +1018,7 @@
                 hazards = [];
                 growers = [];
                 shrinkers = [];
+                defaultSizeBlocks = [];
                 backgroundBlocks = [];
                 foregroundBlocks = [];
                 startPos = { x: 40, y: 520, width: 40, height: 40 };
@@ -1076,6 +1092,7 @@
                 hazards = data.hazards || [];
                 growers = data.growers || [];
                 shrinkers = data.shrinkers || [];
+                defaultSizeBlocks = data.defaultSizeBlocks || [];
                 backgroundBlocks = data.backgroundBlocks || [];
                 foregroundBlocks = data.foregroundBlocks || [];
                 startPos = data.start || { x: 40, y: 520, width: 40, height: 40 };
@@ -1204,6 +1221,15 @@
                 ctx.strokeRect(s.x, s.y, s.width, s.height);
             });
 
+            // Default size blocks (yellow/orange - default 40px size)
+            defaultSizeBlocks.forEach(d => {
+                ctx.fillStyle = '#FFB84D';
+                ctx.fillRect(d.x, d.y, d.width, d.height);
+                ctx.strokeStyle = '#FF8800';
+                ctx.lineWidth = 2 / zoom;
+                ctx.strokeRect(d.x, d.y, d.width, d.height);
+            });
+
             // Current drawing
             if (currentRect) {
                 if (currentTool === 'platform') {
@@ -1218,6 +1244,9 @@
                 } else if (currentTool === 'shrinker') {
                     ctx.fillStyle = 'rgba(187, 102, 255, 0.5)';
                     ctx.strokeStyle = '#BB66FF';
+                } else if (currentTool === 'default') {
+                    ctx.fillStyle = 'rgba(255, 184, 77, 0.5)';
+                    ctx.strokeStyle = '#FFB84D';
                 } else if (currentTool === 'background') {
                     ctx.fillStyle = 'rgba(100, 100, 100, 0.3)';
                     ctx.strokeStyle = 'rgba(80, 80, 80, 0.5)';
@@ -1641,6 +1670,7 @@
                     else if (selectedBlock.type === 'hazard') hazards.push(newBlock);
                     else if (selectedBlock.type === 'grower') growers.push(newBlock);
                     else if (selectedBlock.type === 'shrinker') shrinkers.push(newBlock);
+                    else if (selectedBlock.type === 'default') defaultSizeBlocks.push(newBlock);
                     else if (selectedBlock.type === 'background') backgroundBlocks.push(newBlock);
                     else if (selectedBlock.type === 'foreground') foregroundBlocks.push(newBlock);
                 }
@@ -1658,6 +1688,7 @@
                 else if (selectedBlock.type === 'hazard') hazards.splice(selectedBlock.index, 1);
                 else if (selectedBlock.type === 'grower') growers.splice(selectedBlock.index, 1);
                 else if (selectedBlock.type === 'shrinker') shrinkers.splice(selectedBlock.index, 1);
+                else if (selectedBlock.type === 'default') defaultSizeBlocks.splice(selectedBlock.index, 1);
                 else if (selectedBlock.type === 'background') backgroundBlocks.splice(selectedBlock.index, 1);
                 else if (selectedBlock.type === 'foreground') foregroundBlocks.splice(selectedBlock.index, 1);
                 selectedBlock = null;

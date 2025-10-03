@@ -528,6 +528,7 @@
         let hazards = [];
         let growers = [];
         let shrinkers = [];
+        let defaultSizeBlocks = [];
         let keys = {};
         let isGrounded = false;
         let sizeTransitioning = false;
@@ -1238,6 +1239,13 @@
                 height: s.height
             })) : [];
 
+            defaultSizeBlocks = map.defaultSizeBlocks ? map.defaultSizeBlocks.map(d => ({
+                x: d.x,
+                y: d.y,
+                width: d.width,
+                height: d.height
+            })) : [];
+
             finishLine = {
                 x: map.finish.x,
                 y: map.finish.y,
@@ -1470,13 +1478,14 @@
             }
         }
 
-        // Check growers
+        // Check size blocks (growers = large, shrinkers = small)
         function checkGrowers() {
             for (let grower of growers) {
                 if (player.x + player.width > grower.x &&
                     player.x < grower.x + grower.width &&
                     player.y + player.height > grower.y &&
                     player.y < grower.y + grower.height) {
+                    // Large size block - sets to 80
                     if (player.currentSize !== 80 && !sizeTransitioning) {
                         startSizeTransition(80);
                     }
@@ -1485,15 +1494,32 @@
             }
         }
 
-        // Check shrinkers
+        // Check shrinkers (small size block)
         function checkShrinkers() {
             for (let shrinker of shrinkers) {
                 if (player.x + player.width > shrinker.x &&
                     player.x < shrinker.x + shrinker.width &&
                     player.y + player.height > shrinker.y &&
                     player.y < shrinker.y + shrinker.height) {
+                    // Small size block - sets to 20
                     if (player.currentSize !== 20 && !sizeTransitioning) {
                         startSizeTransition(20);
+                    }
+                    return;
+                }
+            }
+        }
+
+        // Check default size blocks
+        function checkDefaultSize() {
+            for (let defaultBlock of defaultSizeBlocks) {
+                if (player.x + player.width > defaultBlock.x &&
+                    player.x < defaultBlock.x + defaultBlock.width &&
+                    player.y + player.height > defaultBlock.y &&
+                    player.y < defaultBlock.y + defaultBlock.height) {
+                    // Default size block - sets to 40
+                    if (player.currentSize !== 40 && !sizeTransitioning) {
+                        startSizeTransition(40);
                     }
                     return;
                 }
@@ -1699,6 +1725,7 @@
             checkHazards();
             checkGrowers();
             checkShrinkers();
+            checkDefaultSize();
             checkFinish();
 
             // Update velocity indicator (after collision so it shows actual velocity)
@@ -1753,6 +1780,14 @@
                 ctx.strokeStyle = '#9944DD';
                 ctx.lineWidth = 2;
                 ctx.strokeRect(shrinker.x, shrinker.y, shrinker.width, shrinker.height);
+            }
+
+            for (let defaultBlock of defaultSizeBlocks) {
+                ctx.fillStyle = '#FFB84D';
+                ctx.fillRect(defaultBlock.x, defaultBlock.y, defaultBlock.width, defaultBlock.height);
+                ctx.strokeStyle = '#FF8800';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(defaultBlock.x, defaultBlock.y, defaultBlock.width, defaultBlock.height);
             }
 
             if (finishLine) {
