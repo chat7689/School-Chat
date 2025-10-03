@@ -719,12 +719,22 @@
                 const endX = snapToGrid(worldPos.x, grid);
                 const endY = snapToGrid(worldPos.y, grid);
 
+                // Only include grid cells that the cursor has actually entered
+                const minX = Math.min(dragStart.x, endX);
+                const maxX = Math.max(dragStart.x, endX);
+                const minY = Math.min(dragStart.y, endY);
+                const maxY = Math.max(dragStart.y, endY);
+
                 currentRect = {
-                    x: Math.min(dragStart.x, endX),
-                    y: Math.min(dragStart.y, endY),
-                    width: Math.abs(endX - dragStart.x) + grid,
-                    height: Math.abs(endY - dragStart.y) + grid
+                    x: minX,
+                    y: minY,
+                    width: maxX - minX + (endX === dragStart.x ? grid : 0),
+                    height: maxY - minY + (endY === dragStart.y ? grid : 0)
                 };
+
+                // Ensure minimum size of one grid cell
+                if (currentRect.width === 0) currentRect.width = grid;
+                if (currentRect.height === 0) currentRect.height = grid;
 
                 draw();
             }
