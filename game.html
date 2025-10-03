@@ -1589,14 +1589,14 @@
 
             // Freeze movement during transition
             if (!sizeTransitioning) {
-                // Scale factors based on player size (40 is base)
+                // Scale factors based on player size (40 is base) - linear scaling
                 const sizeScale = player.currentSize / 40;
 
-                // Gravity (with fast fall)
+                // Gravity (scaled by size for proportional physics)
                 if ((keys['KeyS'] || keys['ArrowDown']) && !isGrounded) {
-                    player.velocityY += GRAVITY * FAST_FALL_MULTIPLIER * deltaTime;  // Fall 1.75x faster
+                    player.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;  // Fall 1.75x faster
                 } else {
-                    player.velocityY += GRAVITY * deltaTime;
+                    player.velocityY += GRAVITY * sizeScale * deltaTime;
                 }
 
                 // Movement (scaled by size)
