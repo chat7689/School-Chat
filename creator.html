@@ -610,6 +610,22 @@
         }
 
         function selectMovementPath(block) {
+            // Prompt for cycle time
+            const currentTime = block.movement.cycleTime;
+            const newTime = prompt(`Enter cycle time in seconds (1-10):\nCurrent: ${currentTime}s`, currentTime);
+
+            if (newTime !== null) {
+                const time = parseInt(newTime);
+                if (!isNaN(time) && time >= 1 && time <= 10) {
+                    block.movement.cycleTime = time;
+                    updateLevelData();
+                    updateElementsList();
+                } else {
+                    alert('Please enter a valid number between 1 and 10');
+                }
+            }
+
+            // Update UI
             selectedMovementPath = block;
             document.getElementById('selectedMovementInfo').style.display = 'block';
             const blockType = platforms.includes(block) ? 'Platform' : 'Hazard';
