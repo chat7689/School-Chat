@@ -331,10 +331,10 @@
             <h3>Physics Info</h3>
             <div class="stats" style="line-height: 1.8;">
                 <div>Gravity: <span style="color: #4facfe;">0.042</span></div>
-                <div>Move Accel: <span style="color: #4facfe;">0.21</span></div>
+                <div>Move Accel: <span style="color: #4facfe;">0.28</span></div>
                 <div>Jump Power: <span style="color: #4facfe;">3.67</span></div>
-                <div>Max Speed: <span style="color: #4facfe;">2.625</span></div>
-                <div>Ground Friction: <span style="color: #4facfe;">0.80</span></div>
+                <div>Max Speed: <span style="color: #4facfe;">3.5</span></div>
+                <div>Ground Friction: <span style="color: #4facfe;">0.94</span></div>
                 <div>Air Resistance: <span style="color: #4facfe;">0.92</span></div>
                 <div style="margin-top: 10px; color: #FFC107;">Jump Height: ~160px</div>
             </div>
@@ -385,7 +385,7 @@
         </div>
     </div>
 
-    <div id="movementModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+    <div id="movementModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
         <div class="modal-content" style="width: 400px;">
             <h2>⏱️ Movement Cycle Time</h2>
             <div style="margin: 20px 0;">
@@ -450,10 +450,10 @@
         // Physics settings (fixed values matching main game)
         const physics = {
             gravity: 0.042,  // 150% of 0.028
-            moveSpeed: 0.21,  // 1.75x faster: 0.12 * 1.75 = 0.21
+            moveSpeed: 0.28,  // Faster ground movement: 0.21 * 1.33 ≈ 0.28
             jumpPower: 3.67,  // Calculated to clear 160px: sqrt(160 * 2 * 0.042) ≈ 3.67
-            maxSpeed: 2.625,  // 1.75x faster: 1.5 * 1.75 = 2.625
-            friction: 0.80,  // More slippery ground (was 0.88)
+            maxSpeed: 3.5,  // Faster max speed: 2.625 * 1.33 ≈ 3.5
+            friction: 0.94,  // Less friction, more slippery (was 0.80)
             airRes: 0.92,  // More air resistance (was 0.96)
             fastFallMultiplier: 1.75  // Down arrow fall speed
         };
