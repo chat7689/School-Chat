@@ -759,9 +759,10 @@
                     document.getElementById('cameraInfo').textContent =
                         `Camera: ${Math.round(cameraX)}, ${Math.round(cameraY)} | Zoom: ${zoom.toFixed(1)}x`;
 
-                    // If it has movement, select it for editing
+                    // If it has movement, open the movement modal
                     if (elem.hasMovement) {
                         selectMovementPath(elem.obj);
+                        openMovementModal(elem.obj);
                     }
 
                     draw();
