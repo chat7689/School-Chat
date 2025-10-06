@@ -260,7 +260,8 @@
 
         .difficulty.easy { background: rgba(0,255,0,0.3); color: #0f0; border: 2px solid #0f0; }
         .difficulty.medium { background: rgba(255,255,0,0.3); color: #ff0; border: 2px solid #ff0; }
-        .difficulty.extreme { background: rgba(255,165,0,0.3); color: #ffa500; border: 2px solid #ffa500; }
+        .difficulty.hard { background: rgba(255,165,0,0.3); color: #ffa500; border: 2px solid #ffa500; }
+        .difficulty.extreme { background: rgba(255,0,0,0.3); color: #f00; border: 2px solid #f00; }
         .difficulty.impossible { background: rgba(128,0,128,0.3); color: #a0a; border: 2px solid #a0a; }
 
         .leaderboard {
@@ -442,7 +443,8 @@
                 <button class="difficulty-filter active" data-difficulty="All" style="padding: 8px; background: rgba(79, 172, 254, 0.3); border: 2px solid #4facfe; border-radius: 5px; color: #4facfe; cursor: pointer; font-weight: bold; transition: all 0.3s;">All Levels</button>
                 <button class="difficulty-filter" data-difficulty="Easy" style="padding: 8px; background: rgba(0,255,0,0.1); border: 2px solid #0f0; border-radius: 5px; color: #0f0; cursor: pointer; font-weight: bold; transition: all 0.3s;">🟢 Easy</button>
                 <button class="difficulty-filter" data-difficulty="Medium" style="padding: 8px; background: rgba(255,255,0,0.1); border: 2px solid #ff0; border-radius: 5px; color: #ff0; cursor: pointer; font-weight: bold; transition: all 0.3s;">🟡 Medium</button>
-                <button class="difficulty-filter" data-difficulty="Extreme" style="padding: 8px; background: rgba(255,165,0,0.1); border: 2px solid #ffa500; border-radius: 5px; color: #ffa500; cursor: pointer; font-weight: bold; transition: all 0.3s;">🟠 Extreme</button>
+                <button class="difficulty-filter" data-difficulty="Hard" style="padding: 8px; background: rgba(255,165,0,0.1); border: 2px solid #ffa500; border-radius: 5px; color: #ffa500; cursor: pointer; font-weight: bold; transition: all 0.3s;">🟠 Hard</button>
+                <button class="difficulty-filter" data-difficulty="Extreme" style="padding: 8px; background: rgba(255,0,0,0.1); border: 2px solid #f00; border-radius: 5px; color: #f00; cursor: pointer; font-weight: bold; transition: all 0.3s;">🔴 Extreme</button>
                 <button class="difficulty-filter" data-difficulty="Impossible" style="padding: 8px; background: rgba(128,0,128,0.2); border: 2px solid #a0a; border-radius: 5px; color: #a0a; cursor: pointer; font-weight: bold; transition: all 0.3s;">🟣 Impossible</button>
             </div>
         </div>
@@ -645,7 +647,7 @@
             {
                 id: 'new_level',
                 name: 'Miles SB',
-                difficulty: 'Extreme',
+                difficulty: 'Hard',
                 description: 'A challenging platformer level',
                 platforms: [
                     { x: 200, y: 520, width: 160, height: 40 },
