@@ -416,12 +416,39 @@
         .danger-btn:hover {
             background: rgba(255,0,0,0.9);
         }
+
+        .difficulty-filter {
+            opacity: 0.6;
+        }
+
+        .difficulty-filter.active {
+            opacity: 1;
+        }
+
+        .difficulty-filter:hover {
+            opacity: 1;
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
     <div id="menu">
         <h1>⚡ SPEEDRUN ⚡</h1>
         <p style="color: #888; font-size: 14px; margin-bottom: 20px;">v10.2 - Online Edition</p>
+
+        <!-- Difficulty Filter Sidebar -->
+        <div style="position: fixed; left: 20px; top: 100px; background: rgba(0,0,0,0.8); border: 2px solid #4facfe; border-radius: 10px; padding: 15px; width: 180px; z-index: 100;">
+            <h3 style="margin: 0 0 10px 0; color: #4facfe; font-size: 16px;">🎯 Difficulty</h3>
+            <div id="difficultyFilters" style="display: flex; flex-direction: column; gap: 8px;">
+                <button class="difficulty-filter active" data-difficulty="All" style="padding: 8px; background: rgba(79, 172, 254, 0.3); border: 2px solid #4facfe; border-radius: 5px; color: #4facfe; cursor: pointer; font-weight: bold; transition: all 0.3s;">All Levels</button>
+                <button class="difficulty-filter" data-difficulty="Easy" style="padding: 8px; background: rgba(0,255,0,0.1); border: 2px solid #0f0; border-radius: 5px; color: #0f0; cursor: pointer; font-weight: bold; transition: all 0.3s;">🟢 Easy</button>
+                <button class="difficulty-filter" data-difficulty="Medium" style="padding: 8px; background: rgba(255,255,0,0.1); border: 2px solid #ff0; border-radius: 5px; color: #ff0; cursor: pointer; font-weight: bold; transition: all 0.3s;">🟡 Medium</button>
+                <button class="difficulty-filter" data-difficulty="Hard" style="padding: 8px; background: rgba(255,0,0,0.1); border: 2px solid #f00; border-radius: 5px; color: #f00; cursor: pointer; font-weight: bold; transition: all 0.3s;">🔴 Hard</button>
+                <button class="difficulty-filter" data-difficulty="Expert" style="padding: 8px; background: rgba(128,0,128,0.1); border: 2px solid #a0a; border-radius: 5px; color: #a0a; cursor: pointer; font-weight: bold; transition: all 0.3s;">🟣 Expert</button>
+                <button class="difficulty-filter" data-difficulty="Extreme" style="padding: 8px; background: rgba(0,0,0,0.5); border: 2px solid #666; border-radius: 5px; color: #666; cursor: pointer; font-weight: bold; transition: all 0.3s;">⚫ Extreme</button>
+            </div>
+        </div>
+
         <h2>Select a Map</h2>
         <div class="maps-container" id="mapsContainer"></div>
         <a href="creator.html" style="position: fixed; bottom: 20px; left: 20px; padding: 12px 20px; background: rgba(79, 172, 254, 0.3); color: #4facfe; border: 2px solid #4facfe; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 16px; transition: all 0.3s;">📝 Level Creator</a>
@@ -558,9 +585,29 @@
         // Map definitions
         const maps = [
             {
+                id: 'simple_map',
+                name: 'Simple Map',
+                difficulty: 'Easy',
+                description: 'A simple rectangular level - perfect for beginners',
+                platforms: [
+                    { x: -40, y: -280, width: 40, height: 320 },
+                    { x: 0, y: -280, width: 280, height: 40 },
+                    { x: 280, y: -280, width: 40, height: 320 },
+                    { x: 0, y: 0, width: 280, height: 40 }
+                ],
+                hazards: [
+                    { x: 120, y: -120, width: 40, height: 120 }
+                ],
+                growers: [],
+                shrinkers: [],
+                defaultSizeBlocks: [],
+                start: { x: 0, y: -40, width: 40, height: 40 },
+                finish: { x: 240, y: -40, width: 40, height: 40 }
+            },
+            {
                 id: 'custom_level',
                 name: 'Original Map',
-                difficulty: 'Easy',
+                difficulty: 'Medium',
                 description: 'A custom designed level',
                 platforms: [
                     { x: 0, y: 400, width: 40, height: 200 },
@@ -600,7 +647,7 @@
             {
                 id: 'new_level',
                 name: 'Miles SB',
-                difficulty: 'Medium',
+                difficulty: 'Hard',
                 description: 'A challenging platformer level',
                 platforms: [
                     { x: 200, y: 520, width: 160, height: 40 },
@@ -717,7 +764,7 @@
             {
                 id: 'hard_level',
                 name: 'Hard Level',
-                difficulty: 'Hard',
+                difficulty: 'Expert',
                 description: 'An extremely challenging level with moving hazards',
                 platforms: [
                     { x: 40, y: -200, width: 240, height: 30 },
@@ -1229,6 +1276,24 @@
                 `;
                 loadUserStats();
                 initMenu();
+
+                // Setup difficulty filter buttons
+                document.querySelectorAll('.difficulty-filter').forEach(button => {
+                    button.addEventListener('click', () => {
+                        // Update active state
+                        document.querySelectorAll('.difficulty-filter').forEach(btn => {
+                            btn.classList.remove('active');
+                            btn.style.opacity = '0.6';
+                        });
+                        button.classList.add('active');
+                        button.style.opacity = '1';
+
+                        // Filter maps
+                        const difficulty = button.getAttribute('data-difficulty');
+                        selectedDifficulty = difficulty;
+                        initMenu(difficulty);
+                    });
+                });
             }
         });
 
@@ -1352,11 +1417,17 @@
         }
 
         // Initialize menu
-        async function initMenu() {
+        let selectedDifficulty = 'All';
+
+        async function initMenu(filterDifficulty = 'All') {
             const container = document.getElementById('mapsContainer');
             container.innerHTML = '';
 
-            for (let map of maps) {
+            const filteredMaps = filterDifficulty === 'All'
+                ? maps
+                : maps.filter(map => map.difficulty === filterDifficulty);
+
+            for (let map of filteredMaps) {
                 const card = document.createElement('div');
                 card.className = 'map-card';
 
