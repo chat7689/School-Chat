@@ -979,13 +979,15 @@
                             }
                         }
 
-                        // If clicked on empty space, start multi-selection box
+                        // If clicked on empty space, start multi-selection box and deselect movement paths
                         if (!clickedBlock) {
                             isMultiSelecting = true;
                             selectionStart = { x: worldPos.x, y: worldPos.y };
                             selectionBox = { x: worldPos.x, y: worldPos.y, width: 0, height: 0 };
                             selectedBlock = null;
                             selectedBlocks = [];
+                            draggingNodeBlock = null; // Deselect movement path
+                            selectedMovementPath = null;
                         }
                     }
                 }
@@ -1039,9 +1041,9 @@
                         }
                     }
                 } else if (movementStep === 1) {
-                    // Step 2: Set starting point (center of clicked grid square)
-                    const clickedGridX = Math.floor(worldPos.x / gridSize) * gridSize + gridSize / 2;
-                    const clickedGridY = Math.floor(worldPos.y / gridSize) * gridSize + gridSize / 2;
+                    // Step 2: Set starting point (snap to grid intersections for clear placement)
+                    const clickedGridX = Math.round(worldPos.x / gridSize) * gridSize;
+                    const clickedGridY = Math.round(worldPos.y / gridSize) * gridSize;
 
                     movementPoint1 = {
                         x: clickedGridX,
@@ -1050,9 +1052,9 @@
                     movementStep = 2;
                     draw();
                 } else if (movementStep === 2) {
-                    // Step 3: Set ending point (center of clicked grid square)
-                    const clickedGridX = Math.floor(worldPos.x / gridSize) * gridSize + gridSize / 2;
-                    const clickedGridY = Math.floor(worldPos.y / gridSize) * gridSize + gridSize / 2;
+                    // Step 3: Set ending point (snap to grid intersections for clear placement)
+                    const clickedGridX = Math.round(worldPos.x / gridSize) * gridSize;
+                    const clickedGridY = Math.round(worldPos.y / gridSize) * gridSize;
 
                     movementPoint2 = {
                         x: clickedGridX,
@@ -1198,13 +1200,13 @@
                 }
                 draw();
             } else if (isDraggingMovementNode && draggingNodeBlock) {
-                // Drag movement node
+                // Drag movement node - snap to grid intersections
                 if (draggingNodeType === 'point1') {
-                    draggingNodeBlock.movement.point1.x = snapToGrid(worldPos.x);
-                    draggingNodeBlock.movement.point1.y = snapToGrid(worldPos.y);
+                    draggingNodeBlock.movement.point1.x = Math.round(worldPos.x / gridSize) * gridSize;
+                    draggingNodeBlock.movement.point1.y = Math.round(worldPos.y / gridSize) * gridSize;
                 } else if (draggingNodeType === 'point2') {
-                    draggingNodeBlock.movement.point2.x = snapToGrid(worldPos.x);
-                    draggingNodeBlock.movement.point2.y = snapToGrid(worldPos.y);
+                    draggingNodeBlock.movement.point2.x = Math.round(worldPos.x / gridSize) * gridSize;
+                    draggingNodeBlock.movement.point2.y = Math.round(worldPos.y / gridSize) * gridSize;
                 }
                 draw();
             } else if (isMultiSelecting) {
@@ -1343,7 +1345,7 @@
 
             if (isDraggingMovementNode) {
                 isDraggingMovementNode = false;
-                draggingNodeBlock = null;
+                // Keep draggingNodeBlock selected so it stays locked until manually deselected
                 draggingNodeType = null;
                 updateLevelData();
             }
@@ -1907,10 +1909,11 @@
             [...platforms, ...hazards].forEach(block => {
                 if (block.movement) {
                     const { point1, point2 } = block.movement;
+                    const isSelected = draggingNodeBlock === block;
 
-                    // Draw path line
-                    ctx.strokeStyle = 'rgba(100, 150, 255, 0.6)';
-                    ctx.lineWidth = 3 / zoom;
+                    // Draw path line (brighter if selected)
+                    ctx.strokeStyle = isSelected ? 'rgba(100, 200, 255, 1.0)' : 'rgba(100, 150, 255, 0.6)';
+                    ctx.lineWidth = isSelected ? 5 / zoom : 3 / zoom;
                     ctx.setLineDash([10 / zoom, 5 / zoom]);
                     ctx.beginPath();
                     ctx.moveTo(point1.x, point1.y);
@@ -1918,22 +1921,22 @@
                     ctx.stroke();
                     ctx.setLineDash([]);
 
-                    // Draw point1 (starting point - blue circle)
-                    ctx.fillStyle = 'rgba(100, 150, 255, 0.8)';
+                    // Draw point1 (starting point - blue circle, larger if selected)
+                    ctx.fillStyle = isSelected ? 'rgba(100, 200, 255, 1.0)' : 'rgba(100, 150, 255, 0.8)';
                     ctx.beginPath();
-                    ctx.arc(point1.x, point1.y, 8 / zoom, 0, Math.PI * 2);
+                    ctx.arc(point1.x, point1.y, isSelected ? 12 / zoom : 8 / zoom, 0, Math.PI * 2);
                     ctx.fill();
-                    ctx.strokeStyle = '#6496FF';
-                    ctx.lineWidth = 2 / zoom;
+                    ctx.strokeStyle = isSelected ? '#4AC0FF' : '#6496FF';
+                    ctx.lineWidth = isSelected ? 3 / zoom : 2 / zoom;
                     ctx.stroke();
 
-                    // Draw point2 (end point - cyan circle)
-                    ctx.fillStyle = 'rgba(0, 255, 255, 0.8)';
+                    // Draw point2 (end point - cyan circle, larger if selected)
+                    ctx.fillStyle = isSelected ? 'rgba(0, 255, 255, 1.0)' : 'rgba(0, 255, 255, 0.8)';
                     ctx.beginPath();
-                    ctx.arc(point2.x, point2.y, 8 / zoom, 0, Math.PI * 2);
+                    ctx.arc(point2.x, point2.y, isSelected ? 12 / zoom : 8 / zoom, 0, Math.PI * 2);
                     ctx.fill();
-                    ctx.strokeStyle = '#00FFFF';
-                    ctx.lineWidth = 2 / zoom;
+                    ctx.strokeStyle = isSelected ? '#00FFFF' : '#00CCCC';
+                    ctx.lineWidth = isSelected ? 3 / zoom : 2 / zoom;
                     ctx.stroke();
                 }
             });
