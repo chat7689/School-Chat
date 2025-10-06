@@ -286,6 +286,7 @@
             <button class="tool-button delete" onclick="setTool('delete')">🗑 Delete <span style="float:right;color:#999;">6</span></button>
             <button class="tool-button" onclick="setTool('void')" style="background: rgba(0,0,0,0.5);">⬛ Void (Cut)</button>
             <button class="tool-button" onclick="setTool('movement')" style="background: rgba(100,150,255,0.7);">🔄 Add Movement</button>
+            <button class="tool-button" onclick="setTool('editmovement')" style="background: rgba(255,150,100,0.7);">⏱️ Edit Movement Time</button>
         </div>
 
 
@@ -987,6 +988,24 @@
                             selectedBlock = null;
                             selectedBlocks = [];
                         }
+                    }
+                }
+            } else if (currentTool === 'editmovement') {
+                // Edit Movement tool - click on a block with movement to edit cycle time
+                const movableBlocks = [
+                    ...platforms.map((p, i) => ({ type: 'platform', index: i, obj: p })),
+                    ...hazards.map((h, i) => ({ type: 'hazard', index: i, obj: h }))
+                ];
+
+                for (const block of movableBlocks) {
+                    if (worldPos.x >= block.obj.x && worldPos.x <= block.obj.x + block.obj.width &&
+                        worldPos.y >= block.obj.y && worldPos.y <= block.obj.y + block.obj.height) {
+                        if (block.obj.movement) {
+                            openMovementModal(block.obj);
+                        } else {
+                            alert('This block has no movement path. Use "Add Movement" tool first.');
+                        }
+                        break;
                     }
                 }
             } else if (currentTool === 'movement') {
