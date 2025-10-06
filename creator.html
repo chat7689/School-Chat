@@ -283,7 +283,8 @@
             <button class="tool-button" onclick="setTool('finish')">🏁 Finish Line</button>
             <button class="tool-button" onclick="setTool('player')">👤 Preview Player</button>
             <button class="tool-button" onclick="setTool('select')">✋ Select/Move <span style="float:right;color:#999;">5</span></button>
-            <button class="tool-button delete" onclick="setTool('delete')">🗑 Delete <span style="float:right;color:#999;">6</span></button>
+            <button class="tool-button" onclick="setTool('resize')">↔️ Resize <span style="float:right;color:#999;">6</span></button>
+            <button class="tool-button delete" onclick="setTool('delete')">🗑 Delete <span style="float:right;color:#999;">7</span></button>
             <button class="tool-button" onclick="setTool('void')" style="background: rgba(0,0,0,0.5);">⬛ Void (Cut)</button>
             <button class="tool-button" onclick="setTool('movement')" style="background: rgba(100,150,255,0.7);">🔄 Add Movement</button>
             <button class="tool-button" onclick="setTool('editmovement')" style="background: rgba(255,150,100,0.7);">⏱️ Edit Movement Time</button>
@@ -345,7 +346,7 @@
             <h3>Keyboard Shortcuts</h3>
             <div class="controls-info" style="font-size: 11px; line-height: 1.6;">
                 <strong>Tools:</strong><br>
-                • 1-6: Select tools<br>
+                • 1-7: Select tools<br>
                 • G: Toggle grid<br>
                 <br>
                 <strong>Editing:</strong><br>
@@ -850,7 +851,7 @@
                 isResizing = false;
                 resizeEdge = null;
 
-                // Check all blocks for edge resizing first (prioritize edges)
+                // Check all blocks (select tool doesn't resize anymore)
                 const allBlocks = [
                     ...platforms.map((p, i) => ({ type: 'platform', index: i, obj: p, grid: gridSize })),
                     ...hazards.map((h, i) => ({ type: 'hazard', index: i, obj: h, grid: gridSize })),
@@ -861,26 +862,8 @@
                     ...foregroundBlocks.map((f, i) => ({ type: 'foreground', index: i, obj: f, grid: gridSize }))
                 ];
 
-                // Check for edge resizing
-                for (const block of allBlocks) {
-                    const edge = getEdgeNearMouse(block.obj, worldPos.x, worldPos.y);
-                    if (edge) {
-                        selectedBlock = block;
-                        isResizing = true;
-                        resizeEdge = edge;
-                        resizeStartPos = { x: worldPos.x, y: worldPos.y };
-                        resizeOriginal = {
-                            x: block.obj.x,
-                            y: block.obj.y,
-                            width: block.obj.width,
-                            height: block.obj.height
-                        };
-                        break;
-                    }
-                }
-
-                // If not resizing, check for movement nodes first, then regular dragging
-                if (!isResizing) {
+                // Check for movement nodes first, then regular dragging
+                {
                     // Check if clicking on a movement node
                     const nodeRadius = 10 / zoom;
                     let foundNode = false;
@@ -1065,6 +1048,39 @@
                     movementPoint2 = null;
                     updateLevelData();
                     draw();
+                }
+            } else if (currentTool === 'resize') {
+                // Resize tool - check for edges and start resizing
+                selectedBlock = null;
+                isResizing = false;
+                resizeEdge = null;
+
+                const allBlocks = [
+                    ...platforms.map((p, i) => ({ type: 'platform', index: i, obj: p, grid: gridSize })),
+                    ...hazards.map((h, i) => ({ type: 'hazard', index: i, obj: h, grid: gridSize })),
+                    ...growers.map((g, i) => ({ type: 'grower', index: i, obj: g, grid: gridSize })),
+                    ...shrinkers.map((s, i) => ({ type: 'shrinker', index: i, obj: s, grid: gridSize })),
+                    ...defaultSizeBlocks.map((d, i) => ({ type: 'default', index: i, obj: d, grid: gridSize })),
+                    ...backgroundBlocks.map((b, i) => ({ type: 'background', index: i, obj: b, grid: gridSize })),
+                    ...foregroundBlocks.map((f, i) => ({ type: 'foreground', index: i, obj: f, grid: gridSize }))
+                ];
+
+                // Check for edge resizing
+                for (const block of allBlocks) {
+                    const edge = getEdgeNearMouse(block.obj, worldPos.x, worldPos.y);
+                    if (edge) {
+                        selectedBlock = block;
+                        isResizing = true;
+                        resizeEdge = edge;
+                        resizeStartPos = { x: worldPos.x, y: worldPos.y };
+                        resizeOriginal = {
+                            x: block.obj.x,
+                            y: block.obj.y,
+                            width: block.obj.width,
+                            height: block.obj.height
+                        };
+                        break;
+                    }
                 }
             } else if (currentTool === 'delete') {
                 deleteAtPosition(worldPos.x, worldPos.y);
@@ -2446,7 +2462,8 @@
                 else if (e.code === 'Digit3') setToolByName('grower');
                 else if (e.code === 'Digit4') setToolByName('shrinker');
                 else if (e.code === 'Digit5') setToolByName('select');
-                else if (e.code === 'Digit6') setToolByName('delete');
+                else if (e.code === 'Digit6') setToolByName('resize');
+                else if (e.code === 'Digit7') setToolByName('delete');
                 else if (e.code === 'KeyG') toggleGrid();
             }
 
