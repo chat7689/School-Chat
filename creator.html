@@ -1941,6 +1941,35 @@
                 }
             });
 
+            // Draw movement trails from last test run
+            if (movementTrails.length > 0 && !testMode) {
+                movementTrails.forEach(trail => {
+                    if (trail.points.length < 2) return;
+
+                    // Find max speed for color normalization
+                    const maxSpeed = Math.max(...trail.points.map(p => p.speed), 0.1);
+
+                    // Draw trail as connected line segments with color based on speed
+                    for (let i = 1; i < trail.points.length; i++) {
+                        const p1 = trail.points[i - 1];
+                        const p2 = trail.points[i];
+
+                        // Color gradient from blue (slow) to red (fast)
+                        const speedRatio = p2.speed / maxSpeed;
+                        const r = Math.floor(speedRatio * 255);
+                        const g = Math.floor((1 - speedRatio) * 100);
+                        const b = Math.floor((1 - speedRatio) * 255);
+
+                        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.7)`;
+                        ctx.lineWidth = 3 / zoom;
+                        ctx.beginPath();
+                        ctx.moveTo(p1.x, p1.y);
+                        ctx.lineTo(p2.x, p2.y);
+                        ctx.stroke();
+                    }
+                });
+            }
+
             // Movement tool visualization
             if (currentTool === 'movement') {
                 // Highlight selected block
@@ -2029,6 +2058,7 @@
             sizeTransitioning = false;
             lastFrameTime = performance.now(); // Reset frame time for delta calculation
             testStartTime = performance.now(); // Reset test start time for movement animations
+            movementTrails = []; // Clear previous trails when starting new test
             requestAnimationFrame(gameLoop);
         }
 
@@ -2039,6 +2069,7 @@
 
         let lastFrameTime = performance.now();
         let testStartTime = 0;
+        let movementTrails = []; // Store trails for moving blocks: {blockId, points: [{x, y, speed}]}
 
         function gameLoop(currentTime) {
             if (!testMode) return;
@@ -2059,9 +2090,13 @@
 
         function updateMovingBlocks(elapsed) {
             // Update platform positions based on movement paths
-            platforms.forEach(platform => {
+            platforms.forEach((platform, index) => {
                 if (platform.movement) {
                     const { point1, point2, cycleTime, delay = 0 } = platform.movement;
+
+                    // Store previous position for speed calculation
+                    const prevX = platform.x || point1.x - platform.width / 2;
+                    const prevY = platform.y || point1.y - platform.height / 2;
 
                     // Apply delay - platform stays at start position until delay expires
                     if (elapsed < delay) {
@@ -2089,13 +2124,40 @@
                     // Set block position (accounting for block size)
                     platform.x = centerX - platform.width / 2;
                     platform.y = centerY - platform.height / 2;
+
+                    // Record trail if in test mode
+                    if (testMode) {
+                        // Calculate speed (distance moved)
+                        const dx = platform.x + platform.width / 2 - (prevX + platform.width / 2);
+                        const dy = platform.y + platform.height / 2 - (prevY + platform.height / 2);
+                        const speed = Math.sqrt(dx * dx + dy * dy);
+
+                        // Find or create trail for this platform
+                        const blockId = 'platform_' + index;
+                        let trail = movementTrails.find(t => t.blockId === blockId);
+                        if (!trail) {
+                            trail = { blockId, points: [] };
+                            movementTrails.push(trail);
+                        }
+
+                        // Add point to trail
+                        trail.points.push({
+                            x: platform.x + platform.width / 2,
+                            y: platform.y + platform.height / 2,
+                            speed: speed
+                        });
+                    }
                 }
             });
 
             // Update hazard positions
-            hazards.forEach(hazard => {
+            hazards.forEach((hazard, index) => {
                 if (hazard.movement) {
                     const { point1, point2, cycleTime, delay = 0 } = hazard.movement;
+
+                    // Store previous position for speed calculation
+                    const prevX = hazard.x || point1.x - hazard.width / 2;
+                    const prevY = hazard.y || point1.y - hazard.height / 2;
 
                     // Apply delay
                     if (elapsed < delay) {
@@ -2119,6 +2181,26 @@
 
                     hazard.x = centerX - hazard.width / 2;
                     hazard.y = centerY - hazard.height / 2;
+
+                    // Record trail if in test mode
+                    if (testMode) {
+                        const dx = hazard.x + hazard.width / 2 - (prevX + hazard.width / 2);
+                        const dy = hazard.y + hazard.height / 2 - (prevY + hazard.height / 2);
+                        const speed = Math.sqrt(dx * dx + dy * dy);
+
+                        const blockId = 'hazard_' + index;
+                        let trail = movementTrails.find(t => t.blockId === blockId);
+                        if (!trail) {
+                            trail = { blockId, points: [] };
+                            movementTrails.push(trail);
+                        }
+
+                        trail.points.push({
+                            x: hazard.x + hazard.width / 2,
+                            y: hazard.y + hazard.height / 2,
+                            speed: speed
+                        });
+                    }
                 }
             });
         }
