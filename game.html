@@ -1621,27 +1621,29 @@
             currentMap = map;
 
             platforms = map.platforms.map(p => ({
-                x: p.x,
-                y: p.y,
+                x: p.movement ? p.movement.point1.x - p.width / 2 : p.x,
+                y: p.movement ? p.movement.point1.y - p.height / 2 : p.y,
                 width: p.width,
                 height: p.height,
                 color: '#4CAF50',
                 movement: p.movement ? {
                     point1: { x: p.movement.point1.x, y: p.movement.point1.y },
                     point2: { x: p.movement.point2.x, y: p.movement.point2.y },
-                    cycleTime: p.movement.cycleTime
+                    cycleTime: p.movement.cycleTime,
+                    delay: p.movement.delay || 0
                 } : null
             }));
 
             hazards = map.hazards ? map.hazards.map(h => ({
-                x: h.x,
-                y: h.y,
+                x: h.movement ? h.movement.point1.x - h.width / 2 : h.x,
+                y: h.movement ? h.movement.point1.y - h.height / 2 : h.y,
                 width: h.width,
                 height: h.height,
                 movement: h.movement ? {
                     point1: { x: h.movement.point1.x, y: h.movement.point1.y },
                     point2: { x: h.movement.point2.x, y: h.movement.point2.y },
-                    cycleTime: h.movement.cycleTime
+                    cycleTime: h.movement.cycleTime,
+                    delay: h.movement.delay || 0
                 } : null
             })) : [];
 
