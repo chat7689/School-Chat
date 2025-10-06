@@ -2157,7 +2157,7 @@
                 player.velocityX = Math.max(-physics.maxSpeed * sizeScale, Math.min(physics.maxSpeed * sizeScale, player.velocityX));
 
                 // Cap vertical velocity to prevent tunneling through platforms
-                const maxFallSpeed = 20 * sizeScale; // Terminal velocity
+                const maxFallSpeed = 8 * sizeScale; // Terminal velocity (reduced to prevent glitching)
                 player.velocityY = Math.min(player.velocityY, maxFallSpeed);
 
                 player.x += player.velocityX * deltaTime;
@@ -2209,7 +2209,10 @@
 
                     const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
 
-                    if (minOverlap === overlapTop && player.velocityY >= 0) {
+                    // Floor collision (landing on top)
+                    // Extra check: if moving down fast and overlap is significant, it's definitely a floor collision
+                    if ((minOverlap === overlapTop && player.velocityY >= 0) ||
+                        (player.velocityY > 0 && overlapTop < overlapBottom && overlapTop <= Math.max(overlapLeft, overlapRight))) {
                         // Don't allow gap sliding - always stop at platform edges
                         player.y = platform.y - player.height;
                         player.velocityY = 0;
