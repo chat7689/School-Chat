@@ -334,11 +334,11 @@
             <div class="stats" style="line-height: 1.8;">
                 <div>Gravity: <span style="color: #4facfe;">0.042</span></div>
                 <div>Move Accel: <span style="color: #4facfe;">0.28</span></div>
-                <div>Jump Power: <span style="color: #4facfe;">3.67</span></div>
+                <div>Jump Power: <span style="color: #4facfe;">3.70</span></div>
                 <div>Max Speed: <span style="color: #4facfe;">3.5</span></div>
                 <div>Ground Friction: <span style="color: #4facfe;">0.94</span></div>
                 <div>Air Resistance: <span style="color: #4facfe;">0.88</span></div>
-                <div style="margin-top: 10px; color: #FFC107;">Jump Height: ~160px</div>
+                <div style="margin-top: 10px; color: #FFC107;">Jump Height: ~162px (size×4+2)</div>
             </div>
         </div>
 
@@ -453,7 +453,7 @@
         const physics = {
             gravity: 0.042,  // 150% of 0.028
             moveSpeed: 0.28,  // Faster ground movement: 0.21 * 1.33 ≈ 0.28
-            jumpPower: 3.67,  // Calculated to clear 160px: sqrt(160 * 2 * 0.042) ≈ 3.67
+            jumpPower: 3.70,  // Allows jumping height × 4 + 2px for each size
             maxSpeed: 3.5,  // Faster max speed: 2.625 * 1.33 ≈ 3.5
             friction: 0.94,  // Less friction, more slippery (was 0.80)
             airRes: 0.88,  // Higher air resistance (was 0.92)
