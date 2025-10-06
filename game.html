@@ -1532,9 +1532,10 @@
                     const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
 
                     // Floor collision (landing on top)
-                    // Extra check: if moving down fast and overlap is significant, it's definitely a floor collision
+                    // Extra check: if moving down fast, only treat as floor if top overlap is clearly smallest
                     if ((minOverlap === overlapTop && player.velocityY >= 0) ||
-                        (player.velocityY > 0 && overlapTop < overlapBottom && overlapTop <= Math.max(overlapLeft, overlapRight))) {
+                        (player.velocityY > 0 && overlapTop < overlapBottom &&
+                         overlapTop < overlapLeft * 0.5 && overlapTop < overlapRight * 0.5)) {
                         // Don't allow gap sliding - always stop at platform edges
                         player.y = platform.y - player.height;
                         player.velocityY = 0;
