@@ -544,6 +544,7 @@
         let timerInterval = null;
         let finishLine = null;
         let personalBests = {};
+        let mapStartTime = 0; // For moving platforms
 
         // Constants
         const GRAVITY = 0.042;  // 150% of 0.028
@@ -1332,14 +1333,24 @@
                 y: p.y,
                 width: p.width,
                 height: p.height,
-                color: '#4CAF50'
+                color: '#4CAF50',
+                movement: p.movement ? {
+                    point1: { x: p.movement.point1.x, y: p.movement.point1.y },
+                    point2: { x: p.movement.point2.x, y: p.movement.point2.y },
+                    cycleTime: p.movement.cycleTime
+                } : null
             }));
 
             hazards = map.hazards ? map.hazards.map(h => ({
                 x: h.x,
                 y: h.y,
                 width: h.width,
-                height: h.height
+                height: h.height,
+                movement: h.movement ? {
+                    point1: { x: h.movement.point1.x, y: h.movement.point1.y },
+                    point2: { x: h.movement.point2.x, y: h.movement.point2.y },
+                    cycleTime: h.movement.cycleTime
+                } : null
             })) : [];
 
             growers = map.growers ? map.growers.map(g => ({
@@ -1426,6 +1437,7 @@
                     startTime = Date.now();
                     currentTime = 0;
                     lastFrameTime = performance.now(); // Reset frame time for delta calculation
+                    mapStartTime = performance.now(); // Reset moving platforms to starting position
                     gameActive = true;
 
                     timerInterval = setInterval(() => {
@@ -1752,6 +1764,49 @@
             dot.style.top = dotY + 'px';
         }
 
+        // Update moving platforms and hazards
+        function updateMovingBlocks(currentTime) {
+            const elapsed = (currentTime - mapStartTime) / 1000; // Convert to seconds
+
+            // Update platform positions based on movement paths
+            platforms.forEach(platform => {
+                if (platform.movement) {
+                    const { point1, point2, cycleTime } = platform.movement;
+                    const progress = (elapsed % cycleTime) / cycleTime;
+
+                    // Ping-pong between point1 and point2
+                    let t;
+                    if (progress < 0.5) {
+                        t = progress * 2; // 0 to 1
+                    } else {
+                        t = 2 - (progress * 2); // 1 to 0
+                    }
+
+                    // Linear interpolation between point1 and point2
+                    platform.x = point1.x + (point2.x - point1.x) * t - platform.width / 2;
+                    platform.y = point1.y + (point2.y - point1.y) * t - platform.height / 2;
+                }
+            });
+
+            // Update hazard positions
+            hazards.forEach(hazard => {
+                if (hazard.movement) {
+                    const { point1, point2, cycleTime } = hazard.movement;
+                    const progress = (elapsed % cycleTime) / cycleTime;
+
+                    let t;
+                    if (progress < 0.5) {
+                        t = progress * 2;
+                    } else {
+                        t = 2 - (progress * 2);
+                    }
+
+                    hazard.x = point1.x + (point2.x - point1.x) * t - hazard.width / 2;
+                    hazard.y = point1.y + (point2.y - point1.y) * t - hazard.height / 2;
+                }
+            });
+        }
+
         // Update player
         function updatePlayer(deltaTime = 1) {
             if (!gameActive) return;
@@ -1942,6 +1997,9 @@
                 // Calculate delta time (normalize to 60fps baseline)
                 const deltaTime = (currentTime - lastFrameTime) / 16.67;
                 lastFrameTime = currentTime;
+
+                // Update moving blocks
+                updateMovingBlocks(currentTime);
 
                 updatePlayer(deltaTime);
                 draw();
