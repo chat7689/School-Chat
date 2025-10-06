@@ -446,6 +446,7 @@
                 <button class="difficulty-filter" data-difficulty="Hard" style="padding: 8px; background: rgba(255,0,0,0.1); border: 2px solid #f00; border-radius: 5px; color: #f00; cursor: pointer; font-weight: bold; transition: all 0.3s;">🔴 Hard</button>
                 <button class="difficulty-filter" data-difficulty="Expert" style="padding: 8px; background: rgba(128,0,128,0.1); border: 2px solid #a0a; border-radius: 5px; color: #a0a; cursor: pointer; font-weight: bold; transition: all 0.3s;">🟣 Expert</button>
                 <button class="difficulty-filter" data-difficulty="Extreme" style="padding: 8px; background: rgba(0,0,0,0.5); border: 2px solid #666; border-radius: 5px; color: #666; cursor: pointer; font-weight: bold; transition: all 0.3s;">⚫ Extreme</button>
+                <button class="difficulty-filter" data-difficulty="Impossible" style="padding: 8px; background: rgba(255,0,255,0.2); border: 2px solid #f0f; border-radius: 5px; color: #f0f; cursor: pointer; font-weight: bold; transition: all 0.3s;">💀 Impossible</button>
             </div>
         </div>
 
@@ -848,6 +849,141 @@
                 ],
                 start: { x: 0, y: -80, width: 40, height: 40 },
                 finish: { x: 600, y: -80, width: 40, height: 80 }
+            },
+            {
+                id: 'possibly_impossible',
+                name: 'Possibly Impossible',
+                difficulty: 'Impossible',
+                description: 'A chaotic gauntlet of moving hazards - good luck!',
+                platforms: [
+                    { x: 0, y: 0, width: 520, height: 40 }
+                ],
+                hazards: [
+                    {
+                        x: 90,
+                        y: -45.5664000034333,
+                        width: 20,
+                        height: 20,
+                        movement: {
+                            point1: { x: 100, y: -200 },
+                            point2: { x: 100, y: -20 },
+                            cycleTime: 5,
+                            delay: 0
+                        }
+                    },
+                    {
+                        x: 250,
+                        y: -55.944000005722216,
+                        width: 20,
+                        height: 20,
+                        movement: {
+                            point1: { x: 260, y: -200 },
+                            point2: { x: 260, y: -20 },
+                            cycleTime: 3,
+                            delay: 0
+                        }
+                    },
+                    {
+                        x: 170,
+                        y: -94.45800000429166,
+                        width: 20,
+                        height: 20,
+                        movement: {
+                            point1: { x: 180, y: -200 },
+                            point2: { x: 180, y: -20 },
+                            cycleTime: 4,
+                            delay: 0
+                        }
+                    },
+                    {
+                        x: 330,
+                        y: -94.45800000429166,
+                        width: 20,
+                        height: 20,
+                        movement: {
+                            point1: { x: 340, y: -200 },
+                            point2: { x: 340, y: -20 },
+                            cycleTime: 4,
+                            delay: 0
+                        }
+                    },
+                    {
+                        x: 410,
+                        y: -45.5664000034333,
+                        width: 20,
+                        height: 20,
+                        movement: {
+                            point1: { x: 420, y: -200 },
+                            point2: { x: 420, y: -20 },
+                            cycleTime: 5,
+                            delay: 0
+                        }
+                    },
+                    {
+                        x: 178.3799999952315,
+                        y: -50,
+                        width: 20,
+                        height: 20,
+                        movement: {
+                            point1: { x: 60, y: -40 },
+                            point2: { x: 460, y: -40 },
+                            cycleTime: 8,
+                            delay: 0
+                        }
+                    },
+                    {
+                        x: 321.6200000047685,
+                        y: -190,
+                        width: 20,
+                        height: 20,
+                        movement: {
+                            point1: { x: 460, y: -180 },
+                            point2: { x: 60, y: -180 },
+                            cycleTime: 8,
+                            delay: 0
+                        }
+                    },
+                    {
+                        x: 253.86285713740745,
+                        y: -118.26171428816666,
+                        width: 20,
+                        height: 20,
+                        movement: {
+                            point1: { x: 460, y: -20 },
+                            point2: { x: 60, y: -200 },
+                            cycleTime: 7,
+                            delay: 0
+                        }
+                    },
+                    {
+                        x: 246.13714286259255,
+                        y: -118.26171428816666,
+                        width: 20,
+                        height: 20,
+                        movement: {
+                            point1: { x: 60, y: -20 },
+                            point2: { x: 460, y: -200 },
+                            cycleTime: 7,
+                            delay: 0
+                        }
+                    }
+                ],
+                growers: [],
+                shrinkers: [],
+                defaultSizeBlocks: [],
+                backgroundBlocks: [],
+                foregroundBlocks: [],
+                start: { x: 0, y: -40, width: 40, height: 40 },
+                finish: { x: 480, y: -40, width: 40, height: 40 },
+                physics: {
+                    gravity: 0.042,
+                    moveSpeed: 0.28,
+                    jumpPower: 3.7,
+                    maxSpeed: 3.5,
+                    friction: 0.94,
+                    airRes: 0.88,
+                    fastFallMultiplier: 2
+                }
             }
         ];
 
