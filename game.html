@@ -1774,8 +1774,17 @@
             // Update platform positions based on movement paths
             platforms.forEach(platform => {
                 if (platform.movement) {
-                    const { point1, point2, cycleTime } = platform.movement;
-                    const progress = (elapsed % cycleTime) / cycleTime;
+                    const { point1, point2, cycleTime, delay = 0 } = platform.movement;
+
+                    // Apply delay - platform stays at start position until delay expires
+                    if (elapsed < delay) {
+                        platform.x = point1.x - platform.width / 2;
+                        platform.y = point1.y - platform.height / 2;
+                        return;
+                    }
+
+                    const adjustedElapsed = elapsed - delay;
+                    const progress = (adjustedElapsed % cycleTime) / cycleTime;
 
                     // Ping-pong between point1 and point2
                     let t;
@@ -1794,8 +1803,17 @@
             // Update hazard positions
             hazards.forEach(hazard => {
                 if (hazard.movement) {
-                    const { point1, point2, cycleTime } = hazard.movement;
-                    const progress = (elapsed % cycleTime) / cycleTime;
+                    const { point1, point2, cycleTime, delay = 0 } = hazard.movement;
+
+                    // Apply delay
+                    if (elapsed < delay) {
+                        hazard.x = point1.x - hazard.width / 2;
+                        hazard.y = point1.y - hazard.height / 2;
+                        return;
+                    }
+
+                    const adjustedElapsed = elapsed - delay;
+                    const progress = (adjustedElapsed % cycleTime) / cycleTime;
 
                     let t;
                     if (progress < 0.5) {

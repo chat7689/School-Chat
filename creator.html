@@ -389,12 +389,16 @@
 
     <div id="movementModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
         <div class="modal-content" style="width: 400px;">
-            <h2>⏱️ Movement Cycle Time</h2>
+            <h2>⏱️ Movement Settings</h2>
             <div style="margin: 20px 0;">
                 <div style="font-size: 14px; color: #aaa; margin-bottom: 10px;" id="movementModalBlockInfo"></div>
                 <div class="slider-group">
                     <label>Cycle Time: <span class="value" id="movementModalValue">5</span>s</label>
                     <input type="range" min="1" max="10" value="5" id="movementModalSlider" oninput="updateMovementModalSlider()" style="width: 100%;">
+                </div>
+                <div class="slider-group" style="margin-top: 15px;">
+                    <label>Start Delay: <span class="value" id="movementDelayValue">0</span>s</label>
+                    <input type="range" min="0" max="10" step="0.5" value="0" id="movementDelaySlider" oninput="updateMovementDelaySlider()" style="width: 100%;">
                 </div>
             </div>
             <div class="modal-buttons">
@@ -610,6 +614,11 @@
             document.getElementById('movementModalBlockInfo').textContent = `${blockType} #${blockIndex}`;
             document.getElementById('movementModalSlider').value = block.movement.cycleTime;
             document.getElementById('movementModalValue').textContent = block.movement.cycleTime;
+
+            const delay = block.movement.delay || 0;
+            document.getElementById('movementDelaySlider').value = delay;
+            document.getElementById('movementDelayValue').textContent = delay;
+
             document.getElementById('movementModal').style.display = 'flex';
         }
 
@@ -623,10 +632,17 @@
             document.getElementById('movementModalValue').textContent = value;
         }
 
+        function updateMovementDelaySlider() {
+            const value = document.getElementById('movementDelaySlider').value;
+            document.getElementById('movementDelayValue').textContent = value;
+        }
+
         function saveMovementTime() {
             if (editingMovementBlock) {
                 const newTime = parseInt(document.getElementById('movementModalSlider').value);
+                const newDelay = parseFloat(document.getElementById('movementDelaySlider').value);
                 editingMovementBlock.movement.cycleTime = newTime;
+                editingMovementBlock.movement.delay = newDelay;
                 updateLevelData();
                 updateElementsList();
             }
@@ -992,9 +1008,9 @@
                     }
                 }
             } else if (currentTool === 'movement') {
-                // Movement tool - 3 step process
+                // Movement tool - 3 step process: click block center, click start square, click end square
                 if (movementStep === 0) {
-                    // Step 1: Select a block (only platforms and hazards can move)
+                    // Step 1: Select a block and set its center as reference point
                     const movableBlocks = [
                         ...platforms.map((p, i) => ({ type: 'platform', index: i, obj: p })),
                         ...hazards.map((h, i) => ({ type: 'hazard', index: i, obj: h }))
@@ -1004,6 +1020,17 @@
                         if (worldPos.x >= block.obj.x && worldPos.x <= block.obj.x + block.obj.width &&
                             worldPos.y >= block.obj.y && worldPos.y <= block.obj.y + block.obj.height) {
                             movementSelectedBlock = block;
+
+                            // Calculate center of the grid square that was clicked
+                            const clickedGridX = Math.floor(worldPos.x / gridSize) * gridSize + gridSize / 2;
+                            const clickedGridY = Math.floor(worldPos.y / gridSize) * gridSize + gridSize / 2;
+
+                            // Store the block's center offset from the clicked square
+                            movementSelectedBlock.centerOffset = {
+                                x: clickedGridX,
+                                y: clickedGridY
+                            };
+
                             movementStep = 1;
                             movementPoint1 = null;
                             movementPoint2 = null;
@@ -1012,33 +1039,32 @@
                         }
                     }
                 } else if (movementStep === 1) {
-                    // Step 2: Set point 1 (must be on the block, snapped to grid center)
-                    const blockCenterX = movementSelectedBlock.obj.x + movementSelectedBlock.obj.width / 2;
-                    const blockCenterY = movementSelectedBlock.obj.y + movementSelectedBlock.obj.height / 2;
+                    // Step 2: Set starting point (center of clicked grid square)
+                    const clickedGridX = Math.floor(worldPos.x / gridSize) * gridSize + gridSize / 2;
+                    const clickedGridY = Math.floor(worldPos.y / gridSize) * gridSize + gridSize / 2;
 
-                    // Check if click is on the selected block
-                    if (worldPos.x >= movementSelectedBlock.obj.x && worldPos.x <= movementSelectedBlock.obj.x + movementSelectedBlock.obj.width &&
-                        worldPos.y >= movementSelectedBlock.obj.y && worldPos.y <= movementSelectedBlock.obj.y + movementSelectedBlock.obj.height) {
-
-                        movementPoint1 = {
-                            x: snapToGrid(blockCenterX),
-                            y: snapToGrid(blockCenterY)
-                        };
-                        movementStep = 2;
-                        draw();
-                    }
+                    movementPoint1 = {
+                        x: clickedGridX,
+                        y: clickedGridY
+                    };
+                    movementStep = 2;
+                    draw();
                 } else if (movementStep === 2) {
-                    // Step 3: Set point 2 (can be anywhere, snapped to grid center)
+                    // Step 3: Set ending point (center of clicked grid square)
+                    const clickedGridX = Math.floor(worldPos.x / gridSize) * gridSize + gridSize / 2;
+                    const clickedGridY = Math.floor(worldPos.y / gridSize) * gridSize + gridSize / 2;
+
                     movementPoint2 = {
-                        x: snapToGrid(worldPos.x),
-                        y: snapToGrid(worldPos.y)
+                        x: clickedGridX,
+                        y: clickedGridY
                     };
 
                     // Save the movement data to the block
                     movementSelectedBlock.obj.movement = {
                         point1: movementPoint1,
                         point2: movementPoint2,
-                        cycleTime: movementCycleTime
+                        cycleTime: movementCycleTime,
+                        delay: 0  // Default delay, can be edited in modal
                     };
 
                     // Reset movement tool state
@@ -2032,8 +2058,18 @@
             // Update platform positions based on movement paths
             platforms.forEach(platform => {
                 if (platform.movement) {
-                    const { point1, point2, cycleTime } = platform.movement;
-                    const progress = (elapsed % cycleTime) / cycleTime;
+                    const { point1, point2, cycleTime, delay = 0 } = platform.movement;
+
+                    // Apply delay - platform stays at start position until delay expires
+                    if (elapsed < delay) {
+                        // Stay at starting position (point1)
+                        platform.x = point1.x - platform.width / 2;
+                        platform.y = point1.y - platform.height / 2;
+                        return;
+                    }
+
+                    const adjustedElapsed = elapsed - delay;
+                    const progress = (adjustedElapsed % cycleTime) / cycleTime;
 
                     // Ping-pong between point1 and point2
                     let t;
@@ -2056,8 +2092,17 @@
             // Update hazard positions
             hazards.forEach(hazard => {
                 if (hazard.movement) {
-                    const { point1, point2, cycleTime } = hazard.movement;
-                    const progress = (elapsed % cycleTime) / cycleTime;
+                    const { point1, point2, cycleTime, delay = 0 } = hazard.movement;
+
+                    // Apply delay
+                    if (elapsed < delay) {
+                        hazard.x = point1.x - hazard.width / 2;
+                        hazard.y = point1.y - hazard.height / 2;
+                        return;
+                    }
+
+                    const adjustedElapsed = elapsed - delay;
+                    const progress = (adjustedElapsed % cycleTime) / cycleTime;
 
                     let t;
                     if (progress < 0.5) {
