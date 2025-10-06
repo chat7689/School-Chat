@@ -258,11 +258,12 @@
             margin: 5px 0;
         }
 
-        .difficulty.easy { background: #4CAF50; }
-        .difficulty.medium { background: #FF9800; }
-        .difficulty.hard { background: #F44336; }
-        .difficulty.extreme { background: #9C27B0; }
-        .difficulty.insane { background: #000; border: 2px solid #F44336; }
+        .difficulty.easy { background: rgba(0,255,0,0.3); color: #0f0; border: 2px solid #0f0; }
+        .difficulty.medium { background: rgba(255,255,0,0.3); color: #ff0; border: 2px solid #ff0; }
+        .difficulty.hard { background: rgba(255,0,0,0.3); color: #f00; border: 2px solid #f00; }
+        .difficulty.expert { background: rgba(128,0,128,0.3); color: #a0a; border: 2px solid #a0a; }
+        .difficulty.extreme { background: rgba(0,0,0,0.5); color: #666; border: 2px solid #666; }
+        .difficulty.impossible { background: rgba(255,0,255,0.2); color: #f0f; border: 2px solid #f0f; }
 
         .leaderboard {
             background: rgba(0,0,0,0.3);
@@ -446,7 +447,7 @@
                 <button class="difficulty-filter" data-difficulty="Hard" style="padding: 8px; background: rgba(255,0,0,0.1); border: 2px solid #f00; border-radius: 5px; color: #f00; cursor: pointer; font-weight: bold; transition: all 0.3s;">🔴 Hard</button>
                 <button class="difficulty-filter" data-difficulty="Expert" style="padding: 8px; background: rgba(128,0,128,0.1); border: 2px solid #a0a; border-radius: 5px; color: #a0a; cursor: pointer; font-weight: bold; transition: all 0.3s;">🟣 Expert</button>
                 <button class="difficulty-filter" data-difficulty="Extreme" style="padding: 8px; background: rgba(0,0,0,0.5); border: 2px solid #666; border-radius: 5px; color: #666; cursor: pointer; font-weight: bold; transition: all 0.3s;">⚫ Extreme</button>
-                <button class="difficulty-filter" data-difficulty="Impossible" style="padding: 8px; background: rgba(255,0,255,0.2); border: 2px solid #f0f; border-radius: 5px; color: #f0f; cursor: pointer; font-weight: bold; transition: all 0.3s;">💀 Impossible</button>
+                <button class="difficulty-filter" data-difficulty="Impossible" style="padding: 8px; background: rgba(255,0,255,0.2); border: 2px solid #f0f; border-radius: 5px; color: #f0f; cursor: pointer; font-weight: bold; transition: all 0.3s;">Impossible</button>
             </div>
         </div>
 
