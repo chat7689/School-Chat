@@ -684,6 +684,7 @@
         let ghostPlayer = null;
         let racingGhost = false;
         let watchingGhost = false;
+        let ghostFrameIndex = 0;
 
         // Constants
         const GRAVITY = 0.042;  // 150% of 0.028
@@ -2140,6 +2141,9 @@
                         isRecording = true;
                     }
 
+                    // Reset ghost frame index
+                    ghostFrameIndex = 0;
+
                     gameActive = true;
 
                     timerInterval = setInterval(() => {
@@ -2217,6 +2221,11 @@
         function checkCollision() {
             isGrounded = false;
 
+            // Skip collision if noclip is enabled
+            if (window.noclipEnabled) {
+                return;
+            }
+
             for (let platform of platforms) {
                 // Check if player overlaps with platform
                 if (player.x + player.width > platform.x &&
@@ -2264,6 +2273,11 @@
 
         // Check hazards
         function checkHazards() {
+            // Skip hazards if noclip is enabled
+            if (window.noclipEnabled) {
+                return;
+            }
+
             for (let hazard of hazards) {
                 if (player.x + player.width > hazard.x &&
                     player.x < hazard.x + hazard.width &&
@@ -2775,8 +2789,11 @@
             requestAnimationFrame(gameLoop);
             if (gameActive) {
                 // Calculate delta time (normalize to 60fps baseline)
-                const deltaTime = (currentTime - lastFrameTime) / 16.67;
+                let deltaTime = (currentTime - lastFrameTime) / 16.67;
                 lastFrameTime = currentTime;
+
+                // Apply speed multiplier
+                deltaTime *= (window.speedMultiplier || 1.0);
 
                 // Update moving blocks
                 updateMovingBlocks(currentTime);
@@ -2796,14 +2813,14 @@
 
                 // Update ghost player
                 if (ghostPlayer && ghostData) {
-                    const frameIndex = Math.floor((Date.now() - startTime) / 16.67);
-                    if (frameIndex < ghostData.recording.length) {
-                        const ghostFrame = ghostData.recording[frameIndex];
+                    if (ghostFrameIndex < ghostData.recording.length) {
+                        const ghostFrame = ghostData.recording[ghostFrameIndex];
                         ghostPlayer.x = ghostFrame.x;
                         ghostPlayer.y = ghostFrame.y;
                         ghostPlayer.width = ghostFrame.width;
                         ghostPlayer.height = ghostFrame.height;
                         ghostPlayer.currentSize = ghostFrame.currentSize;
+                        ghostFrameIndex++;
                     }
                 }
 
@@ -2869,6 +2886,148 @@
             keys[e.code] = false;
             e.preventDefault();
         });
+
+        // Console commands API
+        window.gameCommands = {
+            // Player commands
+            teleport: (x, y) => {
+                if (gameActive) {
+                    player.x = x;
+                    player.y = y;
+                    console.log(`Teleported to (${x}, ${y})`);
+                } else {
+                    console.log('Game must be active to teleport');
+                }
+            },
+            setSize: (size) => {
+                if (gameActive) {
+                    player.currentSize = size;
+                    player.width = size;
+                    player.height = size;
+                    console.log(`Player size set to ${size}`);
+                } else {
+                    console.log('Game must be active to change size');
+                }
+            },
+            setVelocity: (vx, vy) => {
+                if (gameActive) {
+                    player.velocityX = vx;
+                    player.velocityY = vy;
+                    console.log(`Velocity set to (${vx}, ${vy})`);
+                } else {
+                    console.log('Game must be active to set velocity');
+                }
+            },
+            noclip: () => {
+                window.noclipEnabled = !window.noclipEnabled;
+                console.log(`Noclip ${window.noclipEnabled ? 'enabled' : 'disabled'}`);
+            },
+
+            // Map commands
+            loadMap: (mapId) => {
+                const map = maps.find(m => m.id === mapId);
+                if (map) {
+                    startGame(map);
+                    console.log(`Loaded map: ${map.name}`);
+                } else {
+                    console.log(`Map not found: ${mapId}`);
+                    console.log('Available maps:', maps.map(m => m.id).join(', '));
+                }
+            },
+            listMaps: () => {
+                console.log('Available maps:');
+                maps.forEach(m => console.log(`- ${m.id}: ${m.name} (${m.difficulty})`));
+            },
+            restart: () => {
+                if (currentMap) {
+                    restartMap();
+                    console.log('Map restarted');
+                } else {
+                    console.log('No map is currently active');
+                }
+            },
+            finish: () => {
+                if (gameActive) {
+                    finishGame();
+                    console.log('Game finished');
+                } else {
+                    console.log('Game must be active to finish');
+                }
+            },
+
+            // Ghost commands
+            watchGhost: (mapId, username) => {
+                watchGhost(mapId, username);
+                console.log(`Loading ghost for ${username} on ${mapId}`);
+            },
+            raceGhost: (mapId, username) => {
+                raceGhost(mapId, username);
+                console.log(`Racing against ${username} on ${mapId}`);
+            },
+            clearGhost: () => {
+                ghostData = null;
+                ghostPlayer = null;
+                racingGhost = false;
+                watchingGhost = false;
+                ghostFrameIndex = 0;
+                console.log('Ghost cleared');
+            },
+
+            // Leaderboard commands
+            viewLeaderboard: async (mapId) => {
+                const leaderboard = await loadFullLeaderboard(mapId);
+                console.log(`Leaderboard for ${mapId}:`);
+                leaderboard.forEach((entry, i) => {
+                    console.log(`${i + 1}. ${entry.username}: ${formatTime(entry.time)}`);
+                });
+            },
+
+            // Utility commands
+            getPosition: () => {
+                if (gameActive) {
+                    console.log(`Player position: (${player.x.toFixed(2)}, ${player.y.toFixed(2)})`);
+                    console.log(`Velocity: (${player.velocityX.toFixed(2)}, ${player.velocityY.toFixed(2)})`);
+                    console.log(`Size: ${player.currentSize}`);
+                } else {
+                    console.log('Game must be active to get position');
+                }
+            },
+            setSpeed: (multiplier) => {
+                window.speedMultiplier = multiplier;
+                console.log(`Speed multiplier set to ${multiplier}x`);
+            },
+            help: () => {
+                console.log('Available commands:');
+                console.log('Player Commands:');
+                console.log('  gameCommands.teleport(x, y) - Teleport player to position');
+                console.log('  gameCommands.setSize(size) - Set player size');
+                console.log('  gameCommands.setVelocity(vx, vy) - Set player velocity');
+                console.log('  gameCommands.noclip() - Toggle noclip mode');
+                console.log('  gameCommands.getPosition() - Get player position and stats');
+                console.log('  gameCommands.setSpeed(multiplier) - Set game speed multiplier');
+                console.log('');
+                console.log('Map Commands:');
+                console.log('  gameCommands.loadMap(mapId) - Load a specific map');
+                console.log('  gameCommands.listMaps() - List all available maps');
+                console.log('  gameCommands.restart() - Restart current map');
+                console.log('  gameCommands.finish() - Force finish the current game');
+                console.log('');
+                console.log('Ghost Commands:');
+                console.log('  gameCommands.watchGhost(mapId, username) - Watch a ghost run');
+                console.log('  gameCommands.raceGhost(mapId, username) - Race against a ghost');
+                console.log('  gameCommands.clearGhost() - Clear current ghost');
+                console.log('');
+                console.log('Leaderboard Commands:');
+                console.log('  gameCommands.viewLeaderboard(mapId) - View leaderboard for a map');
+            }
+        };
+
+        // Initialize speed multiplier
+        window.speedMultiplier = 1.0;
+        window.noclipEnabled = false;
+
+        console.log('%cGame Console Commands Available!', 'color: #4facfe; font-size: 16px; font-weight: bold;');
+        console.log('Type gameCommands.help() for a list of commands');
 
         // Start game loop
         gameLoop();
