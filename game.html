@@ -655,6 +655,14 @@
         let personalBests = {};
         let mapStartTime = 0; // For moving platforms
 
+        // Ghost recording variables
+        let currentRecording = [];
+        let isRecording = false;
+        let ghostData = null;
+        let ghostPlayer = null;
+        let racingGhost = false;
+        let watchingGhost = false;
+
         // Constants
         const GRAVITY = 0.042;  // 150% of 0.028
         const MOVE_SPEED = 0.28;  // Faster ground movement: 0.21 * 1.33 ≈ 0.28
@@ -1796,10 +1804,76 @@
                 entryDiv.className = `menu-lb-entry ${rankClass} ${youClass}`;
                 entryDiv.innerHTML = `
                     <span>${index + 1}. ${entry.username}</span>
-                    <span>${formatTime(entry.time)}</span>
+                    <span>
+                        ${formatTime(entry.time)}
+                        <span class="ghost-icon" onclick="watchGhost('${mapId}', '${entry.username}'); event.stopPropagation();" title="Watch run">👁️</span>
+                        <span class="ghost-icon" onclick="raceGhost('${mapId}', '${entry.username}'); event.stopPropagation();" title="Race ghost">🏁</span>
+                    </span>
                 `;
                 entriesDiv.appendChild(entryDiv);
             });
+        }
+
+        // Watch a ghost run
+        async function watchGhost(mapId, username) {
+            const map = maps.find(m => m.id === mapId);
+            if (!map) return;
+
+            // Load ghost data
+            const ghostDataSnapshot = await database.ref(`ghosts/${mapId}`).orderByChild('username').equalTo(username).once('value');
+            let loadedGhostData = null;
+            ghostDataSnapshot.forEach(snapshot => {
+                loadedGhostData = snapshot.val();
+            });
+
+            if (!loadedGhostData || !loadedGhostData.recording) {
+                alert('No ghost recording available for this run');
+                return;
+            }
+
+            ghostData = loadedGhostData;
+            watchingGhost = true;
+            racingGhost = false;
+            ghostPlayer = {
+                x: map.start.x,
+                y: map.start.y,
+                width: 40,
+                height: 40,
+                currentSize: 40
+            };
+
+            startMap(map);
+        }
+
+        // Race against a ghost
+        async function raceGhost(mapId, username) {
+            const map = maps.find(m => m.id === mapId);
+            if (!map) return;
+
+            // Load ghost data
+            const ghostDataSnapshot = await database.ref(`ghosts/${mapId}`).orderByChild('username').equalTo(username).once('value');
+            let loadedGhostData = null;
+            ghostDataSnapshot.forEach(snapshot => {
+                loadedGhostData = snapshot.val();
+            });
+
+            if (!loadedGhostData || !loadedGhostData.recording) {
+                alert('No ghost recording available for this run');
+                return;
+            }
+
+            ghostData = loadedGhostData;
+            watchingGhost = false;
+            racingGhost = true;
+            ghostPlayer = {
+                x: map.start.x,
+                y: map.start.y,
+                width: 40,
+                height: 40,
+                currentSize: 40
+            };
+
+            startMap(map);
         }
 
         // Display average leaderboard
@@ -1961,6 +2035,13 @@
                     currentTime = 0;
                     lastFrameTime = performance.now(); // Reset frame time for delta calculation
                     mapStartTime = performance.now(); // Reset moving platforms to starting position
+
+                    // Start recording if not watching ghost
+                    if (!watchingGhost) {
+                        currentRecording = [];
+                        isRecording = true;
+                    }
+
                     gameActive = true;
 
                     timerInterval = setInterval(() => {
@@ -2195,12 +2276,15 @@
         async function finishMap() {
             gameActive = false;
             clearInterval(timerInterval);
+            isRecording = false;
 
             const finalTime = currentTime;
             const isNewPB = !personalBests[currentMap.id] || finalTime < personalBests[currentMap.id];
 
             if (isNewPB) {
                 personalBests[currentMap.id] = finalTime;
+                // Save ghost recording for PB
+                await saveGhostRecording(currentMap.id, currentRecording, finalTime);
             }
 
             // Submit to leaderboard
@@ -2218,6 +2302,22 @@
             await getRank(currentMap.id, finalTime);
 
             document.getElementById('finishScreen').style.display = 'block';
+        }
+
+        // Save ghost recording
+        async function saveGhostRecording(mapId, recording, time) {
+            try {
+                const uid = currentUser.uid;
+                const ghostRef = database.ref(`ghosts/${mapId}/${uid}`);
+                await ghostRef.set({
+                    username: currentUsername,
+                    time: time,
+                    recording: recording,
+                    timestamp: firebase.database.ServerValue.TIMESTAMP
+                });
+            } catch (error) {
+                console.error('Failed to save ghost:', error);
+            }
         }
 
         // Submit score
@@ -2552,6 +2652,16 @@
                 ctx.fillText('🏁', finishLine.x + finishLine.width / 2 - 15, finishLine.y - 10);
             }
 
+            // Draw ghost player
+            if (ghostPlayer) {
+                ctx.fillStyle = 'rgba(100, 100, 255, 0.4)';
+                ctx.fillRect(ghostPlayer.x, ghostPlayer.y, ghostPlayer.width, ghostPlayer.height);
+                ctx.strokeStyle = 'rgba(100, 100, 255, 0.7)';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(ghostPlayer.x, ghostPlayer.y, ghostPlayer.width, ghostPlayer.height);
+            }
+
+            // Draw player
             ctx.fillStyle = player.color;
             ctx.fillRect(player.x, player.y, player.width, player.height);
             ctx.strokeStyle = '#333';
@@ -2574,6 +2684,31 @@
                 updateMovingBlocks(currentTime);
 
                 updatePlayer(deltaTime);
+
+                // Record player position for ghost
+                if (isRecording) {
+                    currentRecording.push({
+                        x: player.x,
+                        y: player.y,
+                        width: player.width,
+                        height: player.height,
+                        currentSize: player.currentSize
+                    });
+                }
+
+                // Update ghost player
+                if (ghostPlayer && ghostData) {
+                    const frameIndex = Math.floor((Date.now() - startTime) / 16.67);
+                    if (frameIndex < ghostData.recording.length) {
+                        const ghostFrame = ghostData.recording[frameIndex];
+                        ghostPlayer.x = ghostFrame.x;
+                        ghostPlayer.y = ghostFrame.y;
+                        ghostPlayer.width = ghostFrame.width;
+                        ghostPlayer.height = ghostFrame.height;
+                        ghostPlayer.currentSize = ghostFrame.currentSize;
+                    }
+                }
+
                 draw();
             }
         }
@@ -2583,6 +2718,16 @@
             gameActive = false;
             clearInterval(timerInterval);
             document.getElementById('finishScreen').style.display = 'none';
+
+            // Reset ghost if racing
+            if (racingGhost && ghostPlayer) {
+                ghostPlayer.x = currentMap.start.x;
+                ghostPlayer.y = currentMap.start.y;
+                ghostPlayer.width = 40;
+                ghostPlayer.height = 40;
+                ghostPlayer.currentSize = 40;
+            }
+
             if (currentMap) {
                 startMap(currentMap);
             }
@@ -2600,6 +2745,15 @@
             document.getElementById('gameLeaderboard').style.display = 'none';
             document.getElementById('velocityIndicator').style.display = 'none';
             document.getElementById('versionLabel').style.display = 'none';
+
+            // Clear ghost data
+            ghostData = null;
+            ghostPlayer = null;
+            racingGhost = false;
+            watchingGhost = false;
+            isRecording = false;
+            currentRecording = [];
+
             initMenu();
         }
 
