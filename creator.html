@@ -285,6 +285,7 @@
             <button class="tool-button" onclick="setTool('select')">✋ Select/Move <span style="float:right;color:#999;">5</span></button>
             <button class="tool-button" onclick="setTool('resize')">↔️ Resize <span style="float:right;color:#999;">6</span></button>
             <button class="tool-button delete" onclick="setTool('delete')">🗑 Delete <span style="float:right;color:#999;">7</span></button>
+            <button class="tool-button" onclick="mergeSelected()" style="background: rgba(150,100,255,0.7);">🔗 Merge Selected</button>
             <button class="tool-button" onclick="setTool('void')" style="background: rgba(0,0,0,0.5);">⬛ Void (Cut)</button>
             <button class="tool-button" onclick="setTool('movement')" style="background: rgba(100,150,255,0.7);">🔄 Add Movement</button>
             <button class="tool-button" onclick="setTool('editmovement')" style="background: rgba(255,150,100,0.7);">⏱️ Edit Movement Time</button>
@@ -1564,6 +1565,74 @@
             updateElementsList();
         }
 
+        // Merge selected blocks into a single merged block
+        function mergeSelected() {
+            if (selectedBlocks.length < 2) {
+                alert('Please select at least 2 blocks to merge');
+                return;
+            }
+
+            // Check if all selected blocks are of the same type
+            const types = [...new Set(selectedBlocks.map(b => b.type))];
+            if (types.length > 1) {
+                alert('Can only merge blocks of the same type');
+                return;
+            }
+
+            const blockType = types[0];
+
+            // Check if any selected blocks have movement
+            const hasMovement = selectedBlocks.some(b => b.obj.movement);
+            if (hasMovement) {
+                alert('Cannot merge blocks with movement. Remove movement first.');
+                return;
+            }
+
+            saveState();
+
+            // Create merged block with multiple rectangles
+            const mergedBlock = {
+                merged: true,
+                parts: selectedBlocks.map(b => ({
+                    x: b.obj.x,
+                    y: b.obj.y,
+                    width: b.obj.width,
+                    height: b.obj.height
+                }))
+            };
+
+            // Add merged block to appropriate array
+            let targetArray;
+            if (blockType === 'platform') targetArray = platforms;
+            else if (blockType === 'hazard') targetArray = hazards;
+            else if (blockType === 'grower') targetArray = growers;
+            else if (blockType === 'shrinker') targetArray = shrinkers;
+            else if (blockType === 'default') targetArray = defaultSizeBlocks;
+            else if (blockType === 'background') targetArray = backgroundBlocks;
+            else if (blockType === 'foreground') targetArray = foregroundBlocks;
+
+            if (targetArray) {
+                // Remove original blocks from array
+                for (const block of selectedBlocks) {
+                    const idx = targetArray.indexOf(block.obj);
+                    if (idx > -1) {
+                        targetArray.splice(idx, 1);
+                    }
+                }
+
+                // Add merged block
+                targetArray.push(mergedBlock);
+            }
+
+            // Clear selection
+            selectedBlocks = [];
+            selectedBlock = null;
+
+            updateStats();
+            updateLevelData();
+            draw();
+        }
+
         function updateLevelData() {
             const data = {
                 platforms: platforms,
@@ -1809,58 +1878,63 @@
                 ctx.fillText(y.toString(), 0 + 5 / zoom, y);
             }
 
+            // Helper function to draw a block (handles merged blocks)
+            const drawBlock = (block, fillColor, strokeColor) => {
+                if (block.merged && block.parts) {
+                    // Draw each part of merged block
+                    block.parts.forEach(part => {
+                        ctx.fillStyle = fillColor;
+                        ctx.fillRect(part.x, part.y, part.width, part.height);
+                        ctx.strokeStyle = strokeColor;
+                        ctx.lineWidth = 2 / zoom;
+                        ctx.strokeRect(part.x, part.y, part.width, part.height);
+                    });
+                    // Draw merge indicator (outline around all parts)
+                    ctx.strokeStyle = 'rgba(255, 255, 0, 0.5)';
+                    ctx.lineWidth = 4 / zoom;
+                    ctx.setLineDash([10 / zoom, 5 / zoom]);
+                    block.parts.forEach(part => {
+                        ctx.strokeRect(part.x, part.y, part.width, part.height);
+                    });
+                    ctx.setLineDash([]);
+                } else {
+                    // Draw normal block
+                    ctx.fillStyle = fillColor;
+                    ctx.fillRect(block.x, block.y, block.width, block.height);
+                    ctx.strokeStyle = strokeColor;
+                    ctx.lineWidth = 2 / zoom;
+                    ctx.strokeRect(block.x, block.y, block.width, block.height);
+                }
+            };
+
             // Background blocks (visual only, rendered first)
             backgroundBlocks.forEach(b => {
-                ctx.fillStyle = 'rgba(100, 100, 100, 0.3)';
-                ctx.fillRect(b.x, b.y, b.width, b.height);
-                ctx.strokeStyle = 'rgba(80, 80, 80, 0.5)';
-                ctx.lineWidth = 2 / zoom;
-                ctx.strokeRect(b.x, b.y, b.width, b.height);
+                drawBlock(b, 'rgba(100, 100, 100, 0.3)', 'rgba(80, 80, 80, 0.5)');
             });
 
             // Platforms
             platforms.forEach(p => {
-                ctx.fillStyle = '#4CAF50';
-                ctx.fillRect(p.x, p.y, p.width, p.height);
-                ctx.strokeStyle = '#333';
-                ctx.lineWidth = 2 / zoom;
-                ctx.strokeRect(p.x, p.y, p.width, p.height);
+                drawBlock(p, '#4CAF50', '#333');
             });
 
             // Hazards
             hazards.forEach(h => {
-                ctx.fillStyle = '#FF3333';
-                ctx.fillRect(h.x, h.y, h.width, h.height);
-                ctx.strokeStyle = '#CC0000';
-                ctx.lineWidth = 2 / zoom;
-                ctx.strokeRect(h.x, h.y, h.width, h.height);
+                drawBlock(h, '#FF3333', '#CC0000');
             });
 
             // Growers (green pads - 2x size)
             growers.forEach(g => {
-                ctx.fillStyle = '#00FF88';
-                ctx.fillRect(g.x, g.y, g.width, g.height);
-                ctx.strokeStyle = '#00CC66';
-                ctx.lineWidth = 2 / zoom;
-                ctx.strokeRect(g.x, g.y, g.width, g.height);
+                drawBlock(g, '#00FF88', '#00CC66');
             });
 
             // Shrinkers (purple pads - 0.5x size)
             shrinkers.forEach(s => {
-                ctx.fillStyle = '#BB66FF';
-                ctx.fillRect(s.x, s.y, s.width, s.height);
-                ctx.strokeStyle = '#9944DD';
-                ctx.lineWidth = 2 / zoom;
-                ctx.strokeRect(s.x, s.y, s.width, s.height);
+                drawBlock(s, '#BB66FF', '#9944DD');
             });
 
             // Default size blocks (yellow/orange - default 40px size)
             defaultSizeBlocks.forEach(d => {
-                ctx.fillStyle = '#FFB84D';
-                ctx.fillRect(d.x, d.y, d.width, d.height);
-                ctx.strokeStyle = '#FF8800';
-                ctx.lineWidth = 2 / zoom;
-                ctx.strokeRect(d.x, d.y, d.width, d.height);
+                drawBlock(d, '#FFB84D', '#FF8800');
             });
 
             // Current drawing
