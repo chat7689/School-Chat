@@ -429,6 +429,71 @@
             opacity: 1;
             transform: scale(1.05);
         }
+
+        #menuLeaderboard {
+            position: fixed;
+            right: 20px;
+            top: 100px;
+            width: 400px;
+            max-height: calc(100vh - 140px);
+            background: rgba(0,0,0,0.9);
+            border: 2px solid #4facfe;
+            border-radius: 10px;
+            padding: 20px;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        #menuLeaderboard h3 {
+            margin: 0 0 15px 0;
+            color: #4facfe;
+            font-size: 18px;
+        }
+
+        #menuLeaderboard select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            background: rgba(0,0,0,0.5);
+            color: white;
+            border: 2px solid #4facfe;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .menu-lb-entry {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(255,255,255,0.05);
+            border-radius: 5px;
+            color: #ccc;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .menu-lb-entry:hover {
+            background: rgba(79, 172, 254, 0.2);
+            transform: translateX(-3px);
+        }
+
+        .menu-lb-entry.top1 { background: rgba(255,215,0,0.2); border-left: 3px solid gold; }
+        .menu-lb-entry.top2 { background: rgba(192,192,192,0.2); border-left: 3px solid silver; }
+        .menu-lb-entry.top3 { background: rgba(205,127,50,0.2); border-left: 3px solid #cd7f32; }
+        .menu-lb-entry.you { background: rgba(79, 172, 254, 0.3); border-left: 3px solid #4facfe; }
+
+        .ghost-icon {
+            margin-left: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .ghost-icon:hover {
+            transform: scale(1.2);
+        }
     </style>
 </head>
 <body>
@@ -449,8 +514,25 @@
             </div>
         </div>
 
+        <!-- Leaderboard Panel -->
+        <div id="menuLeaderboard">
+            <h3>🏆 Leaderboards</h3>
+            <select id="leaderboardType" onchange="updateMenuLeaderboard()">
+                <option value="map">Map Leaderboard</option>
+                <option value="average">Average Ranking</option>
+            </select>
+            <div id="mapSelectContainer" style="display: block;">
+                <select id="mapSelect" onchange="updateMenuLeaderboard()"></select>
+            </div>
+            <div id="averageMapSelectContainer" style="display: none;">
+                <label style="color: #4facfe; font-size: 12px; margin-bottom: 5px; display: block;">Select Maps for Average:</label>
+                <div id="averageMapChecks" style="max-height: 150px; overflow-y: auto; margin-bottom: 15px;"></div>
+            </div>
+            <div id="menuLeaderboardEntries"></div>
+        </div>
+
         <h2>Select a Map</h2>
-        <div class="maps-container" id="mapsContainer"></div>
+        <div class="maps-container" id="mapsContainer" style="margin: 0 430px 0 210px;"></div>
         <a href="creator.html" style="position: fixed; bottom: 20px; left: 20px; padding: 12px 20px; background: rgba(79, 172, 254, 0.3); color: #4facfe; border: 2px solid #4facfe; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 16px; transition: all 0.3s;">📝 Level Creator</a>
     </div>
 
@@ -1601,6 +1683,151 @@
                 card.onclick = () => startMap(map);
                 container.appendChild(card);
             }
+
+            // Initialize menu leaderboard
+            initMenuLeaderboard();
+        }
+
+        // Initialize menu leaderboard dropdowns
+        function initMenuLeaderboard() {
+            const mapSelect = document.getElementById('mapSelect');
+            mapSelect.innerHTML = '';
+            maps.forEach(map => {
+                const option = document.createElement('option');
+                option.value = map.id;
+                option.textContent = map.name;
+                mapSelect.appendChild(option);
+            });
+
+            const averageMapChecks = document.getElementById('averageMapChecks');
+            averageMapChecks.innerHTML = '';
+            maps.forEach(map => {
+                const label = document.createElement('label');
+                label.style.display = 'block';
+                label.style.color = '#ccc';
+                label.style.padding = '5px';
+                label.style.cursor = 'pointer';
+                label.innerHTML = `<input type="checkbox" value="${map.id}" checked onchange="updateMenuLeaderboard()"> ${map.name}`;
+                averageMapChecks.appendChild(label);
+            });
+
+            updateMenuLeaderboard();
+        }
+
+        // Update menu leaderboard
+        async function updateMenuLeaderboard() {
+            const type = document.getElementById('leaderboardType').value;
+            const mapSelectContainer = document.getElementById('mapSelectContainer');
+            const averageMapSelectContainer = document.getElementById('averageMapSelectContainer');
+            const entriesDiv = document.getElementById('menuLeaderboardEntries');
+
+            if (type === 'map') {
+                mapSelectContainer.style.display = 'block';
+                averageMapSelectContainer.style.display = 'none';
+                const mapId = document.getElementById('mapSelect').value;
+                const leaderboard = await loadFullLeaderboard(mapId);
+                displayMenuLeaderboard(leaderboard, mapId);
+            } else if (type === 'average') {
+                mapSelectContainer.style.display = 'none';
+                averageMapSelectContainer.style.display = 'block';
+                const selectedMaps = Array.from(document.querySelectorAll('#averageMapChecks input:checked')).map(cb => cb.value);
+                const averageLeaderboard = await calculateAverageRankings(selectedMaps);
+                displayAverageLeaderboard(averageLeaderboard, selectedMaps);
+            }
+        }
+
+        // Load full leaderboard for a map
+        async function loadFullLeaderboard(mapId) {
+            try {
+                const snapshot = await database.ref('scores/' + mapId).orderByChild('time').limitToFirst(100).once('value');
+                const entries = [];
+                snapshot.forEach((child) => {
+                    entries.push(child.val());
+                });
+                return entries;
+            } catch (error) {
+                console.error('Failed to load leaderboard:', error);
+                return [];
+            }
+        }
+
+        // Calculate average rankings across selected maps
+        async function calculateAverageRankings(selectedMapIds) {
+            const userRankings = {};
+
+            for (const mapId of selectedMapIds) {
+                const leaderboard = await loadFullLeaderboard(mapId);
+                leaderboard.forEach((entry, index) => {
+                    const username = entry.username;
+                    if (!userRankings[username]) {
+                        userRankings[username] = { rankings: [], mapsCompleted: 0 };
+                    }
+                    userRankings[username].rankings.push(index + 1);
+                    userRankings[username].mapsCompleted++;
+                });
+            }
+
+            // Only include users who have completed all selected maps
+            const averageLeaderboard = Object.entries(userRankings)
+                .filter(([username, data]) => data.mapsCompleted === selectedMapIds.length)
+                .map(([username, data]) => {
+                    const avgRank = data.rankings.reduce((a, b) => a + b, 0) / data.rankings.length;
+                    return { username, avgRank, mapsCompleted: data.mapsCompleted };
+                })
+                .sort((a, b) => a.avgRank - b.avgRank);
+
+            return averageLeaderboard;
+        }
+
+        // Display menu leaderboard
+        function displayMenuLeaderboard(leaderboard, mapId) {
+            const entriesDiv = document.getElementById('menuLeaderboardEntries');
+            entriesDiv.innerHTML = '';
+
+            if (leaderboard.length === 0) {
+                entriesDiv.innerHTML = '<p style="color: #888;">No times yet!</p>';
+                return;
+            }
+
+            leaderboard.forEach((entry, index) => {
+                const rankClass = index === 0 ? 'top1' : index === 1 ? 'top2' : index === 2 ? 'top3' : '';
+                const youClass = entry.username === currentUsername ? 'you' : '';
+                const entryDiv = document.createElement('div');
+                entryDiv.className = `menu-lb-entry ${rankClass} ${youClass}`;
+                entryDiv.innerHTML = `
+                    <span>${index + 1}. ${entry.username}</span>
+                    <span>${formatTime(entry.time)}</span>
+                `;
+                entriesDiv.appendChild(entryDiv);
+            });
+        }
+
+        // Display average leaderboard
+        function displayAverageLeaderboard(leaderboard, selectedMaps) {
+            const entriesDiv = document.getElementById('menuLeaderboardEntries');
+            entriesDiv.innerHTML = '';
+
+            if (selectedMaps.length === 0) {
+                entriesDiv.innerHTML = '<p style="color: #888;">Please select at least one map</p>';
+                return;
+            }
+
+            if (leaderboard.length === 0) {
+                entriesDiv.innerHTML = '<p style="color: #888;">No players have completed all selected maps</p>';
+                return;
+            }
+
+            leaderboard.forEach((entry, index) => {
+                const youClass = entry.username === currentUsername ? 'you' : '';
+                const rankClass = index === 0 ? 'top1' : index === 1 ? 'top2' : index === 2 ? 'top3' : '';
+                const entryDiv = document.createElement('div');
+                entryDiv.className = `menu-lb-entry ${rankClass} ${youClass}`;
+                entryDiv.innerHTML = `
+                    <span>${index + 1}. ${entry.username}</span>
+                    <span>Avg: ${entry.avgRank.toFixed(2)}</span>
+                `;
+                entriesDiv.appendChild(entryDiv);
+            });
         }
 
         // Load leaderboard
