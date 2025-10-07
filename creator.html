@@ -279,6 +279,7 @@
             <button class="tool-button" onclick="setTool('grower')">🟩 Large Size (80px)</button>
             <button class="tool-button" onclick="setTool('background')">🔲 Background</button>
             <button class="tool-button" onclick="setTool('foreground')">⬜ Foreground</button>
+            <button class="tool-button" onclick="setTool('trigger')" style="background: rgba(255,100,255,0.3);">⚡ Trigger Block</button>
             <button class="tool-button" onclick="setTool('start')">🟢 Start Position</button>
             <button class="tool-button" onclick="setTool('finish')">🏁 Finish Line</button>
             <button class="tool-button" onclick="setTool('player')">👤 Preview Player</button>
@@ -433,6 +434,8 @@
         let defaultSizeBlocks = [];  // Default size blocks (40px)
         let backgroundBlocks = [];  // Visual only, no collision
         let foregroundBlocks = [];  // Visual only, rendered on top
+        let triggers = [];  // Invisible trigger blocks with IDs
+        let nextTriggerId = 1;  // Auto-increment trigger IDs
         let startPos = { x: 40, y: 520, width: 40, height: 40 };  // 40x40 grid
         let finishPos = { x: 700, y: 480, width: 40, height: 40 };  // Drag-able finish (40x40)
 
@@ -1468,6 +1471,8 @@
                     backgroundBlocks.push({...currentRect});
                 } else if (currentTool === 'foreground') {
                     foregroundBlocks.push({...currentRect});
+                } else if (currentTool === 'trigger') {
+                    triggers.push({...currentRect, triggerId: nextTriggerId++});
                 } else if (currentTool === 'finish') {
                     // Replace finish position with new drag-created one
                     finishPos.x = currentRect.x;
@@ -1682,6 +1687,7 @@
                 defaultSizeBlocks: defaultSizeBlocks,
                 backgroundBlocks: backgroundBlocks,
                 foregroundBlocks: foregroundBlocks,
+                triggers: triggers,
                 start: startPos,
                 finish: finishPos,
                 physics: physics
@@ -1977,6 +1983,24 @@
                 drawBlock(d, '#FFB84D', '#FF8800');
             });
 
+            // Trigger blocks (invisible in game, visible in editor)
+            triggers.forEach(t => {
+                ctx.fillStyle = 'rgba(255, 100, 255, 0.3)';
+                ctx.fillRect(t.x, t.y, t.width, t.height);
+                ctx.strokeStyle = '#FF64FF';
+                ctx.lineWidth = 2 / zoom;
+                ctx.setLineDash([5 / zoom, 5 / zoom]);
+                ctx.strokeRect(t.x, t.y, t.width, t.height);
+                ctx.setLineDash([]);
+
+                // Draw trigger ID
+                ctx.fillStyle = '#FF64FF';
+                ctx.font = `bold ${20 / zoom}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(`⚡${t.triggerId}`, t.x + t.width / 2, t.y + t.height / 2);
+            });
+
             // Current drawing
             if (currentRect) {
                 if (currentTool === 'platform') {
@@ -2000,6 +2024,9 @@
                 } else if (currentTool === 'foreground') {
                     ctx.fillStyle = 'rgba(200, 200, 200, 0.4)';
                     ctx.strokeStyle = 'rgba(180, 180, 180, 0.6)';
+                } else if (currentTool === 'trigger') {
+                    ctx.fillStyle = 'rgba(255, 100, 255, 0.3)';
+                    ctx.strokeStyle = '#FF64FF';
                 } else if (currentTool === 'void') {
                     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
                     ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
