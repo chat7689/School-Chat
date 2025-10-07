@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Speedrun - Login</title>
+    <link rel="icon" type="image/png" id="favicon">
     <style>
         * {
             margin: 0;
@@ -280,6 +281,23 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const database = firebase.database();
+
+        // Create favicon with orange square character
+        const faviconCanvas = document.createElement('canvas');
+        faviconCanvas.width = 32;
+        faviconCanvas.height = 32;
+        const faviconCtx = faviconCanvas.getContext('2d');
+
+        // Draw orange square character
+        faviconCtx.fillStyle = '#FF8C42';
+        faviconCtx.fillRect(6, 6, 20, 20);
+        faviconCtx.strokeStyle = '#333';
+        faviconCtx.lineWidth = 2;
+        faviconCtx.strokeRect(6, 6, 20, 20);
+
+        // Set favicon
+        const favicon = document.getElementById('favicon');
+        favicon.href = faviconCanvas.toDataURL('image/png');
 
         function switchTab(tab) {
             document.querySelectorAll('.tab-button').forEach(btn => {
