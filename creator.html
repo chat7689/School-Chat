@@ -525,6 +525,7 @@
                 defaultSizeBlocks: JSON.parse(JSON.stringify(defaultSizeBlocks)),
                 backgroundBlocks: JSON.parse(JSON.stringify(backgroundBlocks)),
                 foregroundBlocks: JSON.parse(JSON.stringify(foregroundBlocks)),
+                triggers: JSON.parse(JSON.stringify(triggers)),
                 startPos: JSON.parse(JSON.stringify(startPos)),
                 finishPos: JSON.parse(JSON.stringify(finishPos))
             };
@@ -545,6 +546,7 @@
                     defaultSizeBlocks: JSON.parse(JSON.stringify(defaultSizeBlocks)),
                     backgroundBlocks: JSON.parse(JSON.stringify(backgroundBlocks)),
                     foregroundBlocks: JSON.parse(JSON.stringify(foregroundBlocks)),
+                    triggers: JSON.parse(JSON.stringify(triggers)),
                     startPos: JSON.parse(JSON.stringify(startPos)),
                     finishPos: JSON.parse(JSON.stringify(finishPos))
                 };
@@ -558,6 +560,7 @@
                 defaultSizeBlocks = state.defaultSizeBlocks || [];
                 backgroundBlocks = state.backgroundBlocks;
                 foregroundBlocks = state.foregroundBlocks;
+                triggers = state.triggers || [];
                 startPos = state.startPos;
                 finishPos = state.finishPos;
 
@@ -577,6 +580,7 @@
                     defaultSizeBlocks: JSON.parse(JSON.stringify(defaultSizeBlocks)),
                     backgroundBlocks: JSON.parse(JSON.stringify(backgroundBlocks)),
                     foregroundBlocks: JSON.parse(JSON.stringify(foregroundBlocks)),
+                    triggers: JSON.parse(JSON.stringify(triggers)),
                     startPos: JSON.parse(JSON.stringify(startPos)),
                     finishPos: JSON.parse(JSON.stringify(finishPos))
                 };
@@ -590,6 +594,7 @@
                 defaultSizeBlocks = state.defaultSizeBlocks || [];
                 backgroundBlocks = state.backgroundBlocks;
                 foregroundBlocks = state.foregroundBlocks;
+                triggers = state.triggers || [];
                 startPos = state.startPos;
                 finishPos = state.finishPos;
 
@@ -1549,6 +1554,7 @@
             defaultSizeBlocks = defaultSizeBlocks.filter(d => !isPointInBlock(x, y, d));
             backgroundBlocks = backgroundBlocks.filter(b => !isPointInBlock(x, y, b));
             foregroundBlocks = foregroundBlocks.filter(f => !isPointInBlock(x, y, f));
+            triggers = triggers.filter(t => !isPointInBlock(x, y, t));
             updateStats();
             updateLevelData();
             draw();
