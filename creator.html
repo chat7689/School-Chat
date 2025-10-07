@@ -287,6 +287,7 @@
             <button class="tool-button" onclick="setTool('resize')">↔️ Resize <span style="float:right;color:#999;">6</span></button>
             <button class="tool-button delete" onclick="setTool('delete')">🗑 Delete <span style="float:right;color:#999;">7</span></button>
             <button class="tool-button" onclick="mergeSelected()" style="background: rgba(150,100,255,0.7);">🔗 Merge Selected</button>
+            <button class="tool-button" id="unmergeButton" onclick="unmergeSelected()" style="background: rgba(255,100,150,0.7); display: none;">🔓 Unmerge</button>
             <button class="tool-button" onclick="setTool('void')" style="background: rgba(0,0,0,0.5);">⬛ Void (Cut)</button>
             <button class="tool-button" onclick="setTool('movement')" style="background: rgba(100,150,255,0.7);">🔄 Add Movement</button>
             <button class="tool-button" onclick="setTool('editmovement')" style="background: rgba(255,150,100,0.7);">⏱️ Edit Movement Time</button>
@@ -1015,13 +1016,13 @@
                             isDraggingBlock = true;
                             clickedBlock = true;
                             selectedBlocks = [];  // Clear multi-selection
+                            document.getElementById('unmergeButton').style.display = 'none'; // Hide unmerge button
                         } else {
                             // Check if clicking on a block in the current selection
                             let clickedSelectedBlock = false;
                             if (selectedBlocks.length > 0) {
                                 for (const block of selectedBlocks) {
-                                    if (worldPos.x >= block.obj.x && worldPos.x <= block.obj.x + block.obj.width &&
-                                        worldPos.y >= block.obj.y && worldPos.y <= block.obj.y + block.obj.height) {
+                                    if (isPointInBlock(worldPos.x, worldPos.y, block.obj)) {
                                         isDraggingBlock = true;
                                         clickedBlock = true;
                                         clickedSelectedBlock = true;
@@ -1034,8 +1035,7 @@
                             // If not clicking on selected block, check other blocks for dragging
                             if (!clickedSelectedBlock) {
                                 for (const block of allBlocks) {
-                                    if (worldPos.x >= block.obj.x && worldPos.x <= block.obj.x + block.obj.width &&
-                                        worldPos.y >= block.obj.y && worldPos.y <= block.obj.y + block.obj.height) {
+                                    if (isPointInBlock(worldPos.x, worldPos.y, block.obj)) {
 
                                         // If block has movement, open modal instead of dragging
                                         if (block.obj.movement && (block.type === 'platform' || block.type === 'hazard')) {
@@ -1048,6 +1048,15 @@
                                         isDraggingBlock = true;
                                         clickedBlock = true;
                                         selectedBlocks = [];  // Clear multi-selection
+
+                                        // Show unmerge button if merged block selected
+                                        const unmergeBtn = document.getElementById('unmergeButton');
+                                        if (block.obj.merged) {
+                                            unmergeBtn.style.display = 'inline-block';
+                                        } else {
+                                            unmergeBtn.style.display = 'none';
+                                        }
+
                                         break;
                                     }
                                 }
@@ -1062,6 +1071,7 @@
                             selectedBlock = null;
                             selectedBlocks = [];
                             draggingNodeBlock = null; // Deselect movement path
+                            document.getElementById('unmergeButton').style.display = 'none'; // Hide unmerge button
                             selectedMovementPath = null;
                         }
                     }
@@ -1074,8 +1084,7 @@
                 ];
 
                 for (const block of movableBlocks) {
-                    if (worldPos.x >= block.obj.x && worldPos.x <= block.obj.x + block.obj.width &&
-                        worldPos.y >= block.obj.y && worldPos.y <= block.obj.y + block.obj.height) {
+                    if (isPointInBlock(worldPos.x, worldPos.y, block.obj)) {
                         if (block.obj.movement) {
                             openMovementModal(block.obj);
                         } else {
@@ -1094,8 +1103,7 @@
                     ];
 
                     for (const block of movableBlocks) {
-                        if (worldPos.x >= block.obj.x && worldPos.x <= block.obj.x + block.obj.width &&
-                            worldPos.y >= block.obj.y && worldPos.y <= block.obj.y + block.obj.height) {
+                        if (isPointInBlock(worldPos.x, worldPos.y, block.obj)) {
                             movementSelectedBlock = block;
 
                             // Calculate center of the grid square that was clicked
@@ -1516,13 +1524,13 @@
 
         function deleteAtPosition(x, y) {
             saveState(); // Save for undo
-            platforms = platforms.filter(p => !(x >= p.x && x <= p.x + p.width && y >= p.y && y <= p.y + p.height));
-            hazards = hazards.filter(h => !(x >= h.x && x <= h.x + h.width && y >= h.y && y <= h.y + h.height));
-            growers = growers.filter(g => !(x >= g.x && x <= g.x + g.width && y >= g.y && y <= g.y + g.height));
-            shrinkers = shrinkers.filter(s => !(x >= s.x && x <= s.x + s.width && y >= s.y && y <= s.y + s.height));
-            defaultSizeBlocks = defaultSizeBlocks.filter(d => !(x >= d.x && x <= d.x + d.width && y >= d.y && y <= d.y + d.height));
-            backgroundBlocks = backgroundBlocks.filter(b => !(x >= b.x && x <= b.x + b.width && y >= b.y && y <= b.y + b.height));
-            foregroundBlocks = foregroundBlocks.filter(f => !(x >= f.x && x <= f.x + f.width && y >= f.y && y <= f.y + f.height));
+            platforms = platforms.filter(p => !isPointInBlock(x, y, p));
+            hazards = hazards.filter(h => !isPointInBlock(x, y, h));
+            growers = growers.filter(g => !isPointInBlock(x, y, g));
+            shrinkers = shrinkers.filter(s => !isPointInBlock(x, y, s));
+            defaultSizeBlocks = defaultSizeBlocks.filter(d => !isPointInBlock(x, y, d));
+            backgroundBlocks = backgroundBlocks.filter(b => !isPointInBlock(x, y, b));
+            foregroundBlocks = foregroundBlocks.filter(f => !isPointInBlock(x, y, f));
             updateStats();
             updateLevelData();
             draw();
@@ -1604,6 +1612,21 @@
         }
 
 
+        // Helper function to check if a point is inside a block (including merged blocks)
+        function isPointInBlock(x, y, block) {
+            if (block.merged && block.parts) {
+                // Check if point is in any part of merged block
+                return block.parts.some(part =>
+                    x >= part.x && x <= part.x + part.width &&
+                    y >= part.y && y <= part.y + part.height
+                );
+            } else {
+                // Normal block collision
+                return x >= block.x && x <= block.x + block.width &&
+                       y >= block.y && y <= block.y + block.height;
+            }
+        }
+
         function updateStats() {
             document.getElementById('blockCount').textContent = platforms.length;
             document.getElementById('hazardCount').textContent = hazards.length;
@@ -1672,6 +1695,54 @@
             // Clear selection
             selectedBlocks = [];
             selectedBlock = null;
+
+            updateStats();
+            updateLevelData();
+            draw();
+        }
+
+        function unmergeSelected() {
+            if (!selectedBlock || !selectedBlock.obj.merged) {
+                alert('Please select a merged block to unmerge');
+                return;
+            }
+
+            saveState();
+
+            const mergedBlock = selectedBlock.obj;
+            const blockType = selectedBlock.type;
+
+            // Get target array
+            let targetArray;
+            if (blockType === 'platform') targetArray = platforms;
+            else if (blockType === 'hazard') targetArray = hazards;
+            else if (blockType === 'grower') targetArray = growers;
+            else if (blockType === 'shrinker') targetArray = shrinkers;
+            else if (blockType === 'default') targetArray = defaultSizeBlocks;
+            else if (blockType === 'background') targetArray = backgroundBlocks;
+            else if (blockType === 'foreground') targetArray = foregroundBlocks;
+
+            if (targetArray) {
+                // Remove merged block
+                const idx = targetArray.indexOf(mergedBlock);
+                if (idx > -1) {
+                    targetArray.splice(idx, 1);
+                }
+
+                // Add back individual blocks
+                for (const part of mergedBlock.parts) {
+                    targetArray.push({
+                        x: part.x,
+                        y: part.y,
+                        width: part.width,
+                        height: part.height
+                    });
+                }
+            }
+
+            // Clear selection and hide unmerge button
+            selectedBlock = null;
+            document.getElementById('unmergeButton').style.display = 'none';
 
             updateStats();
             updateLevelData();
@@ -1927,7 +1998,7 @@
             // Helper function to draw a block (handles merged blocks)
             const drawBlock = (block, fillColor, strokeColor) => {
                 if (block.merged && block.parts) {
-                    // Draw each part of merged block
+                    // Draw each part of merged block as one continuous shape
                     block.parts.forEach(part => {
                         ctx.fillStyle = fillColor;
                         ctx.fillRect(part.x, part.y, part.width, part.height);
@@ -1935,14 +2006,6 @@
                         ctx.lineWidth = 2 / zoom;
                         ctx.strokeRect(part.x, part.y, part.width, part.height);
                     });
-                    // Draw merge indicator (outline around all parts)
-                    ctx.strokeStyle = 'rgba(255, 255, 0, 0.5)';
-                    ctx.lineWidth = 4 / zoom;
-                    ctx.setLineDash([10 / zoom, 5 / zoom]);
-                    block.parts.forEach(part => {
-                        ctx.strokeRect(part.x, part.y, part.width, part.height);
-                    });
-                    ctx.setLineDash([]);
                 } else {
                     // Draw normal block
                     ctx.fillStyle = fillColor;
