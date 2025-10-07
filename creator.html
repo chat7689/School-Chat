@@ -395,11 +395,19 @@
                 <div style="font-size: 14px; color: #aaa; margin-bottom: 10px;" id="movementModalBlockInfo"></div>
                 <div class="slider-group">
                     <label>Cycle Time: <span class="value" id="movementModalValue">5</span>s</label>
-                    <input type="range" min="1" max="10" value="5" id="movementModalSlider" oninput="updateMovementModalSlider()" style="width: 100%;">
+                    <input type="range" min="1" max="30" value="5" id="movementModalSlider" oninput="updateMovementModalSlider()" style="width: 100%;">
+                    <div style="margin-top: 10px;">
+                        <label style="font-size: 12px; color: #888;">Or enter exact value (seconds):</label>
+                        <input type="number" min="0.1" max="100" step="0.1" value="5" id="movementCycleInput" oninput="updateMovementFromInput()" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.5); color: white; border: 1px solid #4facfe; border-radius: 3px; margin-top: 5px;">
+                    </div>
                 </div>
                 <div class="slider-group" style="margin-top: 15px;">
                     <label>Start Delay: <span class="value" id="movementDelayValue">0</span>s</label>
-                    <input type="range" min="0" max="10" step="0.5" value="0" id="movementDelaySlider" oninput="updateMovementDelaySlider()" style="width: 100%;">
+                    <input type="range" min="0" max="30" step="0.5" value="0" id="movementDelaySlider" oninput="updateMovementDelaySlider()" style="width: 100%;">
+                    <div style="margin-top: 10px;">
+                        <label style="font-size: 12px; color: #888;">Or enter exact value (seconds):</label>
+                        <input type="number" min="0" max="100" step="0.1" value="0" id="movementDelayInput" oninput="updateDelayFromInput()" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.5); color: white; border: 1px solid #4facfe; border-radius: 3px; margin-top: 5px;">
+                    </div>
                 </div>
             </div>
             <div class="modal-buttons">
@@ -619,12 +627,16 @@
             const blockIndex = platforms.includes(block) ? platforms.indexOf(block) + 1 : hazards.indexOf(block) + 1;
 
             document.getElementById('movementModalBlockInfo').textContent = `${blockType} #${blockIndex}`;
-            document.getElementById('movementModalSlider').value = block.movement.cycleTime;
-            document.getElementById('movementModalValue').textContent = block.movement.cycleTime;
+
+            const cycleTime = block.movement.cycleTime;
+            document.getElementById('movementModalSlider').value = Math.min(cycleTime, 30);
+            document.getElementById('movementModalValue').textContent = cycleTime;
+            document.getElementById('movementCycleInput').value = cycleTime;
 
             const delay = block.movement.delay || 0;
-            document.getElementById('movementDelaySlider').value = delay;
+            document.getElementById('movementDelaySlider').value = Math.min(delay, 30);
             document.getElementById('movementDelayValue').textContent = delay;
+            document.getElementById('movementDelayInput').value = delay;
 
             document.getElementById('movementModal').style.display = 'flex';
         }
@@ -637,19 +649,47 @@
         function updateMovementModalSlider() {
             const value = document.getElementById('movementModalSlider').value;
             document.getElementById('movementModalValue').textContent = value;
+            document.getElementById('movementCycleInput').value = value;
         }
 
         function updateMovementDelaySlider() {
             const value = document.getElementById('movementDelaySlider').value;
             document.getElementById('movementDelayValue').textContent = value;
+            document.getElementById('movementDelayInput').value = value;
+        }
+
+        function updateMovementFromInput() {
+            const value = parseFloat(document.getElementById('movementCycleInput').value);
+            if (value && value > 0) {
+                document.getElementById('movementModalValue').textContent = value;
+                if (value <= 30) {
+                    document.getElementById('movementModalSlider').value = value;
+                }
+            }
+        }
+
+        function updateDelayFromInput() {
+            const value = parseFloat(document.getElementById('movementDelayInput').value);
+            if (value >= 0) {
+                document.getElementById('movementDelayValue').textContent = value;
+                if (value <= 30) {
+                    document.getElementById('movementDelaySlider').value = value;
+                }
+            }
         }
 
         function saveMovementTime() {
             if (editingMovementBlock) {
-                const newTime = parseInt(document.getElementById('movementModalSlider').value);
-                const newDelay = parseFloat(document.getElementById('movementDelaySlider').value);
-                editingMovementBlock.movement.cycleTime = newTime;
-                editingMovementBlock.movement.delay = newDelay;
+                const newTime = parseFloat(document.getElementById('movementCycleInput').value);
+                const newDelay = parseFloat(document.getElementById('movementDelayInput').value);
+
+                if (newTime && newTime > 0) {
+                    editingMovementBlock.movement.cycleTime = newTime;
+                }
+                if (newDelay >= 0) {
+                    editingMovementBlock.movement.delay = newDelay;
+                }
+
                 updateLevelData();
                 updateElementsList();
             }
