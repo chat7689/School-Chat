@@ -452,14 +452,29 @@
 
         #menuLeaderboard select {
             width: 100%;
-            padding: 10px;
+            padding: 12px 15px;
             margin-bottom: 15px;
-            background: rgba(0,0,0,0.5);
+            background: linear-gradient(145deg, rgba(30,30,50,0.9), rgba(20,20,40,0.9));
             color: white;
             border: 2px solid #4facfe;
-            border-radius: 5px;
+            border-radius: 15px;
             font-size: 14px;
             cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.2);
+        }
+
+        #menuLeaderboard select:hover {
+            background: linear-gradient(145deg, rgba(40,40,60,0.9), rgba(30,30,50,0.9));
+            border-color: #6fd0ff;
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
+            transform: translateY(-2px);
+        }
+
+        #menuLeaderboard select:focus {
+            outline: none;
+            border-color: #6fd0ff;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.3);
         }
 
         .menu-lb-entry {
