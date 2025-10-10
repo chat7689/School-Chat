@@ -118,9 +118,12 @@
             left: 20px;
             color: white;
             font-size: 20px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
-            z-index: 50;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
             display: none;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
         }
 
         #timer {
@@ -1202,26 +1205,39 @@
         };
 
         function startPracticeMode() {
-            const canvas = document.getElementById('practiceCanvas');
-            const ctx = canvas.getContext('2d');
-            canvas.style.display = 'block';
-            document.getElementById('hud').style.display = 'block';
-            document.getElementById('practiceBackBtn').style.display = 'block';
+            try {
+                console.log('Starting practice mode...');
 
-            practiceMode.active = true;
-            practiceMode.player = new Player(100, 300, equippedCosmetics);
-            practiceMode.platforms = [];
-            practiceMode.credits = [];
-            practiceMode.platformsPassed = 0;
-            practiceMode.creditsCollected = 0;
-            practiceMode.lastPlatformX = -200; // Start from negative to generate from beginning
+                const canvas = document.getElementById('practiceCanvas');
+                const ctx = canvas.getContext('2d');
 
-            // Generate initial platforms
-            for (let i = 0; i < 20; i++) {
-                generatePracticePlatform();
-            }
+                if (!canvas || !ctx) {
+                    console.error('Canvas or context not found!');
+                    alert('Error: Practice canvas not found. Please refresh the page.');
+                    return;
+                }
 
-            console.log('Generated credits:', practiceMode.credits.length);
+                canvas.style.display = 'block';
+                document.getElementById('hud').style.display = 'block';
+                document.getElementById('practiceBackBtn').style.display = 'block';
+
+                practiceMode.active = true;
+                practiceMode.player = new Player(100, 300, equippedCosmetics);
+                practiceMode.platforms = [];
+                practiceMode.credits = [];
+                practiceMode.platformsPassed = 0;
+                practiceMode.creditsCollected = 0;
+                practiceMode.lastPlatformX = -200; // Start from negative to generate from beginning
+
+                console.log('Player created:', practiceMode.player);
+
+                // Generate initial platforms
+                for (let i = 0; i < 20; i++) {
+                    generatePracticePlatform();
+                }
+
+                console.log('Generated platforms:', practiceMode.platforms.length);
+                console.log('Generated credits:', practiceMode.credits.length);
 
             let lastPracticeFrameTime = performance.now();
             function practiceLoop(currentTime) {
@@ -1246,7 +1262,7 @@
                 practiceMode.credits = practiceMode.credits.filter(c => c.x > practiceMode.cameraX - 200);
 
                 // Update HUD
-                const dashCooldownPercent = Math.max(0, (player.dashCooldown / DASH_COOLDOWN) * 100);
+                const dashCooldownPercent = Math.max(0, (practiceMode.player.dashCooldown / DASH_COOLDOWN) * 100);
                 document.getElementById('hud').innerHTML = `
                     <div style="font-size: 24px; font-weight: bold;">EARN MODE</div>
                     <div style="font-size: 18px; margin-top: 5px;">Collected This Run: ${practiceMode.creditsCollected}</div>
@@ -1348,7 +1364,13 @@
                 requestAnimationFrame(practiceLoop);
             }
 
+            console.log('Starting practice loop...');
             practiceLoop();
+
+            } catch (error) {
+                console.error('Error starting practice mode:', error);
+                alert('Error starting earn mode: ' + error.message);
+            }
         }
 
         function generatePracticePlatform() {
