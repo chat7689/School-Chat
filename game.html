@@ -769,7 +769,11 @@
                 { x: 100, y: 200, width: 200, height: 60, label: 'LEVEL CREATOR', action: 'creator' },
                 { x: 400, y: 150, width: 160, height: 60, label: 'BASE', action: 'base' },
                 { x: 650, y: 100, width: 200, height: 60, label: 'LEADERBOARD', action: 'leaderboard' },
-                { x: 0, y: 720, width: 1200, height: 80, label: '', action: 'none' } // Ground
+                { x: 0, y: 720, width: 1200, height: 80, label: '', action: 'none' }, // Ground
+                // Left wall - 100 blocks high (4000px)
+                { x: -40, y: -3280, width: 40, height: 4000, label: '', action: 'none' },
+                // Right wall - 100 blocks high (4000px)
+                { x: 1200, y: -3280, width: 40, height: 4000, label: '', action: 'none' }
             ];
 
             // Spawn player in center of screen on the ground platform
@@ -841,10 +845,11 @@
         }
 
         function updateMenuPlayer(deltaTime = 1) {
-            // Check if grounded first
+            // Check if grounded first and handle collisions
             let isGrounded = false;
             for (const platform of menuPlatforms) {
                 if (checkCollision(menuPlayer, platform)) {
+                    // Ground collision (landing on top)
                     if (menuPlayer.velocityY > 0 && menuPlayer.y + menuPlayer.height <= platform.y + 10) {
                         menuPlayer.y = platform.y - menuPlayer.height;
                         menuPlayer.velocityY = 0;
@@ -854,6 +859,22 @@
                         if (platform.action && platform.action !== 'none' && menuKeys[' ']) {
                             executePlatformAction(platform.action);
                         }
+                    }
+                    // Wall collision (hitting from sides)
+                    else if (menuPlayer.velocityX > 0 && menuPlayer.x < platform.x) {
+                        // Hitting right side of wall
+                        menuPlayer.x = platform.x - menuPlayer.width;
+                        menuPlayer.velocityX = 0;
+                    }
+                    else if (menuPlayer.velocityX < 0 && menuPlayer.x > platform.x) {
+                        // Hitting left side of wall
+                        menuPlayer.x = platform.x + platform.width;
+                        menuPlayer.velocityX = 0;
+                    }
+                    // Ceiling collision
+                    else if (menuPlayer.velocityY < 0 && menuPlayer.y > platform.y) {
+                        menuPlayer.y = platform.y + platform.height;
+                        menuPlayer.velocityY = 0;
                     }
                 }
             }
