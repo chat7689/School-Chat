@@ -1802,6 +1802,7 @@
                 defaultSizeBlocks: defaultSizeBlocks,
                 backgroundBlocks: backgroundBlocks,
                 foregroundBlocks: foregroundBlocks,
+                triggers: triggers,
                 start: startPos,
                 finish: finishPos,
                 physics: physics,
@@ -1834,6 +1835,7 @@
                     defaultSizeBlocks = data.defaultSizeBlocks || [];
                     backgroundBlocks = data.backgroundBlocks || [];
                     foregroundBlocks = data.foregroundBlocks || [];
+                    triggers = data.triggers || [];
                     startPos = data.start || { x: 40, y: 520, width: 40, height: 40 };
                     finishPos = data.finish || { x: 700, y: 480, width: 40, height: 40 };
                     if (data.camera) {
