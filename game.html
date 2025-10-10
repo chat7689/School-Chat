@@ -928,13 +928,22 @@
 
             if (data) {
                 userCredits = data.credits || 0;
-                secureCredits = data.secureCredits || 0;
                 userCosmetics = data.cosmetics || { skins: ['default_orange'], trails: ['none'], hats: ['none'], effects: ['none'] };
                 equippedCosmetics = data.equippedCosmetics || { skin: 'default_orange', trail: 'none', hat: 'none', effect: 'none' };
                 equippedItem = data.equippedItem || 'none';
                 userStats = data.stats || { racesWon: 0, racesPlayed: 0, totalCreditsEarned: 0 };
+
+                // Calculate secure credits from BASE blocks (physical credits in BASE)
+                const baseBlocks = data.baseBlocks || [];
+                secureCredits = baseBlocks.length;
+
+                // Update Firebase to match actual BASE block count
+                await userRef.update({
+                    secureCredits: secureCredits
+                });
             } else {
                 // Initialize new user
+                secureCredits = 0;
                 await userRef.set({
                     username: currentUsername,
                     credits: 0,
