@@ -772,8 +772,8 @@
                 { x: 0, y: 720, width: 1200, height: 80, label: '', action: 'none' } // Ground
             ];
 
-            // Spawn player in center of screen above ground
-            menuPlayer = new Player(600 - 20, 400, equippedCosmetics);
+            // Spawn player in center of screen on the ground platform
+            menuPlayer = new Player(600 - 20, 720 - 40, equippedCosmetics);
 
             // Game loop with delta time
             let lastMenuFrameTime = performance.now();
