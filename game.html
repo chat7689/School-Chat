@@ -1236,7 +1236,9 @@
 
             // Jump with variable height (W or Up Arrow only, NOT space)
             if ((menuKeys['w'] || menuKeys['ArrowUp']) && isGrounded) {
-                menuPlayer.velocityY = -JUMP_POWER;
+                // Scale jump power by size (menu player is always 40px, so sizeScale = 1)
+                const sizeScale = menuPlayer.currentSize / 40;
+                menuPlayer.velocityY = -JUMP_POWER * sizeScale;
                 menuIsJumping = true;
             }
 
@@ -1943,7 +1945,9 @@
 
             // Jump with coyote time and jump buffering
             if (player.jumpBufferTimer > 0 && player.coyoteTimer > 0 && !practiceIsJumping) {
-                player.velocityY = -JUMP_POWER;
+                // Scale jump power by size so all sizes can jump 4x their height + 1px
+                const sizeScale = player.currentSize / 40;
+                player.velocityY = -JUMP_POWER * sizeScale;
                 practiceIsJumping = true;
                 player.coyoteTimer = 0;
                 player.jumpBufferTimer = 0;
@@ -2561,7 +2565,9 @@
 
             // Jump with variable height
             if ((raceState.keys['w'] || raceState.keys['ArrowUp'] || raceState.keys[' ']) && isGrounded) {
-                player.velocityY = -JUMP_POWER;
+                // Scale jump power by size
+                const sizeScale = player.currentSize / 40;
+                player.velocityY = -JUMP_POWER * sizeScale;
                 raceIsJumping = true;
             }
 
@@ -2938,7 +2944,9 @@
 
             // Jump
             if ((baseKeys['w'] || baseKeys['ArrowUp']) && isGrounded) {
-                basePlayer.velocityY = -JUMP_POWER;
+                // Scale jump power by size (BASE player is always 40px)
+                const sizeScale = basePlayer.currentSize / 40;
+                basePlayer.velocityY = -JUMP_POWER * sizeScale;
                 baseIsJumping = true;
             }
 
