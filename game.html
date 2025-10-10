@@ -523,9 +523,11 @@
         // Game constants
         const GRAVITY = 0.042;
         const MOVE_SPEED = 0.28;
-        const MAX_SPEED = 3.5;
+        const GROUND_MAX_SPEED = 3.5;
+        const AIR_MAX_SPEED = 4.375; // 1.25x ground speed
         const AIR_RESISTANCE = 0.88;
         const GROUND_FRICTION = 0.94;
+        const GROUND_ACCELERATION = 0.15; // Gradual acceleration when grounded
         const JUMP_POWER = 3.70;
         const FAST_FALL_MULTIPLIER = 2.0;
 
@@ -577,6 +579,18 @@
                     color,
                     30 + Math.random() * 20
                 ));
+            }
+        }
+
+        function updateAndDrawParticles(ctx, cameraX, cameraY, deltaTime) {
+            // Update and draw all particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update(deltaTime);
+                if (particles[i].life <= 0) {
+                    particles.splice(i, 1);
+                } else {
+                    particles[i].draw(ctx, cameraX, cameraY);
+                }
             }
         }
 
@@ -1132,7 +1146,7 @@
             }
 
             // Limit speed
-            menuPlayer.velocityX = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, menuPlayer.velocityX));
+            menuPlayer.velocityX = Math.max(-GROUND_MAX_SPEED, Math.min(GROUND_MAX_SPEED, menuPlayer.velocityX));
 
             // Update position HORIZONTALLY first, then check X collisions
             menuPlayer.x += menuPlayer.velocityX * deltaTime;
@@ -1327,44 +1341,55 @@
                     practiceMode.cameraX = practiceMode.player.x - canvas.width / 2 + practiceMode.player.width / 2;
                     practiceMode.cameraY = practiceMode.player.y - canvas.height / 2 + practiceMode.player.height / 2;
 
-                    // Draw platforms
+                    // Draw platforms (dark gray with borders)
                     ctx.fillStyle = '#333';
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 2;
                     for (const platform of practiceMode.platforms) {
                         const screenX = platform.x - practiceMode.cameraX;
                         const screenY = platform.y - practiceMode.cameraY;
                         ctx.fillRect(screenX, screenY, platform.width, platform.height);
+                        ctx.strokeRect(screenX, screenY, platform.width, platform.height);
                     }
 
-                    // Draw hazards (red)
+                    // Draw hazards (red with borders)
                     ctx.fillStyle = '#FF0000';
+                    ctx.strokeStyle = '#8B0000';
                     for (const hazard of practiceMode.hazards) {
                         const screenX = hazard.x - practiceMode.cameraX;
                         const screenY = hazard.y - practiceMode.cameraY;
                         ctx.fillRect(screenX, screenY, hazard.width, hazard.height);
+                        ctx.strokeRect(screenX, screenY, hazard.width, hazard.height);
                     }
 
-                    // Draw growers (green)
+                    // Draw growers (green with borders)
                     ctx.fillStyle = '#00FF00';
+                    ctx.strokeStyle = '#006400';
                     for (const grower of practiceMode.growers) {
                         const screenX = grower.x - practiceMode.cameraX;
                         const screenY = grower.y - practiceMode.cameraY;
                         ctx.fillRect(screenX, screenY, grower.width, grower.height);
+                        ctx.strokeRect(screenX, screenY, grower.width, grower.height);
                     }
 
-                    // Draw shrinkers (blue)
+                    // Draw shrinkers (blue with borders)
                     ctx.fillStyle = '#0000FF';
+                    ctx.strokeStyle = '#000080';
                     for (const shrinker of practiceMode.shrinkers) {
                         const screenX = shrinker.x - practiceMode.cameraX;
                         const screenY = shrinker.y - practiceMode.cameraY;
                         ctx.fillRect(screenX, screenY, shrinker.width, shrinker.height);
+                        ctx.strokeRect(screenX, screenY, shrinker.width, shrinker.height);
                     }
 
-                    // Draw default size blocks (yellow)
+                    // Draw default size blocks (yellow with borders)
                     ctx.fillStyle = '#FFFF00';
+                    ctx.strokeStyle = '#B8860B';
                     for (const block of practiceMode.defaultSizeBlocks) {
                         const screenX = block.x - practiceMode.cameraX;
                         const screenY = block.y - practiceMode.cameraY;
                         ctx.fillRect(screenX, screenY, block.width, block.height);
+                        ctx.strokeRect(screenX, screenY, block.width, block.height);
                     }
 
                     // Draw particles
@@ -1762,12 +1787,27 @@
             // Return squash/stretch to normal
             player.squashStretch += (1 - player.squashStretch) * 0.3;
 
-            // Handle input with smoother acceleration
-            if (practiceMode.keys['a'] || practiceMode.keys['ArrowLeft']) {
-                player.velocityX -= MOVE_SPEED * deltaTime;
-            }
-            if (practiceMode.keys['d'] || practiceMode.keys['ArrowRight']) {
-                player.velocityX += MOVE_SPEED * deltaTime;
+            // Handle input with different behavior for ground vs air
+            if (isGrounded) {
+                // On ground: gradual acceleration to ground max speed
+                const currentSpeed = Math.abs(player.velocityX);
+                const speedRatio = currentSpeed / GROUND_MAX_SPEED;
+                const accelMultiplier = 1 - (speedRatio * GROUND_ACCELERATION);
+
+                if (practiceMode.keys['a'] || practiceMode.keys['ArrowLeft']) {
+                    player.velocityX -= MOVE_SPEED * deltaTime * accelMultiplier;
+                }
+                if (practiceMode.keys['d'] || practiceMode.keys['ArrowRight']) {
+                    player.velocityX += MOVE_SPEED * deltaTime * accelMultiplier;
+                }
+            } else {
+                // In air: full control up to air max speed
+                if (practiceMode.keys['a'] || practiceMode.keys['ArrowLeft']) {
+                    player.velocityX -= MOVE_SPEED * deltaTime;
+                }
+                if (practiceMode.keys['d'] || practiceMode.keys['ArrowRight']) {
+                    player.velocityX += MOVE_SPEED * deltaTime;
+                }
             }
 
             // Speed-based movement particles
@@ -1835,8 +1875,9 @@
                 player.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
             }
 
-            // Limit speed
-            player.velocityX = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, player.velocityX));
+            // Limit speed based on whether grounded or in air
+            const maxSpeed = isGrounded ? GROUND_MAX_SPEED : AIR_MAX_SPEED;
+            player.velocityX = Math.max(-maxSpeed, Math.min(maxSpeed, player.velocityX));
 
             // Update position
             player.x += player.velocityX * deltaTime;
@@ -2367,8 +2408,9 @@
                 player.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
             }
 
-            // Limit speed
-            player.velocityX = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, player.velocityX));
+            // Limit speed based on whether grounded or in air
+            const maxSpeed = isGrounded ? GROUND_MAX_SPEED : AIR_MAX_SPEED;
+            player.velocityX = Math.max(-maxSpeed, Math.min(maxSpeed, player.velocityX));
 
             // Update position
             player.x += player.velocityX * deltaTime;
@@ -2712,7 +2754,7 @@
             }
 
             // Limit speed
-            basePlayer.velocityX = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, basePlayer.velocityX));
+            basePlayer.velocityX = Math.max(-GROUND_MAX_SPEED, Math.min(GROUND_MAX_SPEED, basePlayer.velocityX));
 
             // Update X position, check X collisions
             basePlayer.x += basePlayer.velocityX * deltaTime;
