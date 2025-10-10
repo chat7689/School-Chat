@@ -762,7 +762,7 @@
 
             // Create menu platforms with labels
             menuPlatforms = [
-                { x: 100, y: 600, width: 200, height: 60, label: 'PRACTICE MODE', action: 'practice' },
+                { x: 100, y: 600, width: 200, height: 60, label: 'EARN MODE', action: 'practice' },
                 { x: 400, y: 500, width: 200, height: 60, label: 'CREATE PARTY', action: 'createParty' },
                 { x: 700, y: 450, width: 200, height: 60, label: 'JOIN PARTY', action: 'joinParty' },
                 { x: 250, y: 350, width: 200, height: 60, label: 'COSMETIC SHOP', action: 'shop' },
@@ -1070,8 +1070,11 @@
                 practiceMode.platforms = practiceMode.platforms.filter(p => p.x > practiceMode.cameraX - 200);
 
                 // Update HUD
+                const nextCreditIn = 20 - (practiceMode.platformsPassed % 20);
                 document.getElementById('hud').innerHTML = `
-                    Platforms: ${practiceMode.platformsPassed} | Credits: ${userCredits}
+                    <div style="font-size: 24px; font-weight: bold;">EARN MODE</div>
+                    <div style="font-size: 18px; margin-top: 5px;">Platforms: ${practiceMode.platformsPassed} | Credits: ${userCredits}</div>
+                    <div style="font-size: 16px; color: #FFC107; margin-top: 5px;">Next credit in ${nextCreditIn} platforms!</div>
                 `;
 
                 // Render
