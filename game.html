@@ -393,11 +393,10 @@
 
     <!-- Leaderboard Screen -->
     <div id="leaderboardScreen" class="screen">
-        <h1>Credits Leaderboard</h1>
-        <div class="scroll-container">
-            <div id="leaderboardContent" style="max-width: 600px; margin: 0 auto;"></div>
+        <div class="scroll-container" style="padding-top: 20px;">
+            <div id="leaderboardContent" style="max-width: 1000px; margin: 0 auto;"></div>
         </div>
-        <button onclick="backToMainMenu()">Back to Menu</button>
+        <button onclick="backToMainMenu()" style="margin-top: 20px;">Back to Menu</button>
     </div>
 
     <!-- Race Results -->
@@ -2571,37 +2570,111 @@
                 return;
             }
 
-            // Create array of players with credits
+            // Create array of players with secure credits
             const leaderboard = [];
             for (const [uid, playerData] of Object.entries(playersData)) {
-                if (playerData.username && playerData.credits !== undefined) {
+                if (playerData.username) {
                     leaderboard.push({
                         uid: uid,
                         username: playerData.username,
-                        credits: playerData.credits || 0
+                        secureCredits: playerData.secureCredits || 0
                     });
                 }
             }
 
-            // Sort by credits descending
-            leaderboard.sort((a, b) => b.credits - a.credits);
+            // Sort by secure credits descending
+            leaderboard.sort((a, b) => b.secureCredits - a.secureCredits);
 
-            // Build HTML
-            let html = '<div style="background: rgba(0,0,0,0.3); border-radius: 10px; padding: 20px;">';
-            html += '<h3 style="color: #4facfe; margin-bottom: 15px;">Top Players by Credits</h3>';
+            // Build HTML with player info sidebar
+            let html = '<div style="display: flex; gap: 20px; height: 100%;">';
+
+            // Left sidebar with player info
+            html += `<div style="
+                width: 250px;
+                background: linear-gradient(135deg, rgba(79, 172, 254, 0.2), rgba(79, 172, 254, 0.05));
+                border: 2px solid #4facfe;
+                border-radius: 15px;
+                padding: 25px;
+                box-shadow: 0 8px 32px rgba(79, 172, 254, 0.3);
+            ">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="
+                        width: 80px;
+                        height: 80px;
+                        background: ${menuPlayer ? menuPlayer.getSkinColor() : '#FF8C42'};
+                        border: 4px solid #333;
+                        border-radius: 10px;
+                        margin: 0 auto 15px;
+                        box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+                    "></div>
+                    <div style="font-size: 20px; font-weight: bold; color: #fff; margin-bottom: 5px;">${currentUsername}</div>
+                </div>
+
+                <div style="
+                    background: rgba(0,0,0,0.3);
+                    border-radius: 10px;
+                    padding: 15px;
+                    margin-bottom: 15px;
+                ">
+                    <div style="color: #4facfe; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Secure Credits</div>
+                    <div style="font-size: 32px; font-weight: bold; color: #FFD700; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);">${secureCredits}</div>
+                </div>
+
+                <div style="
+                    background: rgba(0,0,0,0.3);
+                    border-radius: 10px;
+                    padding: 15px;
+                ">
+                    <div style="color: #4facfe; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">On Hand</div>
+                    <div style="font-size: 24px; font-weight: bold; color: #aaa;">${userCredits}</div>
+                </div>
+            </div>`;
+
+            // Right side with leaderboard
+            html += '<div style="flex: 1; background: rgba(0,0,0,0.3); border-radius: 15px; padding: 25px; overflow-y: auto; max-height: 600px;">';
 
             for (let i = 0; i < Math.min(leaderboard.length, 50); i++) {
                 const player = leaderboard[i];
                 const isYou = player.uid === currentUser.uid;
-                const rankColor = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? '#cd7f32' : '#ccc';
+                const rankColor = i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : '#4facfe';
+                const rankBg = i === 0 ? 'rgba(255, 215, 0, 0.1)' : i === 1 ? 'rgba(192, 192, 192, 0.1)' : i === 2 ? 'rgba(205, 127, 50, 0.1)' : 'rgba(79, 172, 254, 0.05)';
 
-                html += `<div style="display: flex; justify-content: space-between; padding: 10px; margin: 5px 0; background: rgba(255,255,255,${isYou ? '0.15' : '0.05'}); border-radius: 5px; border-left: 4px solid ${rankColor};">
-                    <span style="color: white; ${isYou ? 'font-weight: bold;' : ''}">${i + 1}. ${player.username}${isYou ? ' (YOU)' : ''}</span>
-                    <span style="color: #FFC107; font-weight: bold;">${player.credits} credits</span>
+                html += `<div style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 15px 20px;
+                    margin: 8px 0;
+                    background: ${isYou ? 'rgba(79, 172, 254, 0.2)' : rankBg};
+                    border-radius: 10px;
+                    border-left: 5px solid ${rankColor};
+                    transition: transform 0.2s, box-shadow 0.2s;
+                    ${isYou ? 'box-shadow: 0 0 20px rgba(79, 172, 254, 0.5);' : ''}
+                " onmouseover="this.style.transform='translateX(5px)'; this.style.boxShadow='0 4px 15px rgba(0,0,0,0.3)';" onmouseout="this.style.transform='translateX(0)'; this.style.boxShadow='none';">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <span style="
+                            font-size: 24px;
+                            font-weight: bold;
+                            color: ${rankColor};
+                            min-width: 40px;
+                            text-align: center;
+                        ">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1)}</span>
+                        <span style="
+                            color: white;
+                            font-size: 18px;
+                            ${isYou ? 'font-weight: bold; text-shadow: 0 0 10px rgba(79, 172, 254, 0.8);' : ''}
+                        ">${player.username}${isYou ? ' ⭐' : ''}</span>
+                    </div>
+                    <span style="
+                        color: #FFD700;
+                        font-weight: bold;
+                        font-size: 20px;
+                        text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+                    ">${player.secureCredits.toLocaleString()}</span>
                 </div>`;
             }
 
-            html += '</div>';
+            html += '</div></div>'; // Close leaderboard div and main flex container
             document.getElementById('leaderboardContent').innerHTML = html;
         }
 
