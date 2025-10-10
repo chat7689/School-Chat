@@ -115,49 +115,34 @@
         #creditPanel {
             position: absolute;
             top: 50%;
-            left: 20px;
+            left: calc(50% - 600px - 180px); /* Canvas is 1200px wide, center - half - panel spacing */
             transform: translateY(-50%);
-            width: 81px;
-            height: 170px;
+            width: 160px;
+            height: 600px;
             background: linear-gradient(135deg, rgba(79, 172, 254, 0.3), rgba(79, 172, 254, 0.1));
             border: 3px solid #4facfe;
             border-radius: 15px;
-            padding: 15px;
-            z-index: 100;
+            padding: 20px;
+            z-index: 50;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
             display: flex;
             flex-direction: column;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        #gamePanel {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 320px;
-            height: 250px;
-            background: linear-gradient(135deg, rgba(79, 172, 254, 0.3), rgba(79, 172, 254, 0.1));
-            border: 3px solid #4facfe;
-            border-radius: 15px;
-            padding: 15px;
-            z-index: 100;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            align-items: center;
+            gap: 15px;
         }
 
         #leaderboardPanel {
             position: absolute;
             top: 50%;
-            right: 20px;
+            right: calc(50% - 600px - 180px); /* Match left panel positioning */
             transform: translateY(-50%);
-            width: 120px;
-            height: 202px;
+            width: 160px;
+            height: 600px;
             background: linear-gradient(135deg, rgba(79, 172, 254, 0.3), rgba(79, 172, 254, 0.1));
             border: 3px solid #4facfe;
             border-radius: 15px;
             padding: 15px;
-            z-index: 100;
+            z-index: 50;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
             overflow-y: auto;
         }
@@ -408,13 +393,6 @@
 
     <!-- Left Side Credit Panel -->
     <div id="creditPanel" style="display: none;"></div>
-
-    <!-- Center Game Info Panel -->
-    <div id="gamePanel" style="display: none;">
-        <div style="font-family: 'Inter', Arial, sans-serif; font-size: 12px; color: #fff; text-align: center;">
-            Game Screen
-        </div>
-    </div>
 
     <!-- Right Side Leaderboard Panel -->
     <div id="leaderboardPanel" style="display: none;">
@@ -1075,20 +1053,28 @@
             // Spawn player in center of screen on the ground platform
             menuPlayer = new Player(600 - 20, 720 - 40, equippedCosmetics);
 
-            // Populate and show credit panel (compact design)
+            // Populate and show credit panel with player preview
+            const skinData = cosmeticsCatalog.skins.find(s => s.id === equippedCosmetics.skin);
+            const playerColor = skinData ? skinData.color : '#FF8C42';
             document.getElementById('creditPanel').innerHTML = `
-                <div style="font-family: 'Inter', Arial, sans-serif; font-size: 12px; color: #fff; text-align: center;">
-                    <div style="font-weight: bold; margin-bottom: 8px;">${currentUsername}</div>
-                    <div style="font-size: 10px; margin-bottom: 3px;">On Hand:</div>
-                    <div style="font-size: 14px; font-weight: bold; color: #FFD700; margin-bottom: 8px;">${userCredits}</div>
-                    <div style="font-size: 10px; margin-bottom: 3px;">Secure:</div>
-                    <div style="font-size: 14px; font-weight: bold; color: #4facfe;">${secureCredits}</div>
+                <div style="font-family: 'Inter', Arial, sans-serif; color: #fff; text-align: center; width: 100%;">
+                    <div style="width: 100px; height: 100px; background: ${playerColor}; border: 4px solid #333; border-radius: 12px; margin: 0 auto 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); position: relative;">
+                        ${equippedItem === 'credits' && userCredits > 0 ? `
+                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 25px; height: 25px; background: #FFD700; border: 2px solid #FFA500;"></div>
+                        ` : ''}
+                    </div>
+                    <div style="font-weight: bold; font-size: 16px; margin-bottom: 20px;">${currentUsername}</div>
+                    <div style="background: rgba(0,0,0,0.5); border-radius: 12px; padding: 15px; margin-bottom: 12px; border: 2px solid rgba(255, 215, 0, 0.3);">
+                        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; color: #4facfe;">Secure Credits</div>
+                        <div style="font-size: 32px; font-weight: bold; color: #FFD700; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);">${secureCredits.toLocaleString()}</div>
+                    </div>
+                    <div style="background: rgba(0,0,0,0.5); border-radius: 12px; padding: 12px; border: 2px solid rgba(170, 170, 170, 0.2);">
+                        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; color: #4facfe;">On Hand</div>
+                        <div style="font-size: 22px; font-weight: bold; color: #bbb; text-shadow: 0 0 8px rgba(187, 187, 187, 0.4);">${userCredits.toLocaleString()}</div>
+                    </div>
                 </div>
             `;
             document.getElementById('creditPanel').style.display = 'block';
-
-            // Show game panel
-            document.getElementById('gamePanel').style.display = 'block';
 
             // Populate and show leaderboard panel
             loadMiniLeaderboard();
@@ -1196,6 +1182,12 @@
                 }
             }
 
+            // Landing particles (gray)
+            if (isGrounded && !menuPlayer.wasGrounded) {
+                spawnParticles(menuPlayer.x + menuPlayer.width / 2, menuPlayer.y + menuPlayer.height, 8, 'rgb(200, 200, 200)');
+            }
+            menuPlayer.wasGrounded = isGrounded;
+
             // Check for platform interaction when standing on action platform
             if (standingOnPlatform && standingOnPlatform.action && standingOnPlatform.action !== 'none') {
                 if (menuKeys[' ']) {
@@ -1240,6 +1232,8 @@
                 const sizeScale = menuPlayer.currentSize / 40;
                 menuPlayer.velocityY = -JUMP_POWER * sizeScale;
                 menuIsJumping = true;
+                // Jump particles (white)
+                spawnParticles(menuPlayer.x + menuPlayer.width / 2, menuPlayer.y + menuPlayer.height, 12, 'rgb(255, 255, 255)');
             }
 
             // Cut jump short if button released (variable jump height)
@@ -1329,7 +1323,6 @@
             document.getElementById('menuCanvas').style.display = 'none';
             document.getElementById('menuHUD').style.display = 'none';
             document.getElementById('creditPanel').style.display = 'none';
-            document.getElementById('gamePanel').style.display = 'none';
             document.getElementById('leaderboardPanel').style.display = 'none';
 
             switch(action) {
@@ -2073,20 +2066,13 @@
                 }
             }
 
-            // Die if fall off (instant death, respawn at start)
+            // Die if fall off - return to main menu with credits intact
             if (player.y > 900) {
                 // Death particles
                 spawnParticles(player.x + player.width / 2, player.y + player.height / 2, 30, 'rgb(255, 0, 0)');
 
-                // Reset to start
-                player.x = 100;
-                player.y = 300;
-                player.velocityX = 0;
-                player.velocityY = 0;
-                practiceMode.creditsCollected = 0; // Lose collected credits on death
-
-                // Reset camera
-                practiceMode.cameraX = 0;
+                // Exit earn mode and return to menu (credits already on-hand)
+                exitPracticeMode();
             }
 
             // Update camera
