@@ -997,6 +997,7 @@
             // Check current grounded state BEFORE applying physics
             // Check if player is standing on a platform (touching from above)
             let isGrounded = false;
+            let standingOnPlatform = null;
             for (const platform of menuPlatforms) {
                 // Check if player is directly above platform
                 const onTop = menuPlayer.y + menuPlayer.height >= platform.y &&
@@ -1006,7 +1007,15 @@
 
                 if (onTop && horizontalOverlap) {
                     isGrounded = true;
+                    standingOnPlatform = platform;
                     break;
+                }
+            }
+
+            // Check for platform interaction when standing on action platform
+            if (standingOnPlatform && standingOnPlatform.action && standingOnPlatform.action !== 'none') {
+                if (menuKeys[' ']) {
+                    executePlatformAction(standingOnPlatform.action);
                 }
             }
 
@@ -1081,11 +1090,6 @@
                         // Moving down, hit top of platform
                         menuPlayer.y = platform.y - menuPlayer.height;
                         menuPlayer.velocityY = 0;
-
-                        // Check for platform interaction (space key)
-                        if (platform.action && platform.action !== 'none' && menuKeys[' ']) {
-                            executePlatformAction(platform.action);
-                        }
                     } else if (menuPlayer.velocityY < 0) {
                         // Moving up, hit bottom of platform
                         menuPlayer.y = platform.y + platform.height;
