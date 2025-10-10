@@ -23,20 +23,24 @@
         }
 
         canvas {
-            border: 5px solid #333;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border: 5px solid #4facfe;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(79, 172, 254, 0.4);
             background: #87CEEB;
         }
 
         .screen {
             display: none;
             position: absolute;
-            background: rgba(0,0,0,0.95);
+            background: linear-gradient(135deg, rgba(79, 172, 254, 0.3), rgba(79, 172, 254, 0.1));
+            backdrop-filter: blur(10px);
             color: white;
             padding: 40px;
             border-radius: 20px;
+            border: 3px solid #4facfe;
             text-align: center;
             z-index: 100;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
         }
 
         .screen.active {
@@ -60,38 +64,52 @@
             padding: 15px 30px;
             font-size: 18px;
             margin: 10px;
-            background: #4facfe;
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
             color: white;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             cursor: pointer;
             transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+            font-weight: bold;
         }
 
         button:hover {
-            background: #6fd0ff;
+            background: linear-gradient(135deg, #6fd0ff, #20f5ff);
             transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.5);
         }
 
         button.secondary {
-            background: #666;
+            background: linear-gradient(135deg, #666, #888);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         }
 
         button.danger {
-            background: rgba(255,0,0,0.7);
+            background: linear-gradient(135deg, rgba(255,0,0,0.7), rgba(255,50,50,0.7));
+            box-shadow: 0 4px 15px rgba(255, 0, 0, 0.3);
         }
 
         button.success {
-            background: #4CAF50;
+            background: linear-gradient(135deg, #4CAF50, #66BB6A);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
         }
 
         input, select {
             padding: 12px;
             font-size: 16px;
             margin: 10px;
-            border-radius: 8px;
+            border-radius: 12px;
             border: 2px solid #4facfe;
             background: rgba(255,255,255,0.9);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #00f2fe;
+            box-shadow: 0 4px 20px rgba(79, 172, 254, 0.4);
         }
 
         #creditPanel {
@@ -108,16 +126,26 @@
         }
 
         .cosmetic-item {
-            background: rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.4);
             padding: 15px;
             margin: 10px;
-            border-radius: 10px;
+            border-radius: 12px;
             display: inline-block;
             min-width: 200px;
+            border: 2px solid rgba(79, 172, 254, 0.3);
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .cosmetic-item:hover {
+            border-color: #4facfe;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
         }
 
         .cosmetic-item.owned {
             border: 2px solid #4facfe;
+            background: rgba(79, 172, 254, 0.2);
         }
 
         .cosmetic-item.equipped {
@@ -132,9 +160,11 @@
             color: white;
             font-size: 20px;
             z-index: 100;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 15px;
-            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(79, 172, 254, 0.3), rgba(79, 172, 254, 0.1));
+            padding: 20px;
+            border-radius: 15px;
+            border: 3px solid #4facfe;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
             display: none;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
         }
@@ -150,27 +180,42 @@
             text-shadow: 3px 3px 6px rgba(0,0,0,0.7);
             z-index: 50;
             display: none;
+            background: linear-gradient(135deg, rgba(79, 172, 254, 0.3), rgba(79, 172, 254, 0.1));
+            padding: 20px 40px;
+            border-radius: 15px;
+            border: 3px solid #4facfe;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
             font-family: 'Courier New', monospace;
         }
 
         .party-member {
-            background: rgba(255,255,255,0.1);
-            padding: 10px;
-            margin: 5px;
-            border-radius: 5px;
+            background: rgba(0,0,0,0.4);
+            padding: 12px;
+            margin: 8px;
+            border-radius: 12px;
+            border: 2px solid rgba(79, 172, 254, 0.3);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s;
+        }
+
+        .party-member:hover {
+            border-color: #4facfe;
+            transform: translateY(-2px);
         }
 
         .party-member.ready {
             background: rgba(0,255,0,0.2);
             border: 2px solid #0f0;
+            box-shadow: 0 4px 15px rgba(0, 255, 0, 0.3);
         }
 
         .invitation {
-            background: rgba(255,255,0,0.2);
-            padding: 15px;
+            background: rgba(255,215,0,0.2);
+            padding: 18px;
             margin: 10px;
-            border-radius: 10px;
+            border-radius: 15px;
             border: 2px solid #FFC107;
+            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.3);
         }
 
         .platform-button {
