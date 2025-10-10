@@ -401,6 +401,11 @@
         let currentLobby = null;
         let currentLobbyId = null;
 
+        // Jump state tracking
+        let menuIsJumping = false;
+        let practiceIsJumping = false;
+        let raceIsJumping = false;
+
         // Game constants
         const GRAVITY = 0.042;
         const MOVE_SPEED = 0.28;
@@ -746,12 +751,17 @@
 
             menuPlayer = new Player(150, 500, equippedCosmetics);
 
-            // Game loop
-            function menuLoop() {
+            // Game loop with delta time
+            let lastMenuFrameTime = performance.now();
+            function menuLoop(currentTime) {
                 if (canvas.style.display === 'none') return;
 
+                // Calculate delta time (normalize to 60fps baseline)
+                let deltaTime = (currentTime - lastMenuFrameTime) / 16.67;
+                lastMenuFrameTime = currentTime;
+
                 // Update player physics
-                updateMenuPlayer();
+                updateMenuPlayer(deltaTime);
 
                 // Render
                 ctx.fillStyle = '#87CEEB';
@@ -789,22 +799,8 @@
             menuLoop();
         }
 
-        function updateMenuPlayer() {
-            // Apply gravity
-            menuPlayer.velocityY += GRAVITY;
-
-            // Handle input
-            if (menuKeys['a'] || menuKeys['ArrowLeft']) {
-                menuPlayer.velocityX -= MOVE_SPEED;
-            }
-            if (menuKeys['d'] || menuKeys['ArrowRight']) {
-                menuPlayer.velocityX += MOVE_SPEED;
-            }
-
-            // Limit speed
-            menuPlayer.velocityX = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, menuPlayer.velocityX));
-
-            // Apply friction/air resistance
+        function updateMenuPlayer(deltaTime = 1) {
+            // Check if grounded first
             let isGrounded = false;
             for (const platform of menuPlatforms) {
                 if (checkCollision(menuPlayer, platform)) {
@@ -821,16 +817,53 @@
                 }
             }
 
-            menuPlayer.velocityX *= isGrounded ? GROUND_FRICTION : AIR_RESISTANCE;
-
-            // Jump
-            if ((menuKeys['w'] || menuKeys['ArrowUp'] || menuKeys[' ']) && isGrounded) {
-                menuPlayer.velocityY = -JUMP_POWER;
+            // Apply gravity with fast fall
+            if ((menuKeys['s'] || menuKeys['ArrowDown']) && !isGrounded) {
+                menuPlayer.velocityY += GRAVITY * FAST_FALL_MULTIPLIER * deltaTime;
+            } else {
+                menuPlayer.velocityY += GRAVITY * deltaTime;
             }
 
+            // Handle input
+            if (menuKeys['a'] || menuKeys['ArrowLeft']) {
+                menuPlayer.velocityX -= MOVE_SPEED * deltaTime;
+            }
+            if (menuKeys['d'] || menuKeys['ArrowRight']) {
+                menuPlayer.velocityX += MOVE_SPEED * deltaTime;
+            }
+
+            // Jump with variable height
+            if ((menuKeys['w'] || menuKeys['ArrowUp'] || menuKeys[' ']) && isGrounded) {
+                menuPlayer.velocityY = -JUMP_POWER;
+                menuIsJumping = true;
+            }
+
+            // Cut jump short if button released (variable jump height)
+            if (menuIsJumping && !menuKeys['w'] && !menuKeys['ArrowUp'] && !menuKeys[' ']) {
+                if (menuPlayer.velocityY < 0) {
+                    menuPlayer.velocityY *= 0.5;
+                }
+                menuIsJumping = false;
+            }
+
+            // Reset jump state when grounded
+            if (isGrounded && menuPlayer.velocityY >= 0) {
+                menuIsJumping = false;
+            }
+
+            // Apply friction using exponential decay
+            if (isGrounded) {
+                menuPlayer.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
+            } else {
+                menuPlayer.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
+            }
+
+            // Limit speed
+            menuPlayer.velocityX = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, menuPlayer.velocityX));
+
             // Update position
-            menuPlayer.x += menuPlayer.velocityX;
-            menuPlayer.y += menuPlayer.velocityY;
+            menuPlayer.x += menuPlayer.velocityX * deltaTime;
+            menuPlayer.y += menuPlayer.velocityY * deltaTime;
 
             // Keep player in bounds
             if (menuPlayer.x < 0) menuPlayer.x = 0;
@@ -904,11 +937,16 @@
                 generatePracticePlatform();
             }
 
-            function practiceLoop() {
+            let lastPracticeFrameTime = performance.now();
+            function practiceLoop(currentTime) {
                 if (!practiceMode.active) return;
 
+                // Calculate delta time
+                let deltaTime = (currentTime - lastPracticeFrameTime) / 16.67;
+                lastPracticeFrameTime = currentTime;
+
                 // Update
-                updatePracticePlayer();
+                updatePracticePlayer(deltaTime);
 
                 // Generate new platforms
                 while (practiceMode.lastPlatformX < practiceMode.cameraX + 1500) {
@@ -961,24 +999,10 @@
             practiceMode.lastPlatformX = baseX;
         }
 
-        function updatePracticePlayer() {
+        function updatePracticePlayer(deltaTime = 1) {
             const player = practiceMode.player;
 
-            // Apply gravity
-            player.velocityY += GRAVITY;
-
-            // Handle input
-            if (practiceMode.keys['a'] || practiceMode.keys['ArrowLeft']) {
-                player.velocityX -= MOVE_SPEED;
-            }
-            if (practiceMode.keys['d'] || practiceMode.keys['ArrowRight']) {
-                player.velocityX += MOVE_SPEED;
-            }
-
-            // Limit speed
-            player.velocityX = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, player.velocityX));
-
-            // Check collisions
+            // Check if grounded first
             let isGrounded = false;
             for (const platform of practiceMode.platforms) {
                 if (checkCollision(player, platform)) {
@@ -999,16 +1023,53 @@
                 }
             }
 
-            player.velocityX *= isGrounded ? GROUND_FRICTION : AIR_RESISTANCE;
-
-            // Jump
-            if ((practiceMode.keys['w'] || practiceMode.keys['ArrowUp'] || practiceMode.keys[' ']) && isGrounded) {
-                player.velocityY = -JUMP_POWER;
+            // Apply gravity with fast fall
+            if ((practiceMode.keys['s'] || practiceMode.keys['ArrowDown']) && !isGrounded) {
+                player.velocityY += GRAVITY * FAST_FALL_MULTIPLIER * deltaTime;
+            } else {
+                player.velocityY += GRAVITY * deltaTime;
             }
 
+            // Handle input
+            if (practiceMode.keys['a'] || practiceMode.keys['ArrowLeft']) {
+                player.velocityX -= MOVE_SPEED * deltaTime;
+            }
+            if (practiceMode.keys['d'] || practiceMode.keys['ArrowRight']) {
+                player.velocityX += MOVE_SPEED * deltaTime;
+            }
+
+            // Jump with variable height
+            if ((practiceMode.keys['w'] || practiceMode.keys['ArrowUp'] || practiceMode.keys[' ']) && isGrounded) {
+                player.velocityY = -JUMP_POWER;
+                practiceIsJumping = true;
+            }
+
+            // Cut jump short if button released (variable jump height)
+            if (practiceIsJumping && !practiceMode.keys['w'] && !practiceMode.keys['ArrowUp'] && !practiceMode.keys[' ']) {
+                if (player.velocityY < 0) {
+                    player.velocityY *= 0.5;
+                }
+                practiceIsJumping = false;
+            }
+
+            // Reset jump state when grounded
+            if (isGrounded && player.velocityY >= 0) {
+                practiceIsJumping = false;
+            }
+
+            // Apply friction using exponential decay
+            if (isGrounded) {
+                player.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
+            } else {
+                player.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
+            }
+
+            // Limit speed
+            player.velocityX = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, player.velocityX));
+
             // Update position
-            player.x += player.velocityX;
-            player.y += player.velocityY;
+            player.x += player.velocityX * deltaTime;
+            player.y += player.velocityY * deltaTime;
 
             // Die if fall off
             if (player.y > 1000) {
@@ -1365,11 +1426,16 @@
                 });
             }, 100);
 
-            function raceLoop() {
+            let lastRaceFrameTime = performance.now();
+            function raceLoop(currentTime) {
                 if (!raceState.active) return;
 
+                // Calculate delta time
+                let deltaTime = (currentTime - lastRaceFrameTime) / 16.67;
+                lastRaceFrameTime = currentTime;
+
                 // Update
-                updateRacePlayer();
+                updateRacePlayer(deltaTime);
 
                 // Check finish
                 if (!raceState.finished && checkCollision(raceState.player, raceState.map.finish)) {
@@ -1425,27 +1491,10 @@
             raceLoop();
         }
 
-        function updateRacePlayer() {
+        function updateRacePlayer(deltaTime = 1) {
             const player = raceState.player;
 
-            // Apply gravity
-            player.velocityY += GRAVITY;
-
-            // Handle input
-            if (raceState.keys['a'] || raceState.keys['ArrowLeft']) {
-                player.velocityX -= MOVE_SPEED;
-            }
-            if (raceState.keys['d'] || raceState.keys['ArrowRight']) {
-                player.velocityX += MOVE_SPEED;
-            }
-            if (raceState.keys['s'] || raceState.keys['ArrowDown']) {
-                player.velocityY += GRAVITY * FAST_FALL_MULTIPLIER;
-            }
-
-            // Limit speed
-            player.velocityX = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, player.velocityX));
-
-            // Check collisions
+            // Check collisions first
             let isGrounded = false;
             for (const platform of raceState.platforms) {
                 if (checkCollision(player, platform)) {
@@ -1465,19 +1514,57 @@
                     player.y = raceState.map.start.y;
                     player.velocityX = 0;
                     player.velocityY = 0;
+                    raceIsJumping = false;
                 }
             }
 
-            player.velocityX *= isGrounded ? GROUND_FRICTION : AIR_RESISTANCE;
-
-            // Jump
-            if ((raceState.keys['w'] || raceState.keys['ArrowUp'] || raceState.keys[' ']) && isGrounded) {
-                player.velocityY = -JUMP_POWER;
+            // Apply gravity with fast fall
+            if ((raceState.keys['s'] || raceState.keys['ArrowDown']) && !isGrounded) {
+                player.velocityY += GRAVITY * FAST_FALL_MULTIPLIER * deltaTime;
+            } else {
+                player.velocityY += GRAVITY * deltaTime;
             }
 
+            // Handle input
+            if (raceState.keys['a'] || raceState.keys['ArrowLeft']) {
+                player.velocityX -= MOVE_SPEED * deltaTime;
+            }
+            if (raceState.keys['d'] || raceState.keys['ArrowRight']) {
+                player.velocityX += MOVE_SPEED * deltaTime;
+            }
+
+            // Jump with variable height
+            if ((raceState.keys['w'] || raceState.keys['ArrowUp'] || raceState.keys[' ']) && isGrounded) {
+                player.velocityY = -JUMP_POWER;
+                raceIsJumping = true;
+            }
+
+            // Cut jump short if button released (variable jump height)
+            if (raceIsJumping && !raceState.keys['w'] && !raceState.keys['ArrowUp'] && !raceState.keys[' ']) {
+                if (player.velocityY < 0) {
+                    player.velocityY *= 0.5;
+                }
+                raceIsJumping = false;
+            }
+
+            // Reset jump state when grounded
+            if (isGrounded && player.velocityY >= 0) {
+                raceIsJumping = false;
+            }
+
+            // Apply friction using exponential decay
+            if (isGrounded) {
+                player.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
+            } else {
+                player.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
+            }
+
+            // Limit speed
+            player.velocityX = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, player.velocityX));
+
             // Update position
-            player.x += player.velocityX;
-            player.y += player.velocityY;
+            player.x += player.velocityX * deltaTime;
+            player.y += player.velocityY * deltaTime;
 
             // Update camera
             raceState.cameraX = player.x - 400;
