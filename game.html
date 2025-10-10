@@ -348,6 +348,27 @@
         <button onclick="backToMainMenu()">Back to Menu</button>
     </div>
 
+    <!-- Base Screen -->
+    <div id="baseScreen" class="screen">
+        <h1>Your Base</h1>
+        <div id="baseCredits" style="font-size: 24px; color: #FFC107; margin-bottom: 20px;"></div>
+        <canvas id="baseCanvas" width="800" height="600" style="border: 3px solid #4facfe; border-radius: 10px;"></canvas>
+        <div style="margin-top: 20px;">
+            <p>Click on the grid to place 40x40px blocks (costs 1 credit each)</p>
+            <p>Right-click to remove blocks (refunds 1 credit)</p>
+        </div>
+        <button onclick="backToMainMenu()">Back to Menu</button>
+    </div>
+
+    <!-- Leaderboard Screen -->
+    <div id="leaderboardScreen" class="screen">
+        <h1>Credits Leaderboard</h1>
+        <div class="scroll-container">
+            <div id="leaderboardContent" style="max-width: 600px; margin: 0 auto;"></div>
+        </div>
+        <button onclick="backToMainMenu()">Back to Menu</button>
+    </div>
+
     <!-- Race Results -->
     <div id="raceResults">
         <h2>Race Complete!</h2>
@@ -746,10 +767,13 @@
                 { x: 250, y: 350, width: 200, height: 60, label: 'COSMETIC SHOP', action: 'shop' },
                 { x: 600, y: 300, width: 180, height: 60, label: 'VIEW STATS', action: 'stats' },
                 { x: 100, y: 200, width: 200, height: 60, label: 'LEVEL CREATOR', action: 'creator' },
+                { x: 400, y: 150, width: 160, height: 60, label: 'BASE', action: 'base' },
+                { x: 650, y: 100, width: 200, height: 60, label: 'LEADERBOARD', action: 'leaderboard' },
                 { x: 0, y: 720, width: 1200, height: 80, label: '', action: 'none' } // Ground
             ];
 
-            menuPlayer = new Player(150, 500, equippedCosmetics);
+            // Spawn player in center of screen above ground
+            menuPlayer = new Player(600 - 20, 400, equippedCosmetics);
 
             // Game loop with delta time
             let lastMenuFrameTime = performance.now();
@@ -784,8 +808,25 @@
                         ctx.textAlign = 'center';
                         ctx.fillText(platform.label, screenX + platform.width / 2, screenY + platform.height / 2 + 6);
                     } else {
-                        ctx.fillStyle = '#8B4513';
+                        // Green platform
+                        ctx.fillStyle = '#00AA00';
                         ctx.fillRect(screenX, screenY, platform.width, platform.height);
+
+                        // Draw 40x40 grid lines
+                        ctx.strokeStyle = '#006600';
+                        ctx.lineWidth = 1;
+                        for (let gx = 0; gx < platform.width; gx += 40) {
+                            ctx.beginPath();
+                            ctx.moveTo(screenX + gx, screenY);
+                            ctx.lineTo(screenX + gx, screenY + platform.height);
+                            ctx.stroke();
+                        }
+                        for (let gy = 0; gy < platform.height; gy += 40) {
+                            ctx.beginPath();
+                            ctx.moveTo(screenX, screenY + gy);
+                            ctx.lineTo(screenX + platform.width, screenY + gy);
+                            ctx.stroke();
+                        }
                     }
                 }
 
@@ -905,6 +946,12 @@
                 case 'creator':
                     window.location.href = 'creator.html';
                     break;
+                case 'base':
+                    showBase();
+                    break;
+                case 'leaderboard':
+                    showLeaderboard();
+                    break;
             }
         }
 
@@ -969,8 +1016,31 @@
                 for (const platform of practiceMode.platforms) {
                     const screenX = platform.x - practiceMode.cameraX;
                     const screenY = platform.y - practiceMode.cameraY;
-                    ctx.fillStyle = platform.isHazard ? '#FF0000' : '#8B4513';
-                    ctx.fillRect(screenX, screenY, platform.width, platform.height);
+
+                    if (platform.isHazard) {
+                        ctx.fillStyle = '#FF0000';
+                        ctx.fillRect(screenX, screenY, platform.width, platform.height);
+                    } else {
+                        // Green platform
+                        ctx.fillStyle = '#00AA00';
+                        ctx.fillRect(screenX, screenY, platform.width, platform.height);
+
+                        // Draw 40x40 grid lines
+                        ctx.strokeStyle = '#006600';
+                        ctx.lineWidth = 1;
+                        for (let gx = 0; gx < platform.width; gx += 40) {
+                            ctx.beginPath();
+                            ctx.moveTo(screenX + gx, screenY);
+                            ctx.lineTo(screenX + gx, screenY + platform.height);
+                            ctx.stroke();
+                        }
+                        for (let gy = 0; gy < platform.height; gy += 40) {
+                            ctx.beginPath();
+                            ctx.moveTo(screenX, screenY + gy);
+                            ctx.lineTo(screenX + platform.width, screenY + gy);
+                            ctx.stroke();
+                        }
+                    }
                 }
 
                 // Draw player
@@ -1457,11 +1527,29 @@
                 for (const platform of raceState.platforms) {
                     const screenX = platform.x - raceState.cameraX;
                     const screenY = platform.y - raceState.cameraY;
-                    ctx.fillStyle = '#8B4513';
+
+                    // Green platform
+                    ctx.fillStyle = '#00AA00';
                     ctx.fillRect(screenX, screenY, platform.width, platform.height);
+
+                    // Draw 40x40 grid lines
+                    ctx.strokeStyle = '#006600';
+                    ctx.lineWidth = 1;
+                    for (let gx = 0; gx < platform.width; gx += 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(screenX + gx, screenY);
+                        ctx.lineTo(screenX + gx, screenY + platform.height);
+                        ctx.stroke();
+                    }
+                    for (let gy = 0; gy < platform.height; gy += 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(screenX, screenY + gy);
+                        ctx.lineTo(screenX + platform.width, screenY + gy);
+                        ctx.stroke();
+                    }
                 }
 
-                // Draw hazards
+                // Draw hazards (red)
                 for (const hazard of raceState.hazards) {
                     const screenX = hazard.x - raceState.cameraX;
                     const screenY = hazard.y - raceState.cameraY;
@@ -1766,6 +1854,164 @@
                 <div style="margin: 20px 0;">Win Rate: ${userStats.racesPlayed > 0 ? ((userStats.racesWon / userStats.racesPlayed) * 100).toFixed(1) : 0}%</div>
                 <div style="margin: 20px 0;">Total Credits Earned: ${userStats.totalCreditsEarned}</div>
             `;
+        }
+
+        // Base screen (build with credits)
+        let baseBlocks = [];
+        let baseCanvas, baseCtx;
+
+        async function showBase() {
+            showScreen('baseScreen');
+            document.getElementById('baseCredits').textContent = `Credits: ${userCredits}`;
+
+            baseCanvas = document.getElementById('baseCanvas');
+            baseCtx = baseCanvas.getContext('2d');
+
+            // Load base blocks from Firebase
+            const baseSnapshot = await database.ref('players/' + currentUser.uid + '/baseBlocks').once('value');
+            baseBlocks = baseSnapshot.val() || [];
+
+            renderBase();
+
+            // Add click handlers
+            baseCanvas.onclick = handleBaseClick;
+            baseCanvas.oncontextmenu = handleBaseRightClick;
+        }
+
+        function renderBase() {
+            baseCtx.fillStyle = '#87CEEB';
+            baseCtx.fillRect(0, 0, baseCanvas.width, baseCanvas.height);
+
+            // Draw grid
+            baseCtx.strokeStyle = '#ccc';
+            baseCtx.lineWidth = 0.5;
+            for (let x = 0; x <= baseCanvas.width; x += 40) {
+                baseCtx.beginPath();
+                baseCtx.moveTo(x, 0);
+                baseCtx.lineTo(x, baseCanvas.height);
+                baseCtx.stroke();
+            }
+            for (let y = 0; y <= baseCanvas.height; y += 40) {
+                baseCtx.beginPath();
+                baseCtx.moveTo(0, y);
+                baseCtx.lineTo(baseCanvas.width, y);
+                baseCtx.stroke();
+            }
+
+            // Draw placed blocks
+            for (const block of baseBlocks) {
+                baseCtx.fillStyle = '#00AA00';
+                baseCtx.fillRect(block.x, block.y, 40, 40);
+                baseCtx.strokeStyle = '#006600';
+                baseCtx.lineWidth = 2;
+                baseCtx.strokeRect(block.x, block.y, 40, 40);
+            }
+        }
+
+        async function handleBaseClick(e) {
+            const rect = baseCanvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            // Snap to grid
+            const gridX = Math.floor(clickX / 40) * 40;
+            const gridY = Math.floor(clickY / 40) * 40;
+
+            // Check if block already exists
+            const exists = baseBlocks.some(b => b.x === gridX && b.y === gridY);
+            if (exists) {
+                alert('Block already placed here!');
+                return;
+            }
+
+            // Check if user has credits
+            if (userCredits < 1) {
+                alert('Not enough credits!');
+                return;
+            }
+
+            // Place block
+            baseBlocks.push({ x: gridX, y: gridY });
+            await updateCredits(-1);
+            await database.ref('players/' + currentUser.uid + '/baseBlocks').set(baseBlocks);
+
+            document.getElementById('baseCredits').textContent = `Credits: ${userCredits}`;
+            renderBase();
+        }
+
+        async function handleBaseRightClick(e) {
+            e.preventDefault();
+
+            const rect = baseCanvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            // Snap to grid
+            const gridX = Math.floor(clickX / 40) * 40;
+            const gridY = Math.floor(clickY / 40) * 40;
+
+            // Find and remove block
+            const index = baseBlocks.findIndex(b => b.x === gridX && b.y === gridY);
+            if (index === -1) {
+                alert('No block here!');
+                return;
+            }
+
+            baseBlocks.splice(index, 1);
+            await updateCredits(1);
+            await database.ref('players/' + currentUser.uid + '/baseBlocks').set(baseBlocks);
+
+            document.getElementById('baseCredits').textContent = `Credits: ${userCredits}`;
+            renderBase();
+
+            return false;
+        }
+
+        // Leaderboard screen
+        async function showLeaderboard() {
+            showScreen('leaderboardScreen');
+
+            // Fetch all players with their credits
+            const playersSnapshot = await database.ref('players').once('value');
+            const playersData = playersSnapshot.val();
+
+            if (!playersData) {
+                document.getElementById('leaderboardContent').innerHTML = '<p>No players found.</p>';
+                return;
+            }
+
+            // Create array of players with credits
+            const leaderboard = [];
+            for (const [uid, playerData] of Object.entries(playersData)) {
+                if (playerData.username && playerData.credits !== undefined) {
+                    leaderboard.push({
+                        uid: uid,
+                        username: playerData.username,
+                        credits: playerData.credits || 0
+                    });
+                }
+            }
+
+            // Sort by credits descending
+            leaderboard.sort((a, b) => b.credits - a.credits);
+
+            // Build HTML
+            let html = '<div style="background: rgba(0,0,0,0.3); border-radius: 10px; padding: 20px;">';
+            html += '<h3 style="color: #4facfe; margin-bottom: 15px;">Top Players by Credits</h3>';
+
+            for (let i = 0; i < Math.min(leaderboard.length, 50); i++) {
+                const player = leaderboard[i];
+                const isYou = player.uid === currentUser.uid;
+                const rankColor = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? '#cd7f32' : '#ccc';
+
+                html += `<div style="display: flex; justify-content: space-between; padding: 10px; margin: 5px 0; background: rgba(255,255,255,${isYou ? '0.15' : '0.05'}); border-radius: 5px; border-left: 4px solid ${rankColor};">
+                    <span style="color: white; ${isYou ? 'font-weight: bold;' : ''}">${i + 1}. ${player.username}${isYou ? ' (YOU)' : ''}</span>
+                    <span style="color: #FFC107; font-weight: bold;">${player.credits} credits</span>
+                </div>`;
+            }
+
+            html += '</div>';
+            document.getElementById('leaderboardContent').innerHTML = html;
         }
 
         // Screen management
