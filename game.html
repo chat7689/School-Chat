@@ -1164,6 +1164,9 @@
                     }
                 }
 
+                // Draw particles
+                updateAndDrawParticles(ctx, menuCameraX, menuCameraY, deltaTime);
+
                 // Draw player
                 menuPlayer.updateTrail();
                 menuPlayer.draw(ctx, menuCameraX, menuCameraY, false);
@@ -1213,6 +1216,22 @@
             }
             if (menuKeys['d'] || menuKeys['ArrowRight']) {
                 menuPlayer.velocityX += MOVE_SPEED * deltaTime;
+            }
+
+            // Speed-based movement particles (same as practice mode)
+            const speed = Math.abs(menuPlayer.velocityX);
+            if (speed > 0.5) {
+                // More particles = faster movement
+                const particleChance = Math.min(speed / 10, 0.8); // Max 80% chance
+                if (Math.random() < particleChance) {
+                    const particleCount = Math.floor(speed / 2);
+                    spawnParticles(
+                        menuPlayer.x + menuPlayer.width / 2 + (Math.random() - 0.5) * menuPlayer.width,
+                        menuPlayer.y + menuPlayer.height,
+                        Math.max(1, particleCount),
+                        menuPlayer.getSkinColor()
+                    );
+                }
             }
 
             // Jump with variable height (W or Up Arrow only, NOT space)
@@ -1515,19 +1534,17 @@
                     ctx.lineWidth = 2;
                     ctx.strokeRect(screenX, screenY, practiceMode.player.width, practiceMode.player.height);
 
-                    // Draw face
-                    if (practiceMode.player.cosmetics.face !== 'none') {
-                        ctx.fillStyle = '#000';
-                        ctx.font = `${practiceMode.player.width * 0.6}px Arial`;
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'middle';
-                        const faceEmoji = practiceMode.player.cosmetics.face === 'happy' ? '😊' :
-                                        practiceMode.player.cosmetics.face === 'cool' ? '😎' :
-                                        practiceMode.player.cosmetics.face === 'angry' ? '😠' : '😊';
-                        ctx.fillText(faceEmoji, screenX + practiceMode.player.width / 2, screenY + practiceMode.player.height / 2);
+                    // Draw equipped item (credits display) even in practice mode
+                    if (equippedItem === 'credits' && userCredits > 0) {
+                        const creditSize = practiceMode.player.width / 4;
+                        const creditX = screenX + (practiceMode.player.width - creditSize) / 2;
+                        const creditY = screenY + (practiceMode.player.height - creditSize) / 2;
+                        ctx.fillStyle = '#FFD700';
+                        ctx.fillRect(creditX, creditY, creditSize, creditSize);
+                        ctx.strokeStyle = '#FFA500';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(creditX, creditY, creditSize, creditSize);
                     }
-
-                    ctx.restore();
 
                     requestAnimationFrame(practiceLoop);
                 }
