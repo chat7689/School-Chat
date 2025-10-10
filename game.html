@@ -1190,6 +1190,113 @@
             alert('Level playback will be implemented soon!');
         }
 
+        // Admin function to add levels to Firebase
+        async function addLevelToDatabase(levelName, creatorName, levelData) {
+            try {
+                const levelId = 'level_' + Date.now();
+                await database.ref('levels/' + levelId).set({
+                    name: levelName,
+                    creator: creatorName,
+                    data: levelData,
+                    createdAt: firebase.database.ServerValue.TIMESTAMP
+                });
+                console.log('Level added successfully with ID:', levelId);
+                return levelId;
+            } catch (error) {
+                console.error('Error adding level:', error);
+                throw error;
+            }
+        }
+
+        // Add the "Vertical Challenge" level on first load
+        async function initializeDefaultLevels() {
+            const levelsSnapshot = await database.ref('levels').once('value');
+            const levels = levelsSnapshot.val();
+
+            // Only add default level if no levels exist
+            if (!levels) {
+                const verticalChallengeData = {
+                    "platforms": [
+                        {"x": 0, "y": 0, "width": 240, "height": 40},
+                        {"x": 280, "y": -40, "width": 200, "height": 40},
+                        {"x": 520, "y": -80, "width": 160, "height": 40},
+                        {"x": 720, "y": -120, "width": 120, "height": 40},
+                        {"x": 880, "y": -160, "width": 80, "height": 40},
+                        {"x": 1000, "y": -200, "width": 40, "height": 40},
+                        {"x": 1040, "y": -320, "width": 40, "height": 80},
+                        {"x": 1080, "y": -480, "width": 40, "height": 120},
+                        {"x": 1120, "y": -680, "width": 40, "height": 160},
+                        {"x": 1160, "y": -920, "width": 40, "height": 200},
+                        {"x": 1200, "y": -1200, "width": 40, "height": 240},
+                        {"x": -320, "y": 40, "width": 280, "height": 40},
+                        {"x": -680, "y": 80, "width": 320, "height": 40},
+                        {"x": -1120, "y": 120, "width": 400, "height": 40},
+                        {"x": 1240, "y": -1520, "width": 40, "height": 280},
+                        {"x": 1280, "y": -1880, "width": 40, "height": 320},
+                        {"x": 1320, "y": -2280, "width": 40, "height": 360},
+                        {"x": 1360, "y": -2720, "width": 40, "height": 400},
+                        {"x": 1030, "y": -250, "width": 10, "height": 10},
+                        {"x": 1070, "y": -400, "width": 10, "height": 10},
+                        {"x": 1110, "y": -560, "width": 10, "height": 10},
+                        {"x": 1110, "y": -640, "width": 10, "height": 10},
+                        {"x": 1150, "y": -760, "width": 10, "height": 10},
+                        {"x": 1150, "y": -840, "width": 10, "height": 10},
+                        {"x": 1180, "y": -1080, "width": 20, "height": 20},
+                        {"x": 1220, "y": -1360, "width": 20, "height": 20},
+                        {"x": 1260, "y": -1640, "width": 20, "height": 20},
+                        {"x": 1260, "y": -1760, "width": 20, "height": 20},
+                        {"x": 1300, "y": -2040, "width": 20, "height": 20},
+                        {"x": 1300, "y": -2180, "width": 20, "height": 20},
+                        {"x": 1340, "y": -2400, "width": 20, "height": 20},
+                        {"x": 1340, "y": -2520, "width": 20, "height": 20},
+                        {"x": 1340, "y": -2640, "width": 20, "height": 20},
+                        {"x": 1400, "y": -3200, "width": 40, "height": 440},
+                        {"x": 1440, "y": -3680, "width": 40, "height": 440},
+                        {"x": 1360, "y": -3040, "width": 40, "height": 40},
+                        {"x": 1320, "y": -3960, "width": 280, "height": 40},
+                        {"x": -1600, "y": 160, "width": 440, "height": 40},
+                        {"x": -2120, "y": 200, "width": 480, "height": 40},
+                        {"x": 1400, "y": -3480, "width": 40, "height": 40},
+                        {"x": 1400, "y": -3720, "width": 120, "height": 40}
+                    ],
+                    "hazards": [],
+                    "growers": [
+                        {"x": 1360, "y": -2760, "width": 40, "height": 40},
+                        {"x": -2120, "y": 120, "width": 40, "height": 80},
+                        {"x": -2080, "y": 120, "width": 40, "height": 40},
+                        {"x": -2040, "y": 120, "width": 40, "height": 80}
+                    ],
+                    "shrinkers": [
+                        {"x": 280, "y": -280, "width": 20, "height": 240}
+                    ],
+                    "defaultSizeBlocks": [
+                        {"x": 1160, "y": -930, "width": 40, "height": 10},
+                        {"x": 1560, "y": -4160, "width": 40, "height": 200},
+                        {"x": 1360, "y": -4160, "width": 200, "height": 40},
+                        {"x": 1320, "y": -4160, "width": 40, "height": 200},
+                        {"x": -680, "y": -280, "width": 20, "height": 360}
+                    ],
+                    "backgroundBlocks": [],
+                    "foregroundBlocks": [],
+                    "triggers": [],
+                    "start": {"x": -2080, "y": 160, "width": 40, "height": 40},
+                    "finish": {"x": 1400, "y": -4080, "width": 120, "height": 120},
+                    "physics": {
+                        "gravity": 0.042,
+                        "moveSpeed": 0.28,
+                        "jumpPower": 3.7,
+                        "maxSpeed": 3.5,
+                        "friction": 0.94,
+                        "airRes": 0.88,
+                        "fastFallMultiplier": 2
+                    }
+                };
+
+                await addLevelToDatabase('Vertical Challenge', 'System', verticalChallengeData);
+                console.log('Default level "Vertical Challenge" added to database');
+            }
+        }
+
         // Practice mode (infinite runner with credit earning)
         let practiceMode = {
             active: false,
@@ -2790,6 +2897,7 @@
                 }
 
                 await initUserData();
+                await initializeDefaultLevels();
                 initMainMenu();
             }
         });
