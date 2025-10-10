@@ -508,6 +508,7 @@
         let secureCredits = 0; // Secure credits (stored at base, main credits display)
         let userCosmetics = { skins: ['default_orange'], trails: ['none'], hats: ['none'], effects: ['none'] };
         let equippedCosmetics = { skin: 'default_orange', trail: 'none', hat: 'none', effect: 'none' };
+        let equippedItem = 'none'; // Equippable item: 'none' or 'credits'
         let userStats = { racesWon: 0, racesPlayed: 0, totalCreditsEarned: 0 };
 
         let currentParty = null;
@@ -755,6 +756,11 @@
                 this.coyoteTimer = 0;
                 this.jumpBufferTimer = 0;
                 this.wasGrounded = false;
+
+                // Size transition variables (from level creator)
+                this.targetSize = 40;
+                this.sizeTransitioning = false;
+                this.sizeTransitionProgress = 0;
             }
 
             getSkinColor() {
@@ -858,6 +864,19 @@
                     }
                 }
 
+                // Draw equipped item (credits display)
+                if (equippedItem === 'credits' && userCredits > 0) {
+                    // Small yellow square in center of character (1/4 size)
+                    const creditSize = this.width / 4;
+                    const creditX = screenX + (this.width - creditSize) / 2;
+                    const creditY = screenY + (this.height - creditSize) / 2;
+                    ctx.fillStyle = '#FFD700';
+                    ctx.fillRect(creditX, creditY, creditSize, creditSize);
+                    ctx.strokeStyle = '#FFA500';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(creditX, creditY, creditSize, creditSize);
+                }
+
                 // Draw name
                 if (showName && name) {
                     ctx.fillStyle = 'white';
@@ -881,6 +900,7 @@
                 secureCredits = data.secureCredits || 0;
                 userCosmetics = data.cosmetics || { skins: ['default_orange'], trails: ['none'], hats: ['none'], effects: ['none'] };
                 equippedCosmetics = data.equippedCosmetics || { skin: 'default_orange', trail: 'none', hat: 'none', effect: 'none' };
+                equippedItem = data.equippedItem || 'none';
                 userStats = data.stats || { racesWon: 0, racesPlayed: 0, totalCreditsEarned: 0 };
             } else {
                 // Initialize new user
@@ -1340,9 +1360,9 @@
                     practiceMode.cameraX = practiceMode.player.x - canvas.width / 2 + practiceMode.player.width / 2;
                     practiceMode.cameraY = practiceMode.player.y - canvas.height / 2 + practiceMode.player.height / 2;
 
-                    // Draw platforms (green with borders like level creator)
-                    ctx.fillStyle = '#00AA00';
-                    ctx.strokeStyle = '#006600';
+                    // Draw platforms (exact colors from level creator)
+                    ctx.fillStyle = '#4CAF50';
+                    ctx.strokeStyle = '#333';
                     ctx.lineWidth = 2;
                     for (const platform of practiceMode.platforms) {
                         const screenX = platform.x - practiceMode.cameraX;
@@ -1351,9 +1371,9 @@
                         ctx.strokeRect(screenX, screenY, platform.width, platform.height);
                     }
 
-                    // Draw hazards (red with borders)
-                    ctx.fillStyle = '#FF0000';
-                    ctx.strokeStyle = '#8B0000';
+                    // Draw hazards (exact colors from level creator)
+                    ctx.fillStyle = '#FF3333';
+                    ctx.strokeStyle = '#333';
                     for (const hazard of practiceMode.hazards) {
                         const screenX = hazard.x - practiceMode.cameraX;
                         const screenY = hazard.y - practiceMode.cameraY;
@@ -1361,9 +1381,9 @@
                         ctx.strokeRect(screenX, screenY, hazard.width, hazard.height);
                     }
 
-                    // Draw growers (green with borders)
-                    ctx.fillStyle = '#00FF00';
-                    ctx.strokeStyle = '#006400';
+                    // Draw growers (exact colors from level creator)
+                    ctx.fillStyle = '#00FF88';
+                    ctx.strokeStyle = '#333';
                     for (const grower of practiceMode.growers) {
                         const screenX = grower.x - practiceMode.cameraX;
                         const screenY = grower.y - practiceMode.cameraY;
@@ -1371,9 +1391,9 @@
                         ctx.strokeRect(screenX, screenY, grower.width, grower.height);
                     }
 
-                    // Draw shrinkers (blue with borders)
-                    ctx.fillStyle = '#0000FF';
-                    ctx.strokeStyle = '#000080';
+                    // Draw shrinkers (exact colors from level creator)
+                    ctx.fillStyle = '#BB66FF';
+                    ctx.strokeStyle = '#333';
                     for (const shrinker of practiceMode.shrinkers) {
                         const screenX = shrinker.x - practiceMode.cameraX;
                         const screenY = shrinker.y - practiceMode.cameraY;
@@ -1381,9 +1401,9 @@
                         ctx.strokeRect(screenX, screenY, shrinker.width, shrinker.height);
                     }
 
-                    // Draw default size blocks (yellow with borders)
-                    ctx.fillStyle = '#FFFF00';
-                    ctx.strokeStyle = '#B8860B';
+                    // Draw default size blocks (exact colors from level creator)
+                    ctx.fillStyle = '#FFB84D';
+                    ctx.strokeStyle = '#333';
                     for (const block of practiceMode.defaultSizeBlocks) {
                         const screenX = block.x - practiceMode.cameraX;
                         const screenY = block.y - practiceMode.cameraY;
@@ -1777,26 +1797,17 @@
             }
             player.wasGrounded = isGrounded;
 
-            // Handle input with different behavior for ground vs air
-            if (isGrounded) {
-                // On ground: gradual acceleration to ground max speed
-                const currentSpeed = Math.abs(player.velocityX);
-                const speedRatio = currentSpeed / GROUND_MAX_SPEED;
-                const accelMultiplier = 1 - (speedRatio * GROUND_ACCELERATION);
+            // Scale factors based on player size (from level creator) - freeze movement during transition
+            if (!player.sizeTransitioning) {
+                const sizeScale = player.currentSize / 40;
 
+                // Handle input - scaled by size like level creator
+                const scaledMoveSpeed = MOVE_SPEED * sizeScale;
                 if (practiceMode.keys['a'] || practiceMode.keys['ArrowLeft']) {
-                    player.velocityX -= MOVE_SPEED * deltaTime * accelMultiplier;
+                    player.velocityX -= scaledMoveSpeed * deltaTime;
                 }
                 if (practiceMode.keys['d'] || practiceMode.keys['ArrowRight']) {
-                    player.velocityX += MOVE_SPEED * deltaTime * accelMultiplier;
-                }
-            } else {
-                // In air: full control up to air max speed
-                if (practiceMode.keys['a'] || practiceMode.keys['ArrowLeft']) {
-                    player.velocityX -= MOVE_SPEED * deltaTime;
-                }
-                if (practiceMode.keys['d'] || practiceMode.keys['ArrowRight']) {
-                    player.velocityX += MOVE_SPEED * deltaTime;
+                    player.velocityX += scaledMoveSpeed * deltaTime;
                 }
             }
 
@@ -1846,15 +1857,16 @@
                 practiceIsJumping = false;
             }
 
-            // Apply gravity with fast fall
+            // Apply gravity scaled by size (from level creator)
+            const sizeScale = player.currentSize / 40;
             if ((practiceMode.keys['s'] || practiceMode.keys['ArrowDown']) && !isGrounded) {
-                player.velocityY += GRAVITY * FAST_FALL_MULTIPLIER * deltaTime;
+                player.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
                 // Fast fall particles
                 if (Math.random() < 0.3) {
                     spawnParticles(player.x + player.width / 2, player.y, 1, 'rgb(200, 255, 255)');
                 }
             } else {
-                player.velocityY += GRAVITY * deltaTime;
+                player.velocityY += GRAVITY * sizeScale * deltaTime;
             }
 
             // Apply friction using exponential decay
@@ -1881,51 +1893,72 @@
                 }
             }
 
-            // Check grower collision (double size)
+            // Check grower collision (double size) - smooth transition like level creator
             if (practiceMode.growers) {
                 for (const grower of practiceMode.growers) {
                     if (checkCollision(player, grower)) {
-                        const centerX = player.x + player.width / 2;
-                        const centerY = player.y + player.height / 2;
-                        player.width = 80;  // 2x original 40
-                        player.height = 80;
-                        // Reposition from center
-                        player.x = centerX - player.width / 2;
-                        player.y = centerY - player.height / 2;
-                        spawnParticles(centerX, centerY, 15, 'rgb(0, 255, 0)');
+                        if (player.currentSize !== 80 && !player.sizeTransitioning) {
+                            player.sizeTransitioning = true;
+                            player.targetSize = 80;
+                            player.sizeTransitionProgress = 0;
+                        }
                     }
                 }
             }
 
-            // Check shrinker collision (half size)
+            // Check shrinker collision (half size) - smooth transition like level creator
             if (practiceMode.shrinkers) {
                 for (const shrinker of practiceMode.shrinkers) {
                     if (checkCollision(player, shrinker)) {
-                        const centerX = player.x + player.width / 2;
-                        const centerY = player.y + player.height / 2;
-                        player.width = 20;  // 0.5x original 40
-                        player.height = 20;
-                        // Reposition from center
-                        player.x = centerX - player.width / 2;
-                        player.y = centerY - player.height / 2;
-                        spawnParticles(centerX, centerY, 15, 'rgb(0, 0, 255)');
+                        if (player.currentSize !== 20 && !player.sizeTransitioning) {
+                            player.sizeTransitioning = true;
+                            player.targetSize = 20;
+                            player.sizeTransitionProgress = 0;
+                        }
                     }
                 }
             }
 
-            // Check default size block collision (reset to normal)
+            // Check default size block collision (reset to normal) - smooth transition like level creator
             if (practiceMode.defaultSizeBlocks) {
                 for (const block of practiceMode.defaultSizeBlocks) {
                     if (checkCollision(player, block)) {
-                        const centerX = player.x + player.width / 2;
-                        const centerY = player.y + player.height / 2;
-                        player.width = 40;  // Default size
-                        player.height = 40;
-                        // Reposition from center
-                        player.x = centerX - player.width / 2;
-                        player.y = centerY - player.height / 2;
-                        spawnParticles(centerX, centerY, 15, 'rgb(255, 255, 0)');
+                        if (player.currentSize !== 40 && !player.sizeTransitioning) {
+                            player.sizeTransitioning = true;
+                            player.targetSize = 40;
+                            player.sizeTransitionProgress = 0;
+                        }
                     }
+                }
+            }
+
+            // Update size transition (from level creator)
+            if (player.sizeTransitioning) {
+                player.sizeTransitionProgress += deltaTime * 0.1;  // Transition speed
+
+                if (player.sizeTransitionProgress >= 1) {
+                    // Transition complete
+                    player.sizeTransitioning = false;
+                    player.currentSize = player.targetSize;
+                    player.width = player.targetSize;
+                    player.height = player.targetSize;
+                } else {
+                    // Interpolate size from center
+                    const startSize = player.currentSize;
+                    const t = player.sizeTransitionProgress;
+                    const newSize = startSize + (player.targetSize - startSize) * t;
+
+                    // Calculate center point before resize
+                    const centerX = player.x + player.width / 2;
+                    const centerY = player.y + player.height / 2;
+
+                    // Update size
+                    player.width = newSize;
+                    player.height = newSize;
+
+                    // Reposition from center
+                    player.x = centerX - player.width / 2;
+                    player.y = centerY - player.height / 2;
                 }
             }
 
@@ -2593,6 +2626,21 @@
 
             let html = '';
 
+            // Equippable Items Section
+            html += `<div class="shop-category">
+                <h2>EQUIPPABLE ITEMS</h2>
+                <div class="cosmetics-grid">
+                    <div class="cosmetic-item ${equippedItem === 'credits' ? 'equipped' : ''}">
+                        <div style="font-weight: bold;">Credit Display</div>
+                        <div style="color: #aaa; font-size: 12px;">Show credits on character</div>
+                        ${equippedItem === 'credits'
+                            ? '<div style="color: #0f0;">✓ EQUIPPED</div><button onclick="unequipItem()" style="margin-top: 5px;">Unequip</button>'
+                            : '<button onclick="equipItem(\'credits\')" style="margin-top: 5px;">Equip</button>'
+                        }
+                    </div>
+                </div>
+            </div>`;
+
             for (const [category, items] of Object.entries(cosmeticsCatalog)) {
                 html += `<div class="shop-category">
                     <h2>${category.toUpperCase()}</h2>
@@ -2663,6 +2711,18 @@
                 menuPlayer.cosmetics = equippedCosmetics;
             }
 
+            updateShopUI();
+        }
+
+        async function equipItem(itemId) {
+            equippedItem = itemId;
+            await database.ref('players/' + currentUser.uid + '/equippedItem').set(equippedItem);
+            updateShopUI();
+        }
+
+        async function unequipItem() {
+            equippedItem = 'none';
+            await database.ref('players/' + currentUser.uid + '/equippedItem').set(equippedItem);
             updateShopUI();
         }
 
@@ -2962,7 +3022,7 @@
             }
 
             baseBlocks.splice(index, 1);
-            await updateCredits(1, 'onhand');
+            await updateCredits(1, 'secure');  // Credits from BASE go to secure storage
             await database.ref('players/' + currentUser.uid + '/baseBlocks').set(baseBlocks);
 
             document.getElementById('baseCredits').textContent = `Credits: ${secureCredits} (${userCredits} on hand)`;
