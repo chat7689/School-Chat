@@ -492,6 +492,15 @@
         <button onclick="backToMainMenu()" style="margin-top: 20px;">Back to Menu</button>
     </div>
 
+    <!-- Settings Screen -->
+    <div id="settingsScreen" class="screen">
+        <h1>Settings</h1>
+        <div style="margin-top: 40px;">
+            <button onclick="logout()" style="font-size: 24px; padding: 15px 30px; background: #ff4444; color: white; border: none; border-radius: 10px; cursor: pointer;">Logout</button>
+        </div>
+        <button onclick="backToMainMenu()" style="margin-top: 40px;">Back to Menu</button>
+    </div>
+
     <!-- Race Results -->
     <div id="raceResults">
         <h2>Race Complete!</h2>
@@ -1052,6 +1061,7 @@
                 { x: 650, y: 300, width: 200, height: 60, label: 'LEVEL CREATOR', action: 'creator' },
                 { x: 200, y: 250, width: 160, height: 60, label: 'BASE', action: 'base' },
                 { x: 450, y: 200, width: 200, height: 60, label: 'LEADERBOARD', action: 'leaderboard' },
+                { x: 750, y: 150, width: 180, height: 60, label: 'SETTINGS', action: 'settings' },
                 { x: 0, y: 720, width: 1200, height: 80, label: '', action: 'none' }, // Ground
                 // Left wall - 100 blocks high (4000px)
                 { x: -40, y: -3280, width: 40, height: 4000, label: '', action: 'none' },
@@ -1361,6 +1371,9 @@
                     break;
                 case 'leaderboard':
                     showLeaderboard();
+                    break;
+                case 'settings':
+                    showSettings();
                     break;
             }
         }
@@ -2874,8 +2887,15 @@
                 { x: 4000, y: 0, width: 40, height: 4080 }
             ];
 
-            // Initialize player at center bottom of base
-            basePlayer = new Player(2000, 3960, equippedCosmetics);
+            // Initialize player 2 blocks (80px) above the highest block in base
+            let spawnY = 3960; // Default spawn on ground
+            if (baseBlocks.length > 0) {
+                // Find the highest (lowest Y value) block in the base
+                const highestBlockY = Math.min(...baseBlocks.map(block => block.y));
+                // Spawn 2 blocks (80px) above the highest block
+                spawnY = highestBlockY - 80;
+            }
+            basePlayer = new Player(2000, spawnY, equippedCosmetics);
 
             renderBase();
 
@@ -3274,6 +3294,20 @@
         function showScreen(screenId) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(screenId).classList.add('active');
+        }
+
+        function showSettings() {
+            showScreen('settingsScreen');
+        }
+
+        function logout() {
+            auth.signOut().then(() => {
+                // Redirect to login page
+                window.location.reload();
+            }).catch((error) => {
+                console.error('Error logging out:', error);
+                alert('Error logging out. Please try again.');
+            });
         }
 
         function backToMainMenu() {
