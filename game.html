@@ -931,7 +931,8 @@
             menuPlayer = new Player(600 - 20, 720 - 40, equippedCosmetics);
 
             // Populate and show credit panel (after player is created)
-            const playerColor = equippedCosmetics.skinColor || '#FF8C42';
+            const skinData = cosmeticsCatalog.skins.find(s => s.id === equippedCosmetics.skin);
+            const playerColor = skinData ? skinData.color : '#FF8C42';
             document.getElementById('creditPanel').innerHTML = `
                 <div style="text-align: center; margin-bottom: 20px;">
                     <div style="width: 80px; height: 80px; background: ${playerColor}; border: 4px solid #333; border-radius: 12px; margin: 0 auto 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);"></div>
