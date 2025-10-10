@@ -785,7 +785,9 @@
                 if (canvas.style.display === 'none') return;
 
                 // Calculate delta time (normalize to 60fps baseline)
+                if (!currentTime) currentTime = performance.now();
                 let deltaTime = (currentTime - lastMenuFrameTime) / 16.67;
+                if (deltaTime <= 0 || deltaTime > 10) deltaTime = 1; // Clamp deltaTime
                 lastMenuFrameTime = currentTime;
 
                 // Update player physics
@@ -1010,7 +1012,9 @@
                 if (!practiceMode.active) return;
 
                 // Calculate delta time
+                if (!currentTime) currentTime = performance.now();
                 let deltaTime = (currentTime - lastPracticeFrameTime) / 16.67;
+                if (deltaTime <= 0 || deltaTime > 10) deltaTime = 1;
                 lastPracticeFrameTime = currentTime;
 
                 // Update
@@ -1522,7 +1526,9 @@
                 if (!raceState.active) return;
 
                 // Calculate delta time
+                if (!currentTime) currentTime = performance.now();
                 let deltaTime = (currentTime - lastRaceFrameTime) / 16.67;
+                if (deltaTime <= 0 || deltaTime > 10) deltaTime = 1;
                 lastRaceFrameTime = currentTime;
 
                 // Update
