@@ -94,6 +94,19 @@
             background: rgba(255,255,255,0.9);
         }
 
+        #creditPanel {
+            position: absolute;
+            top: 100px;
+            left: 20px;
+            width: 280px;
+            background: linear-gradient(135deg, rgba(79, 172, 254, 0.3), rgba(79, 172, 254, 0.1));
+            border: 3px solid #4facfe;
+            border-radius: 15px;
+            padding: 25px;
+            z-index: 100;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
         .cosmetic-item {
             background: rgba(255,255,255,0.1);
             padding: 15px;
@@ -310,8 +323,10 @@
     <canvas id="menuCanvas" width="1200" height="800"></canvas>
     <div class="menu-hud" id="menuHUD" style="display: none;">
         <div class="menu-title">BLOCK RACERS ONLINE</div>
-        <div id="menuUserInfo"></div>
     </div>
+
+    <!-- Left Side Credit Panel -->
+    <div id="creditPanel" style="display: none;"></div>
 
     <!-- Practice Mode Canvas -->
     <canvas id="practiceCanvas" width="1200" height="800" style="display: none;"></canvas>
@@ -894,6 +909,23 @@
                 ${currentUsername} | Credits: ${secureCredits} <span style="font-size: 12px; color: #aaa;">(${userCredits} on hand)</span>
             `;
 
+            // Populate and show credit panel
+            document.getElementById('creditPanel').innerHTML = `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="width: 80px; height: 80px; background: ${menuPlayer ? menuPlayer.getSkinColor() : equippedCosmetics.skinColor}; border: 4px solid #333; border-radius: 12px; margin: 0 auto 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);"></div>
+                    <div style="font-size: 22px; font-weight: bold; color: #fff; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">${currentUsername}</div>
+                </div>
+                <div style="background: rgba(0,0,0,0.5); border-radius: 12px; padding: 18px; margin-bottom: 12px; border: 2px solid rgba(255, 215, 0, 0.3);">
+                    <div style="color: #4facfe; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">Secure Credits</div>
+                    <div style="font-size: 42px; font-weight: bold; color: #FFD700; text-shadow: 0 0 15px rgba(255, 215, 0, 0.6); font-family: 'Arial Black', sans-serif;">${secureCredits.toLocaleString()}</div>
+                </div>
+                <div style="background: rgba(0,0,0,0.5); border-radius: 12px; padding: 15px; border: 2px solid rgba(170, 170, 170, 0.2);">
+                    <div style="color: #4facfe; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;">On Hand</div>
+                    <div style="font-size: 28px; font-weight: bold; color: #bbb; text-shadow: 0 0 8px rgba(187, 187, 187, 0.4);">${userCredits.toLocaleString()}</div>
+                </div>
+            `;
+            document.getElementById('creditPanel').style.display = 'block';
+
             // Create menu platforms with labels
             menuPlatforms = [
                 { x: 100, y: 600, width: 200, height: 60, label: 'EARN MODE', action: 'practice' },
@@ -1128,6 +1160,7 @@
         function executePlatformAction(action) {
             document.getElementById('menuCanvas').style.display = 'none';
             document.getElementById('menuHUD').style.display = 'none';
+            document.getElementById('creditPanel').style.display = 'none';
 
             switch(action) {
                 case 'practice':
@@ -1186,8 +1219,161 @@
         }
 
         async function playLevel(levelId) {
-            // TODO: Load and play the selected level
-            alert('Level playback will be implemented soon!');
+            try {
+                // Load level from Firebase
+                const levelSnapshot = await database.ref('levels/' + levelId).once('value');
+                const levelInfo = levelSnapshot.val();
+
+                if (!levelInfo || !levelInfo.data) {
+                    alert('Error: Level data not found!');
+                    return;
+                }
+
+                const levelData = levelInfo.data;
+
+                // Hide practice levels screen
+                document.getElementById('practiceLevelsScreen').classList.remove('active');
+
+                // Show practice canvas
+                const canvas = document.getElementById('practiceCanvas');
+                canvas.style.display = 'block';
+                document.getElementById('hud').style.display = 'block';
+                document.getElementById('practiceBackBtn').style.display = 'block';
+
+                // Initialize practice mode with level data
+                practiceMode.active = true;
+                practiceMode.isLevelMode = true; // Flag to indicate we're playing a level, not infinite mode
+                practiceMode.levelData = levelData;
+                practiceMode.player = new Player(100, -50, equippedCosmetics); // Start position
+
+                // Load platforms from level
+                practiceMode.platforms = levelData.platforms || [];
+
+                // Load other level elements
+                practiceMode.hazards = levelData.hazards || [];
+                practiceMode.growers = levelData.growers || [];
+                practiceMode.shrinkers = levelData.shrinkers || [];
+                practiceMode.defaultSizeBlocks = levelData.defaultSizeBlocks || [];
+
+                // Reset other properties
+                practiceMode.credits = [];
+                practiceMode.creditsCollected = 0;
+                practiceMode.cameraX = 0;
+                practiceMode.cameraY = 0;
+
+                // Start the practice loop
+                let lastPracticeFrameTime = performance.now();
+                function practiceLoop(currentTime) {
+                    if (!practiceMode.active) return;
+
+                    // Calculate delta time
+                    if (!currentTime) currentTime = performance.now();
+                    let deltaTime = (currentTime - lastPracticeFrameTime) / 16.67;
+                    if (deltaTime <= 0 || deltaTime > 10) deltaTime = 1;
+                    lastPracticeFrameTime = currentTime;
+
+                    // Update player
+                    updatePracticePlayer(deltaTime);
+
+                    // Update HUD
+                    const dashCooldownPercent = Math.max(0, (practiceMode.player.dashCooldown / DASH_COOLDOWN) * 100);
+                    document.getElementById('hud').innerHTML = `
+                        <div style="font-size: 24px; font-weight: bold;">${levelInfo.name}</div>
+                        <div style="font-size: 14px; margin-top: 3px; color: #aaa;">By ${levelInfo.creator}</div>
+                        <div style="font-size: 14px; margin-top: 3px; color: ${dashCooldownPercent > 0 ? '#ff6666' : '#66ff66'};">Dash: ${dashCooldownPercent > 0 ? 'Cooling...' : 'READY!'}</div>
+                        <div style="font-size: 16px; color: #FFD700; margin-top: 5px;">Shift+Direction to Dash!</div>
+                    `;
+
+                    // Render
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                    // Camera follows player
+                    practiceMode.cameraX = practiceMode.player.x - canvas.width / 2 + practiceMode.player.width / 2;
+                    practiceMode.cameraY = practiceMode.player.y - canvas.height / 2 + practiceMode.player.height / 2;
+
+                    // Draw platforms
+                    ctx.fillStyle = '#333';
+                    for (const platform of practiceMode.platforms) {
+                        const screenX = platform.x - practiceMode.cameraX;
+                        const screenY = platform.y - practiceMode.cameraY;
+                        ctx.fillRect(screenX, screenY, platform.width, platform.height);
+                    }
+
+                    // Draw hazards (red)
+                    ctx.fillStyle = '#FF0000';
+                    for (const hazard of practiceMode.hazards) {
+                        const screenX = hazard.x - practiceMode.cameraX;
+                        const screenY = hazard.y - practiceMode.cameraY;
+                        ctx.fillRect(screenX, screenY, hazard.width, hazard.height);
+                    }
+
+                    // Draw growers (green)
+                    ctx.fillStyle = '#00FF00';
+                    for (const grower of practiceMode.growers) {
+                        const screenX = grower.x - practiceMode.cameraX;
+                        const screenY = grower.y - practiceMode.cameraY;
+                        ctx.fillRect(screenX, screenY, grower.width, grower.height);
+                    }
+
+                    // Draw shrinkers (blue)
+                    ctx.fillStyle = '#0000FF';
+                    for (const shrinker of practiceMode.shrinkers) {
+                        const screenX = shrinker.x - practiceMode.cameraX;
+                        const screenY = shrinker.y - practiceMode.cameraY;
+                        ctx.fillRect(screenX, screenY, shrinker.width, shrinker.height);
+                    }
+
+                    // Draw default size blocks (yellow)
+                    ctx.fillStyle = '#FFFF00';
+                    for (const block of practiceMode.defaultSizeBlocks) {
+                        const screenX = block.x - practiceMode.cameraX;
+                        const screenY = block.y - practiceMode.cameraY;
+                        ctx.fillRect(screenX, screenY, block.width, block.height);
+                    }
+
+                    // Draw particles
+                    updateAndDrawParticles(ctx, practiceMode.cameraX, practiceMode.cameraY, deltaTime);
+
+                    // Draw player
+                    const screenX = practiceMode.player.x - practiceMode.cameraX;
+                    const screenY = practiceMode.player.y - practiceMode.cameraY;
+
+                    ctx.save();
+                    ctx.translate(screenX + practiceMode.player.width / 2, screenY + practiceMode.player.height / 2);
+                    ctx.scale(1, practiceMode.player.squashStretch || 1);
+                    ctx.translate(-(screenX + practiceMode.player.width / 2), -(screenY + practiceMode.player.height / 2));
+
+                    // Draw player with cosmetics
+                    ctx.fillStyle = practiceMode.player.getSkinColor();
+                    ctx.fillRect(screenX, screenY, practiceMode.player.width, practiceMode.player.height);
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(screenX, screenY, practiceMode.player.width, practiceMode.player.height);
+
+                    // Draw face
+                    if (practiceMode.player.cosmetics.face !== 'none') {
+                        ctx.fillStyle = '#000';
+                        ctx.font = `${practiceMode.player.width * 0.6}px Arial`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        const faceEmoji = practiceMode.player.cosmetics.face === 'happy' ? '😊' :
+                                        practiceMode.player.cosmetics.face === 'cool' ? '😎' :
+                                        practiceMode.player.cosmetics.face === 'angry' ? '😠' : '😊';
+                        ctx.fillText(faceEmoji, screenX + practiceMode.player.width / 2, screenY + practiceMode.player.height / 2);
+                    }
+
+                    ctx.restore();
+
+                    requestAnimationFrame(practiceLoop);
+                }
+
+                practiceLoop();
+
+            } catch (error) {
+                console.error('Error loading level:', error);
+                alert('Error loading level: ' + error.message);
+            }
         }
 
         // Admin function to add levels to Firebase
