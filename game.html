@@ -803,16 +803,29 @@
                     const screenY = platform.y - menuCameraY;
 
                     if (platform.label) {
-                        ctx.fillStyle = 'rgba(79, 172, 254, 0.3)';
+                        // Gradient background for platform buttons
+                        const gradient = ctx.createLinearGradient(screenX, screenY, screenX, screenY + platform.height);
+                        gradient.addColorStop(0, 'rgba(79, 172, 254, 0.5)');
+                        gradient.addColorStop(1, 'rgba(79, 172, 254, 0.2)');
+                        ctx.fillStyle = gradient;
                         ctx.fillRect(screenX, screenY, platform.width, platform.height);
-                        ctx.strokeStyle = '#4facfe';
-                        ctx.lineWidth = 3;
-                        ctx.strokeRect(screenX, screenY, platform.width, platform.height);
 
-                        ctx.fillStyle = '#4facfe';
-                        ctx.font = 'bold 16px Arial';
+                        // Glowing border
+                        ctx.shadowColor = '#4facfe';
+                        ctx.shadowBlur = 15;
+                        ctx.strokeStyle = '#4facfe';
+                        ctx.lineWidth = 4;
+                        ctx.strokeRect(screenX, screenY, platform.width, platform.height);
+                        ctx.shadowBlur = 0;
+
+                        // Text with shadow
+                        ctx.fillStyle = '#ffffff';
+                        ctx.font = 'bold 14px Arial';
                         ctx.textAlign = 'center';
-                        ctx.fillText(platform.label, screenX + platform.width / 2, screenY + platform.height / 2 + 6);
+                        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                        ctx.shadowBlur = 5;
+                        ctx.fillText(platform.label, screenX + platform.width / 2, screenY + platform.height / 2 + 5);
+                        ctx.shadowBlur = 0;
                     } else {
                         // Green platform
                         ctx.fillStyle = '#00AA00';
@@ -847,36 +860,14 @@
         }
 
         function updateMenuPlayer(deltaTime = 1) {
-            // Check if grounded first and handle collisions
+            // Check current grounded state BEFORE applying physics
             let isGrounded = false;
             for (const platform of menuPlatforms) {
                 if (checkCollision(menuPlayer, platform)) {
-                    // Ground collision (landing on top)
-                    if (menuPlayer.velocityY > 0 && menuPlayer.y + menuPlayer.height <= platform.y + 10) {
-                        menuPlayer.y = platform.y - menuPlayer.height;
-                        menuPlayer.velocityY = 0;
+                    const overlap = (menuPlayer.y + menuPlayer.height) - platform.y;
+                    if (overlap > 0 && overlap < 10 && menuPlayer.velocityY >= 0) {
                         isGrounded = true;
-
-                        // Check platform action
-                        if (platform.action && platform.action !== 'none' && menuKeys[' ']) {
-                            executePlatformAction(platform.action);
-                        }
-                    }
-                    // Wall collision (hitting from sides)
-                    else if (menuPlayer.velocityX > 0 && menuPlayer.x < platform.x) {
-                        // Hitting right side of wall
-                        menuPlayer.x = platform.x - menuPlayer.width;
-                        menuPlayer.velocityX = 0;
-                    }
-                    else if (menuPlayer.velocityX < 0 && menuPlayer.x > platform.x) {
-                        // Hitting left side of wall
-                        menuPlayer.x = platform.x + platform.width;
-                        menuPlayer.velocityX = 0;
-                    }
-                    // Ceiling collision
-                    else if (menuPlayer.velocityY < 0 && menuPlayer.y > platform.y) {
-                        menuPlayer.y = platform.y + platform.height;
-                        menuPlayer.velocityY = 0;
+                        break;
                     }
                 }
             }
@@ -896,14 +887,14 @@
                 menuPlayer.velocityX += MOVE_SPEED * deltaTime;
             }
 
-            // Jump with variable height
-            if ((menuKeys['w'] || menuKeys['ArrowUp'] || menuKeys[' ']) && isGrounded) {
+            // Jump with variable height (W or Up Arrow only, NOT space)
+            if ((menuKeys['w'] || menuKeys['ArrowUp']) && isGrounded) {
                 menuPlayer.velocityY = -JUMP_POWER;
                 menuIsJumping = true;
             }
 
             // Cut jump short if button released (variable jump height)
-            if (menuIsJumping && !menuKeys['w'] && !menuKeys['ArrowUp'] && !menuKeys[' ']) {
+            if (menuIsJumping && !menuKeys['w'] && !menuKeys['ArrowUp']) {
                 if (menuPlayer.velocityY < 0) {
                     menuPlayer.velocityY *= 0.5;
                 }
@@ -925,18 +916,62 @@
             // Limit speed
             menuPlayer.velocityX = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, menuPlayer.velocityX));
 
-            // Update position
+            // Update position HORIZONTALLY first, then check X collisions
             menuPlayer.x += menuPlayer.velocityX * deltaTime;
+
+            // Check horizontal collisions
+            for (const platform of menuPlatforms) {
+                if (checkCollision(menuPlayer, platform)) {
+                    if (menuPlayer.velocityX > 0) {
+                        // Moving right, hit left side of platform
+                        menuPlayer.x = platform.x - menuPlayer.width;
+                    } else if (menuPlayer.velocityX < 0) {
+                        // Moving left, hit right side of platform
+                        menuPlayer.x = platform.x + platform.width;
+                    }
+                    menuPlayer.velocityX = 0;
+                }
+            }
+
+            // Update position VERTICALLY, then check Y collisions
             menuPlayer.y += menuPlayer.velocityY * deltaTime;
 
-            // Keep player in bounds
+            // Check vertical collisions
+            for (const platform of menuPlatforms) {
+                if (checkCollision(menuPlayer, platform)) {
+                    if (menuPlayer.velocityY > 0) {
+                        // Moving down, hit top of platform
+                        menuPlayer.y = platform.y - menuPlayer.height;
+                        menuPlayer.velocityY = 0;
+
+                        // Check for platform interaction (space key)
+                        if (platform.action && platform.action !== 'none' && menuKeys[' ']) {
+                            executePlatformAction(platform.action);
+                        }
+                    } else if (menuPlayer.velocityY < 0) {
+                        // Moving up, hit bottom of platform
+                        menuPlayer.y = platform.y + platform.height;
+                        menuPlayer.velocityY = 0;
+                        menuIsJumping = false;
+                    }
+                }
+            }
+
+            // Keep player in bounds (but allow vertical movement)
             if (menuPlayer.x < 0) menuPlayer.x = 0;
             if (menuPlayer.x > 1200 - menuPlayer.width) menuPlayer.x = 1200 - menuPlayer.width;
-            if (menuPlayer.y > 800) menuPlayer.y = 500;
 
-            // Update camera (simple follow)
-            menuCameraX = 0;
-            menuCameraY = 0;
+            // Respawn if fall too far
+            if (menuPlayer.y > 1500) {
+                menuPlayer.x = 600 - 20;
+                menuPlayer.y = 720 - 40;
+                menuPlayer.velocityX = 0;
+                menuPlayer.velocityY = 0;
+            }
+
+            // Update camera to follow player
+            menuCameraX = menuPlayer.x - 600 + 20; // Center horizontally
+            menuCameraY = menuPlayer.y - 400 + 20; // Center vertically
         }
 
         function checkCollision(a, b) {
@@ -2075,6 +2110,8 @@
 
         // Keyboard handling
         document.addEventListener('keydown', (e) => {
+            // Store both original key and lowercase for compatibility
+            menuKeys[e.key] = true;
             menuKeys[e.key.toLowerCase()] = true;
             practiceMode.keys[e.key] = true;
             raceState.keys[e.key] = true;
@@ -2088,6 +2125,7 @@
         });
 
         document.addEventListener('keyup', (e) => {
+            menuKeys[e.key] = false;
             menuKeys[e.key.toLowerCase()] = false;
             delete practiceMode.keys[e.key];
             delete raceState.keys[e.key];
