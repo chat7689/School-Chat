@@ -292,6 +292,7 @@
     <!-- Practice Mode Canvas -->
     <canvas id="practiceCanvas" width="1200" height="800" style="display: none;"></canvas>
     <div id="hud"></div>
+    <button id="practiceBackBtn" onclick="exitPracticeMode()" style="position: absolute; top: 20px; right: 20px; z-index: 100; display: none; padding: 10px 20px; background: rgba(255,0,0,0.7); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">Back to Menu</button>
 
     <!-- Race Canvas -->
     <canvas id="raceCanvas" width="1200" height="800" style="display: none;"></canvas>
@@ -1034,6 +1035,7 @@
             const ctx = canvas.getContext('2d');
             canvas.style.display = 'block';
             document.getElementById('hud').style.display = 'block';
+            document.getElementById('practiceBackBtn').style.display = 'block';
 
             practiceMode.active = true;
             practiceMode.player = new Player(100, 300, equippedCosmetics);
@@ -1122,10 +1124,14 @@
             const baseX = lastPlatform ? lastPlatform.x + lastPlatform.width + Math.random() * 150 + 50 : 0;
             const baseY = lastPlatform ? lastPlatform.y + (Math.random() - 0.5) * 100 : 500;
 
+            // Width must be multiples of 40 (40x40 blocks only)
+            const numBlocks = Math.floor(Math.random() * 4) + 2; // 2-5 blocks wide
+            const width = numBlocks * 40;
+
             practiceMode.platforms.push({
                 x: baseX,
-                y: Math.max(200, Math.min(600, baseY)),
-                width: 80 + Math.random() * 100,
+                y: Math.max(200, Math.min(600, Math.round(baseY / 40) * 40)), // Snap Y to 40px grid
+                width: width,
                 height: 40,
                 isHazard: false
             });
@@ -2080,6 +2086,15 @@
             document.getElementById('leaderboardContent').innerHTML = html;
         }
 
+        // Exit practice mode
+        function exitPracticeMode() {
+            practiceMode.active = false;
+            document.getElementById('practiceCanvas').style.display = 'none';
+            document.getElementById('hud').style.display = 'none';
+            document.getElementById('practiceBackBtn').style.display = 'none';
+            initMainMenu();
+        }
+
         // Screen management
         function showScreen(screenId) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -2105,6 +2120,7 @@
             document.getElementById('practiceCanvas').style.display = 'none';
             document.getElementById('raceCanvas').style.display = 'none';
             document.getElementById('hud').style.display = 'none';
+            document.getElementById('practiceBackBtn').style.display = 'none';
             document.getElementById('timer').style.display = 'none';
             document.getElementById('racePositions').style.display = 'none';
 
@@ -2122,8 +2138,7 @@
 
             if (e.key === 'Escape') {
                 if (practiceMode.active) {
-                    practiceMode.active = false;
-                    backToMainMenu();
+                    exitPracticeMode();
                 }
             }
         });
