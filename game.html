@@ -861,14 +861,18 @@
 
         function updateMenuPlayer(deltaTime = 1) {
             // Check current grounded state BEFORE applying physics
+            // Check if player is standing on a platform (touching from above)
             let isGrounded = false;
             for (const platform of menuPlatforms) {
-                if (checkCollision(menuPlayer, platform)) {
-                    const overlap = (menuPlayer.y + menuPlayer.height) - platform.y;
-                    if (overlap > 0 && overlap < 10 && menuPlayer.velocityY >= 0) {
-                        isGrounded = true;
-                        break;
-                    }
+                // Check if player is directly above platform
+                const onTop = menuPlayer.y + menuPlayer.height >= platform.y &&
+                              menuPlayer.y + menuPlayer.height <= platform.y + 5;
+                const horizontalOverlap = menuPlayer.x + menuPlayer.width > platform.x &&
+                                         menuPlayer.x < platform.x + platform.width;
+
+                if (onTop && horizontalOverlap) {
+                    isGrounded = true;
+                    break;
                 }
             }
 
