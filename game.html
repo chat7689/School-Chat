@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Speedrun Game</title>
+    <title>Block Racers Online</title>
     <link rel="icon" type="image/png" id="favicon">
     <style>
         * {
@@ -22,10 +22,104 @@
             min-height: 100vh;
         }
 
-        #gameCanvas {
+        canvas {
             border: 5px solid #333;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
             background: #87CEEB;
+        }
+
+        .screen {
+            display: none;
+            position: absolute;
+            background: rgba(0,0,0,0.95);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 100;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #FFC107;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+        }
+
+        h2 {
+            font-size: 32px;
+            margin: 20px 0;
+            color: #4facfe;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 18px;
+            margin: 10px;
+            background: #4facfe;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #6fd0ff;
+            transform: scale(1.05);
+        }
+
+        button.secondary {
+            background: #666;
+        }
+
+        button.danger {
+            background: rgba(255,0,0,0.7);
+        }
+
+        button.success {
+            background: #4CAF50;
+        }
+
+        input, select {
+            padding: 12px;
+            font-size: 16px;
+            margin: 10px;
+            border-radius: 8px;
+            border: 2px solid #4facfe;
+            background: rgba(255,255,255,0.9);
+        }
+
+        .cosmetic-item {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            margin: 10px;
+            border-radius: 10px;
+            display: inline-block;
+            min-width: 200px;
+        }
+
+        .cosmetic-item.owned {
+            border: 2px solid #4facfe;
+        }
+
+        .cosmetic-item.equipped {
+            background: rgba(79, 172, 254, 0.3);
+            border: 2px solid #FFC107;
+        }
+
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+            z-index: 50;
             display: none;
         }
 
@@ -38,584 +132,227 @@
             font-size: 48px;
             font-weight: bold;
             text-shadow: 3px 3px 6px rgba(0,0,0,0.7);
-            pointer-events: none;
-            z-index: 10;
+            z-index: 50;
+            display: none;
             font-family: 'Courier New', monospace;
         }
 
-        #mapInfo {
-            position: fixed;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: white;
-            font-size: 24px;
-            font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
-            pointer-events: none;
-            z-index: 10;
-        }
-
-        #userInfo {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            color: white;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
-            z-index: 10;
-            text-align: right;
-        }
-
-        #userInfo button {
-            margin-top: 10px;
-            padding: 8px 15px;
-            background: rgba(255,0,0,0.7);
-            color: white;
-            border: none;
+        .party-member {
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            margin: 5px;
             border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.3s;
         }
 
-        #userInfo button:hover {
-            background: rgba(255,0,0,0.9);
+        .party-member.ready {
+            background: rgba(0,255,0,0.2);
+            border: 2px solid #0f0;
         }
 
-        .main-page-btn {
-            background: rgba(79, 172, 254, 0.7) !important;
-        }
-
-        .main-page-btn:hover {
-            background: rgba(79, 172, 254, 0.9) !important;
-        }
-
-        #controls {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: white;
-            text-align: center;
-            font-size: 14px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
-            pointer-events: none;
-            z-index: 10;
-            display: none;
-        }
-
-        #gameLeaderboard {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 20px;
+        .invitation {
+            background: rgba(255,255,0,0.2);
+            padding: 15px;
+            margin: 10px;
             border-radius: 10px;
-            z-index: 10;
-            min-width: 280px;
-            display: none;
+            border: 2px solid #FFC107;
         }
 
-        #versionLabel {
+        .platform-button {
             position: absolute;
-            bottom: 20px;
-            left: 20px;
-            color: white;
-            font-size: 14px;
+            background: rgba(79, 172, 254, 0.3);
+            border: 3px solid #4facfe;
+            color: #4facfe;
             font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
-            z-index: 10;
-            display: none;
+            font-size: 14px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
         }
 
-
-        #velocityIndicator {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-            width: 120px;
-            height: 120px;
-            z-index: 10;
-            display: none;
-        }
-
-        #velocityCircle {
-            width: 100%;
-            height: 100%;
-            border: 3px solid rgba(255, 255, 255, 0.5);
-            border-radius: 50%;
-            background: rgba(0, 0, 0, 0.3);
-            position: relative;
-        }
-
-        #velocityDot {
-            width: 12px;
-            height: 12px;
-            background: #ff4444;
-            border-radius: 50%;
+        #countdown {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            box-shadow: 0 0 10px rgba(255, 68, 68, 0.8);
-        }
-
-        #velocityLabel {
-            position: absolute;
-            bottom: -25px;
-            width: 100%;
-            text-align: center;
+            font-size: 120px;
             color: white;
-            font-size: 12px;
+            text-shadow: 5px 5px 10px rgba(0,0,0,0.9);
+            z-index: 200;
+            display: none;
             font-weight: bold;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
         }
 
-        #gameLeaderboard h3 {
-            color: #4facfe;
-            margin-bottom: 15px;
-            font-size: 20px;
-        }
-
-        .game-lb-entry {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px;
-            margin: 5px 0;
-            background: rgba(255,255,255,0.05);
-            border-radius: 5px;
-            font-size: 15px;
-        }
-
-        .game-lb-entry.top1 { border-left: 3px solid gold; }
-        .game-lb-entry.top2 { border-left: 3px solid silver; }
-        .game-lb-entry.top3 { border-left: 3px solid #cd7f32; }
-        .game-lb-entry.you { background: rgba(79, 172, 254, 0.2); font-weight: bold; }
-
-        #menu {
-            background: rgba(0,0,0,0.9);
-            color: white;
-            padding: 40px;
-            border-radius: 20px;
-            text-align: center;
-            max-width: 1200px;
-            width: 95%;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        #menu h1 {
-            font-size: 64px;
-            margin-bottom: 10px;
-            color: #FFC107;
-            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
-        }
-
-        #menu h2 {
-            font-size: 32px;
-            margin: 30px 0 20px 0;
-            color: #4facfe;
-        }
-
-        .maps-container {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-            margin: 20px 0;
-            max-width: 800px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .map-card {
-            background: rgba(255,255,255,0.1);
-            padding: 20px;
-            border-radius: 15px;
-            cursor: pointer;
-            transition: all 0.3s;
-            border: 3px solid transparent;
-        }
-
-        .map-card:hover {
-            transform: scale(1.05);
-            background: rgba(255,255,255,0.2);
-            border-color: #4facfe;
-        }
-
-        .map-card h3 {
-            font-size: 24px;
-            margin-bottom: 10px;
-            color: #FFC107;
-        }
-
-        .map-card p {
-            font-size: 14px;
-            color: #ccc;
-            margin: 5px 0;
-        }
-
-        .difficulty {
-            display: inline-block;
-            padding: 5px 12px;
-            border-radius: 5px;
-            font-weight: bold;
-            margin: 5px 0;
-        }
-
-        .difficulty.easy { background: rgba(0,255,0,0.3); color: #0f0; border: 2px solid #0f0; }
-        .difficulty.medium { background: rgba(255,255,0,0.3); color: #ff0; border: 2px solid #ff0; }
-        .difficulty.hard { background: rgba(255,165,0,0.3); color: #ffa500; border: 2px solid #ffa500; }
-        .difficulty.extreme { background: rgba(255,0,0,0.3); color: #f00; border: 2px solid #f00; }
-        .difficulty.impossible { background: rgba(128,0,128,0.3); color: #a0a; border: 2px solid #a0a; }
-
-        .leaderboard {
-            background: rgba(0,0,0,0.3);
+        .player-list {
+            background: rgba(0,0,0,0.5);
             padding: 15px;
             border-radius: 10px;
-            margin-top: 10px;
-            max-height: 200px;
+            margin: 10px 0;
+            max-height: 300px;
             overflow-y: auto;
         }
 
-        .leaderboard h4 {
-            color: #4facfe;
+        .shop-category {
+            margin: 20px 0;
+        }
+
+        .cosmetics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: white;
+        }
+
+        #menuCanvas {
+            display: block;
+        }
+
+        .menu-hud {
+            position: absolute;
+            top: 20px;
+            text-align: center;
+            width: 100%;
+            color: white;
+            font-size: 24px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .menu-title {
+            font-size: 64px;
+            color: #FFC107;
+            font-weight: bold;
             margin-bottom: 10px;
-            font-size: 14px;
         }
 
-        .leaderboard-entry {
-            display: flex;
-            justify-content: space-between;
-            padding: 5px 10px;
-            margin: 3px 0;
-            background: rgba(255,255,255,0.05);
-            border-radius: 5px;
-            font-size: 14px;
+        .scroll-container {
+            max-height: 60vh;
+            overflow-y: auto;
+            padding: 20px;
         }
 
-        .leaderboard-entry.top1 { border-left: 4px solid gold; }
-        .leaderboard-entry.top2 { border-left: 4px solid silver; }
-        .leaderboard-entry.top3 { border-left: 4px solid #cd7f32; }
-        .leaderboard-entry.you { background: rgba(79, 172, 254, 0.2); }
-
-        #finishScreen {
+        #raceResults {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
             background: rgba(0,0,0,0.95);
-            color: white;
-            padding: 40px 60px;
+            padding: 40px;
             border-radius: 20px;
-            text-align: center;
+            z-index: 200;
             display: none;
-            z-index: 20;
             min-width: 400px;
         }
 
-        #finishScreen h2 {
-            font-size: 48px;
-            margin-bottom: 20px;
-            color: #4CAF50;
-        }
-
-        #finishScreen button {
-            margin: 10px;
-            padding: 15px 40px;
-            font-size: 20px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        #finishScreen button:hover {
-            transform: scale(1.1);
-        }
-
-        #finishScreen button.secondary {
-            background: #666;
-        }
-
-        .pb-indicator {
-            color: #FFD700;
-            font-weight: bold;
-            font-size: 24px;
-            margin: 10px 0;
-        }
-
-        #settingsModal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 2000;
-        }
-
-        #settingsModal.show {
-            display: flex;
-        }
-
-        .settings-content {
-            background: rgba(30,30,40,0.98);
-            padding: 40px;
-            border-radius: 20px;
-            max-width: 500px;
-            width: 90%;
-            box-shadow: 0 10px 50px rgba(0,0,0,0.5);
-        }
-
-        .settings-content h2 {
-            color: #4facfe;
-            margin-bottom: 30px;
-            font-size: 32px;
-        }
-
-        .settings-section {
-            margin: 25px 0;
-            padding: 20px;
-            background: rgba(255,255,255,0.05);
-            border-radius: 10px;
-        }
-
-        .settings-section h3 {
-            color: #FFC107;
-            margin-bottom: 15px;
-            font-size: 18px;
-        }
-
-        .settings-info {
-            color: #ccc;
-            font-size: 14px;
-            margin-bottom: 15px;
-        }
-
-        .settings-section button {
-            width: 100%;
-            padding: 12px;
-            margin: 8px 0;
-            font-size: 16px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .settings-section button:hover {
-            transform: scale(1.02);
-        }
-
-        .danger-btn {
-            background: rgba(255,0,0,0.7);
-            color: white;
-        }
-
-        .danger-btn:hover {
-            background: rgba(255,0,0,0.9);
-        }
-
-        .difficulty-filter {
-            opacity: 0.6;
-        }
-
-        .difficulty-filter.active {
-            opacity: 1;
-        }
-
-        .difficulty-filter:hover {
-            opacity: 1;
-            transform: scale(1.05);
-        }
-
-        #menuLeaderboard {
-            position: fixed;
-            right: 20px;
-            top: 100px;
-            width: 320px;
-            max-height: calc(100vh - 140px);
-            background: rgba(0,0,0,0.9);
-            border: 2px solid #4facfe;
-            border-radius: 10px;
-            padding: 20px;
-            overflow-y: auto;
-            z-index: 100;
-        }
-
-        #menuLeaderboard h3 {
-            margin: 0 0 15px 0;
-            color: #4facfe;
-            font-size: 18px;
-        }
-
-        #menuLeaderboard select {
-            width: 100%;
-            padding: 12px 15px;
-            margin-bottom: 15px;
-            background: rgba(255,255,255,0.95);
-            color: #000;
-            border: 2px solid #4facfe;
-            border-radius: 15px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.2);
-        }
-
-        #menuLeaderboard select:hover {
-            background: rgba(255,255,255,1);
-            border-color: #6fd0ff;
-            box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
-            transform: translateY(-2px);
-        }
-
-        #menuLeaderboard select:focus {
-            outline: none;
-            border-color: #6fd0ff;
-            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.3);
-        }
-
-        #menuLeaderboard select option {
-            background: white;
-            color: #000;
-        }
-
-        .menu-lb-entry {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px;
+        .result-entry {
+            padding: 10px;
             margin: 5px 0;
-            background: rgba(255,255,255,0.05);
+            background: rgba(255,255,255,0.1);
             border-radius: 5px;
-            color: #ccc;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
         }
 
-        .menu-lb-entry:hover {
-            background: rgba(79, 172, 254, 0.2);
-            transform: translateX(-3px);
+        .result-entry.winner {
+            background: rgba(255,215,0,0.3);
+            border: 2px solid gold;
         }
 
-        .menu-lb-entry.top1 { background: rgba(255,215,0,0.2); border-left: 3px solid gold; }
-        .menu-lb-entry.top2 { background: rgba(192,192,192,0.2); border-left: 3px solid silver; }
-        .menu-lb-entry.top3 { background: rgba(205,127,50,0.2); border-left: 3px solid #cd7f32; }
-        .menu-lb-entry.you { background: rgba(79, 172, 254, 0.3); border-left: 3px solid #4facfe; }
-
-        .ghost-icon {
-            margin-left: 5px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-
-        .ghost-icon:hover {
-            transform: scale(1.2);
+        #racePositions {
+            position: absolute;
+            top: 100px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+            z-index: 50;
+            display: none;
         }
     </style>
 </head>
 <body>
-    <div id="menu">
-        <h1>⚡ SPEEDRUN ⚡</h1>
-        <p style="color: #888; font-size: 14px; margin-bottom: 20px;">v10.2 - Online Edition</p>
-
-        <!-- Difficulty Filter Sidebar -->
-        <div style="position: fixed; left: 20px; top: 100px; background: rgba(0,0,0,0.8); border: 2px solid #4facfe; border-radius: 10px; padding: 15px; width: 180px; z-index: 100;">
-            <h3 style="margin: 0 0 10px 0; color: #4facfe; font-size: 16px;">🎯 Difficulty</h3>
-            <div id="difficultyFilters" style="display: flex; flex-direction: column; gap: 8px;">
-                <button class="difficulty-filter active" data-difficulty="All" style="padding: 8px; background: rgba(79, 172, 254, 0.3); border: 2px solid #4facfe; border-radius: 5px; color: #4facfe; cursor: pointer; font-weight: bold; transition: all 0.3s;">All Levels</button>
-                <button class="difficulty-filter" data-difficulty="Easy" style="padding: 8px; background: rgba(0,255,0,0.1); border: 2px solid #0f0; border-radius: 5px; color: #0f0; cursor: pointer; font-weight: bold; transition: all 0.3s;">🟢 Easy</button>
-                <button class="difficulty-filter" data-difficulty="Medium" style="padding: 8px; background: rgba(255,255,0,0.1); border: 2px solid #ff0; border-radius: 5px; color: #ff0; cursor: pointer; font-weight: bold; transition: all 0.3s;">🟡 Medium</button>
-                <button class="difficulty-filter" data-difficulty="Hard" style="padding: 8px; background: rgba(255,165,0,0.1); border: 2px solid #ffa500; border-radius: 5px; color: #ffa500; cursor: pointer; font-weight: bold; transition: all 0.3s;">🟠 Hard</button>
-                <button class="difficulty-filter" data-difficulty="Extreme" style="padding: 8px; background: rgba(255,0,0,0.1); border: 2px solid #f00; border-radius: 5px; color: #f00; cursor: pointer; font-weight: bold; transition: all 0.3s;">🔴 Extreme</button>
-                <button class="difficulty-filter" data-difficulty="Impossible" style="padding: 8px; background: rgba(128,0,128,0.2); border: 2px solid #a0a; border-radius: 5px; color: #a0a; cursor: pointer; font-weight: bold; transition: all 0.3s;">🟣 Impossible</button>
-            </div>
-        </div>
-
-        <!-- Leaderboard Panel -->
-        <div id="menuLeaderboard">
-            <h3>🏆 Leaderboards</h3>
-            <select id="leaderboardType" onchange="updateMenuLeaderboard()">
-                <option value="map">Map Leaderboard</option>
-                <option value="average">Average Ranking</option>
-            </select>
-            <div id="mapSelectContainer" style="display: block;">
-                <select id="mapSelect" onchange="updateMenuLeaderboard()"></select>
-            </div>
-            <div id="averageMapSelectContainer" style="display: none;">
-                <label style="color: #4facfe; font-size: 12px; margin-bottom: 5px; display: block;">Select Maps for Average:</label>
-                <div id="averageMapChecks" style="max-height: 150px; overflow-y: auto; margin-bottom: 15px;"></div>
-            </div>
-            <div id="menuLeaderboardEntries"></div>
-        </div>
-
-        <div style="margin: 60px 360px 0 210px;">
-            <h2 style="text-align: center; margin-bottom: 30px;">Main Page</h2>
-            <div class="maps-container" id="mapsContainer"></div>
-        </div>
-        <a href="creator.html" style="position: fixed; bottom: 20px; left: 20px; padding: 12px 20px; background: rgba(79, 172, 254, 0.3); color: #4facfe; border: 2px solid #4facfe; border-radius: 10px; text-decoration: none; font-weight: bold; font-size: 16px; transition: all 0.3s; z-index: 50;">📝 Level Creator</a>
+    <!-- Main Menu Canvas (Interactive Platformer) -->
+    <canvas id="menuCanvas" width="1200" height="800"></canvas>
+    <div class="menu-hud" id="menuHUD" style="display: none;">
+        <div class="menu-title">BLOCK RACERS ONLINE</div>
+        <div id="menuUserInfo"></div>
     </div>
 
-    <canvas id="gameCanvas"></canvas>
+    <!-- Practice Mode Canvas -->
+    <canvas id="practiceCanvas" width="1200" height="800" style="display: none;"></canvas>
+    <div id="hud"></div>
 
-    <div id="timer" style="display: none;">0.00</div>
-    <div id="mapInfo"></div>
-    <div id="userInfo"></div>
-    <div id="versionLabel">v10.2</div>
+    <!-- Race Canvas -->
+    <canvas id="raceCanvas" width="1200" height="800" style="display: none;"></canvas>
+    <div id="timer"></div>
+    <div id="racePositions"></div>
+    <div id="countdown"></div>
 
-    <div id="controls">
-        A/D: Move | W/UP/SPACE: Jump | S/DOWN: Fast Fall | R: Restart
-    </div>
-
-    <div id="gameLeaderboard">
-        <h3>🏆 Global Leaderboard</h3>
-        <div id="gameLeaderboardEntries"></div>
-    </div>
-
-    <div id="velocityIndicator">
-        <div id="velocityCircle">
-            <div id="velocityDot"></div>
+    <!-- Party Screen -->
+    <div id="partyScreen" class="screen">
+        <h1>Party</h1>
+        <div id="partyInfo"></div>
+        <div id="partyMembers" class="player-list"></div>
+        <div id="partyInvitations"></div>
+        <div style="margin-top: 20px;">
+            <input type="text" id="inviteUsername" placeholder="Enter username to invite">
+            <button onclick="sendInvite()">Send Invite</button>
         </div>
-        <div id="velocityLabel">VELOCITY</div>
+        <div id="partyControls" style="margin-top: 20px;"></div>
+        <button onclick="leaveParty()" class="secondary">Leave Party</button>
+        <button onclick="backToMainMenu()" class="secondary">Back to Menu</button>
     </div>
 
-    <div id="finishScreen">
-        <h2>🏁 Finish! 🏁</h2>
-        <div id="finishTime"></div>
-        <div id="pbIndicator"></div>
-        <div id="rankInfo"></div>
-        <div>
-            <button onclick="restartMap()">Retry Map</button>
-            <button onclick="backToMenu()" class="secondary">Map Select</button>
-        </div>
+    <!-- Join Party Screen -->
+    <div id="joinPartyScreen" class="screen">
+        <h1>Join Party</h1>
+        <input type="text" id="partyIdInput" placeholder="Enter Party ID">
+        <button onclick="joinPartyById()">Join Party</button>
+        <button onclick="backToMainMenu()" class="secondary">Back</button>
     </div>
 
-    <!-- Settings Modal -->
-    <div id="settingsModal">
-        <div class="settings-content">
-            <h2>⚙️ Settings</h2>
+    <!-- Lobby Screen -->
+    <div id="lobbyScreen" class="screen">
+        <h1>Race Lobby</h1>
+        <div id="lobbyInfo"></div>
+        <div id="lobbyPlayers" class="player-list"></div>
+        <div id="lobbyControls"></div>
+        <button onclick="leaveLobby()" class="secondary">Leave Lobby</button>
+    </div>
 
-            <div class="settings-section">
-                <h3>🔐 Account Security</h3>
-                <button onclick="changePassword()" class="main-page-btn">Change Password</button>
-            </div>
-
-            <div class="settings-section">
-                <h3>⚠️ Danger Zone</h3>
-                <div class="settings-info">This action cannot be undone. All your times and data will be permanently deleted.</div>
-                <button onclick="deleteAccount()" class="danger-btn">Delete Account</button>
-            </div>
-
-            <div style="text-align: center; margin-top: 30px;">
-                <button onclick="closeSettings()" class="main-page-btn" style="background: #666;">Close</button>
-            </div>
+    <!-- Cosmetic Shop Screen -->
+    <div id="shopScreen" class="screen">
+        <h1>Cosmetic Shop</h1>
+        <div id="shopCredits" style="font-size: 24px; color: #FFC107; margin-bottom: 20px;"></div>
+        <div class="scroll-container">
+            <div id="shopContent"></div>
         </div>
+        <button onclick="backToMainMenu()">Back to Menu</button>
+    </div>
+
+    <!-- Stats Screen -->
+    <div id="statsScreen" class="screen">
+        <h1>Your Stats</h1>
+        <div id="statsContent" style="font-size: 20px;"></div>
+        <button onclick="backToMainMenu()">Back to Menu</button>
+    </div>
+
+    <!-- Race Results -->
+    <div id="raceResults">
+        <h2>Race Complete!</h2>
+        <div id="resultsContent"></div>
+        <button onclick="returnToParty()" class="success">Return to Party</button>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -639,90 +376,77 @@
         const auth = firebase.auth();
         const database = firebase.database();
 
-        // Create favicon with orange square character
+        // Create favicon
         const faviconCanvas = document.createElement('canvas');
         faviconCanvas.width = 32;
         faviconCanvas.height = 32;
         const faviconCtx = faviconCanvas.getContext('2d');
-
-        // Draw orange square character
         faviconCtx.fillStyle = '#FF8C42';
         faviconCtx.fillRect(6, 6, 20, 20);
         faviconCtx.strokeStyle = '#333';
         faviconCtx.lineWidth = 2;
         faviconCtx.strokeRect(6, 6, 20, 20);
+        document.getElementById('favicon').href = faviconCanvas.toDataURL('image/png');
 
-        // Set favicon
-        const favicon = document.getElementById('favicon');
-        favicon.href = faviconCanvas.toDataURL('image/png');
-
+        // Global variables
         let currentUser = null;
         let currentUsername = '';
+        let userCredits = 0;
+        let userCosmetics = { skins: ['default_orange'], trails: ['none'], hats: ['none'], effects: ['none'] };
+        let equippedCosmetics = { skin: 'default_orange', trail: 'none', hat: 'none', effect: 'none' };
+        let userStats = { racesWon: 0, racesPlayed: 0, totalCreditsEarned: 0 };
 
-        // Game variables
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = 1200;
-        canvas.height = 800;
+        let currentParty = null;
+        let currentPartyId = null;
+        let currentLobby = null;
+        let currentLobbyId = null;
 
-        let player = {
-            x: 0,
-            y: 0,
-            width: 40,
-            height: 40,  // Square shape
-            velocityX: 0,
-            velocityY: 0,
-            color: '#FF5722',
-            currentSize: 40
+        // Game constants
+        const GRAVITY = 0.042;
+        const MOVE_SPEED = 0.28;
+        const MAX_SPEED = 3.5;
+        const AIR_RESISTANCE = 0.88;
+        const GROUND_FRICTION = 0.94;
+        const JUMP_POWER = 3.70;
+        const FAST_FALL_MULTIPLIER = 2.0;
+
+        // Cosmetics catalog
+        const cosmeticsCatalog = {
+            skins: [
+                { id: 'default_orange', name: 'Default Orange', price: 0, color: '#FF8C42' },
+                { id: 'red_racer', name: 'Red Racer', price: 50, color: '#FF0000' },
+                { id: 'blue_blur', name: 'Blue Blur', price: 50, color: '#0066FF' },
+                { id: 'green_machine', name: 'Green Machine', price: 100, color: '#00FF00' },
+                { id: 'purple_pro', name: 'Purple Pro', price: 100, color: '#9900FF' },
+                { id: 'golden_champion', name: 'Golden Champion', price: 500, color: '#FFD700' }
+            ],
+            trails: [
+                { id: 'none', name: 'None', price: 0 },
+                { id: 'rainbow', name: 'Rainbow Trail', price: 100 },
+                { id: 'fire', name: 'Fire Trail', price: 150 },
+                { id: 'ice', name: 'Ice Trail', price: 150 },
+                { id: 'star', name: 'Star Trail', price: 200 }
+            ],
+            hats: [
+                { id: 'none', name: 'None', price: 0 },
+                { id: 'crown', name: 'Crown', price: 200 },
+                { id: 'propeller', name: 'Propeller', price: 150 },
+                { id: 'halo', name: 'Halo', price: 300 }
+            ],
+            effects: [
+                { id: 'none', name: 'None', price: 0 },
+                { id: 'sparkles', name: 'Sparkles', price: 100 },
+                { id: 'glow', name: 'Glow', price: 150 },
+                { id: 'shadow_clone', name: 'Shadow Clone', price: 300 }
+            ]
         };
 
-        let platforms = [];
-        let hazards = [];
-        let growers = [];
-        let shrinkers = [];
-        let defaultSizeBlocks = [];
-        let keys = {};
-        let isGrounded = false;
-        let sizeTransitioning = false;
-        let sizeTransitionProgress = 0;
-        let targetSize = 40;
-        let isJumping = false;  // Track if currently in jump
-        let cameraX = 0;
-        let cameraY = 0;
-        let gameActive = false;
-        let currentMap = null;
-        let startTime = 0;
-        let currentTime = 0;
-        let timerInterval = null;
-        let finishLine = null;
-        let personalBests = {};
-        let mapStartTime = 0; // For moving platforms
-
-        // Ghost recording variables
-        let currentRecording = [];
-        let isRecording = false;
-        let ghostData = null;
-        let ghostPlayer = null;
-        let racingGhost = false;
-        let watchingGhost = false;
-        let ghostFrameIndex = 0;
-
-        // Constants
-        const GRAVITY = 0.042;  // 150% of 0.028
-        const MOVE_SPEED = 0.28;  // Faster ground movement: 0.21 * 1.33 ≈ 0.28
-        const MAX_SPEED = 3.5;  // Faster max speed: 2.625 * 1.33 ≈ 3.5
-        const AIR_RESISTANCE = 0.88;  // Higher air resistance (was 0.92)
-        const GROUND_FRICTION = 0.94;  // Less friction, more slippery (was 0.80)
-        const JUMP_POWER = 3.70;  // Allows jumping height × 4 + 2px for each size
-        const FAST_FALL_MULTIPLIER = 2.0;  // Down arrow fall speed multiplier (was 1.75)
-
-        // Map definitions
+        // Map definitions (preserved from original)
         const maps = [
             {
                 id: 'simple_map',
                 name: 'Simple Map',
                 difficulty: 'Easy',
-                description: 'A simple rectangular level - perfect for beginners',
                 platforms: [
                     { x: -40, y: -280, width: 40, height: 320 },
                     { x: 0, y: -280, width: 280, height: 40 },
@@ -742,7 +466,6 @@
                 id: 'custom_level',
                 name: 'Original Map',
                 difficulty: 'Medium',
-                description: 'A custom designed level',
                 platforms: [
                     { x: 0, y: 400, width: 40, height: 200 },
                     { x: 40, y: 560, width: 520, height: 40 },
@@ -775,131 +498,16 @@
                     { x: 0, y: 360, width: 40, height: 40 },
                     { x: -520, y: 800, width: 1560, height: 80 }
                 ],
+                growers: [],
+                shrinkers: [],
+                defaultSizeBlocks: [],
                 start: { x: 80, y: 480 },
                 finish: { x: 700, y: 470, width: 100, height: 50 }
-            },
-            {
-                id: 'new_level',
-                name: 'Miles SB',
-                difficulty: 'Hard',
-                description: 'A challenging platformer level',
-                platforms: [
-                    { x: 200, y: 520, width: 160, height: 40 },
-                    { x: 400, y: 480, width: 120, height: 40 },
-                    { x: 560, y: 440, width: 80, height: 40 },
-                    { x: 680, y: 400, width: 40, height: 40 },
-                    { x: 720, y: 280, width: 40, height: 80 },
-                    { x: 760, y: 120, width: 40, height: 120 },
-                    { x: 520, y: 0, width: 160, height: 40 },
-                    { x: 560, y: -120, width: 120, height: 40 },
-                    { x: 520, y: -120, width: 40, height: 80 },
-                    { x: 200, y: 0, width: 320, height: 40 },
-                    { x: 440, y: -80, width: 80, height: 40 },
-                    { x: 400, y: -120, width: 40, height: 80 },
-                    { x: 200, y: -120, width: 40, height: 120 },
-                    { x: 280, y: -240, width: 40, height: 120 },
-                    { x: 40, y: -120, width: 160, height: 40 },
-                    { x: 200, y: -280, width: 120, height: 40 },
-                    { x: 200, y: -440, width: 40, height: 160 },
-                    { x: -320, y: -440, width: 520, height: 40 },
-                    { x: -280, y: -120, width: 320, height: 40 },
-                    { x: -360, y: -440, width: 40, height: 40 },
-                    { x: 280, y: -200, width: 80, height: 40 },
-                    { x: 360, y: -80, width: 40, height: 40 },
-                    { x: 360, y: -240, width: 40, height: 80 },
-                    { x: 400, y: -240, width: 280, height: 40 },
-                    { x: 520, y: -200, width: 40, height: 40 },
-                    { x: 600, y: -160, width: 40, height: 40 },
-                    { x: 680, y: -240, width: 120, height: 40 },
-                    { x: 680, y: -120, width: 120, height: 40 },
-                    { x: 680, y: -200, width: 40, height: 40 },
-                    { x: 520, y: -160, width: 40, height: 10 },
-                    { x: 600, y: -170, width: 40, height: 10 },
-                    { x: 680, y: -160, width: 40, height: 10 },
-                    { x: 480, y: -120, width: 40, height: 40 },
-                    { x: -640, y: -440, width: 280, height: 40 },
-                    { x: -800, y: -120, width: 120, height: 40 },
-                    { x: -560, y: -160, width: 80, height: 40 },
-                    { x: -360, y: -120, width: 80, height: 40 },
-                    { x: 800, y: -160, width: 80, height: 40 },
-                    { x: 840, y: -240, width: 40, height: 80 },
-                    { x: 880, y: -240, width: 80, height: 40 },
-                    { x: 920, y: -200, width: 80, height: 40 },
-                    { x: 1000, y: -120, width: 80, height: 40 },
-                    { x: 1080, y: 0, width: 80, height: 40 },
-                    { x: 1120, y: 160, width: 80, height: 40 },
-                    { x: 1160, y: 360, width: 80, height: 40 },
-                    { x: 1200, y: 600, width: 80, height: 40 },
-                    { x: 1240, y: 880, width: 80, height: 40 },
-                    { x: 1280, y: 1200, width: 80, height: 40 },
-                    { x: 1160, y: 1200, width: 80, height: 40 },
-                    { x: 1400, y: 1200, width: 80, height: 40 },
-                    { x: 1080, y: 1080, width: 40, height: 80 },
-                    { x: 1520, y: 1080, width: 40, height: 80 },
-                    { x: 1080, y: 1200, width: 40, height: 40 },
-                    { x: 1520, y: 1200, width: 40, height: 40 },
-                    { x: 1000, y: 1080, width: 80, height: 40 },
-                    { x: 1040, y: 880, width: 200, height: 40 },
-                    { x: 1320, y: 880, width: 240, height: 40 },
-                    { x: -300, y: -280, width: 60, height: 20 },
-                    { x: -40, y: 560, width: 200, height: 40 }
-                ],
-                hazards: [
-                    { x: -80, y: -240, width: 40, height: 80 },
-                    { x: -200, y: -160, width: 40, height: 10 },
-                    { x: -80, y: -160, width: 40, height: 10 },
-                    { x: 40, y: -160, width: 40, height: 10 },
-                    { x: 440, y: -120, width: 40, height: 40 },
-                    { x: -760, y: 40, width: 520, height: 40 },
-                    { x: -920, y: -440, width: 280, height: 40 },
-                    { x: -920, y: -400, width: 40, height: 480 },
-                    { x: -880, y: 40, width: 120, height: 40 },
-                    { x: -280, y: -80, width: 40, height: 120 },
-                    { x: -560, y: -280, width: 80, height: 40 },
-                    { x: -920, y: -760, width: 40, height: 320 },
-                    { x: -920, y: 80, width: 40, height: 1320 },
-                    { x: -880, y: 1360, width: 2560, height: 40 },
-                    { x: 1640, y: -760, width: 40, height: 2120 },
-                    { x: -880, y: -760, width: 2520, height: 40 },
-                    { x: -200, y: -240, width: 40, height: 10 },
-                    { x: -200, y: -230, width: 10, height: 10 },
-                    { x: -170, y: -230, width: 10, height: 10 },
-                    { x: -190, y: -170, width: 10, height: 10 },
-                    { x: -180, y: -170, width: 10, height: 10 },
-                    { x: -200, y: -150, width: 40, height: 30 },
-                    { x: 40, y: -150, width: 40, height: 30 },
-                    { x: 40, y: -240, width: 40, height: 10 },
-                    { x: 40, y: -230, width: 10, height: 10 },
-                    { x: 70, y: -230, width: 10, height: 10 },
-                    { x: -80, y: -250, width: 40, height: 10 },
-                    { x: 50, y: -170, width: 10, height: 10 },
-                    { x: 60, y: -170, width: 10, height: 10 },
-                    { x: -200, y: -220, width: 10, height: 5 },
-                    { x: -190, y: -230, width: 20, height: 5 },
-                    { x: -170, y: -220, width: 10, height: 5 },
-                    { x: 40, y: -220, width: 10, height: 5 },
-                    { x: 50, y: -230, width: 20, height: 5 },
-                    { x: 70, y: -220, width: 10, height: 5 },
-                    { x: -70, y: -255, width: 20, height: 5 },
-                    { x: 840, y: -120, width: 40, height: 1480 }
-                ],
-                growers: [
-                    { x: 1280, y: 1080, width: 80, height: 80 }
-                ],
-                shrinkers: [
-                    { x: -760, y: -160, width: 40, height: 40 }
-                ],
-                defaultSizeBlocks: [
-                    { x: 200, y: -720, width: 40, height: 280 }
-                ],
-                start: { x: 40, y: 520, width: 40, height: 40 },
-                finish: { x: -400, y: -480, width: 120, height: 40 }
             },
             {
                 id: 'hard_level',
                 name: 'Hard Level',
                 difficulty: 'Hard',
-                description: 'An extremely challenging level with moving hazards',
                 platforms: [
                     { x: 40, y: -200, width: 240, height: 30 },
                     { x: 40, y: -170, width: 80, height: 30 },
@@ -921,55 +529,16 @@
                     { x: 320, y: -80, width: 20, height: 80 },
                     { x: 520, y: -120, width: 160, height: 40 },
                     { x: 640, y: -80, width: 40, height: 120 },
-                    { x: 520, y: 0, width: 120, height: 40 },
-                    { x: -250, y: -320, width: 30, height: 60 },
-                    { x: 60, y: 0, width: 30, height: 10 },
-                    { x: 230, y: 0, width: 65, height: 10 },
-                    { x: 320, y: -120, width: 200, height: 40 },
-                    { x: 170, y: 50, width: 10, height: 60 },
-                    { x: 280, y: -20, width: 40, height: 20 },
-                    { x: 60, y: 10, width: 230, height: 30 }
+                    { x: 520, y: 0, width: 120, height: 40 }
                 ],
                 hazards: [
                     { x: 40, y: -320, width: 80, height: 120 },
-                    {
-                        x: 130,
-                        y: -137.99230000105908,
-                        width: 60,
-                        height: 63.21020000059225,
-                        movement: {
-                            point1: { x: 160, y: -30 },
-                            point2: { x: 160, y: -110 },
-                            cycleTime: 5,
-                            delay: 0
-                        }
-                    },
                     { x: -80, y: -200, width: 40, height: 200 },
                     { x: 240, y: -1120, width: 80, height: 80 },
                     { x: -360, y: 280, width: 1280, height: 40 },
                     { x: 920, y: -1280, width: 40, height: 1600 },
                     { x: -360, y: -1280, width: 1280, height: 40 },
-                    { x: -400, y: -1280, width: 40, height: 1600 },
-                    { x: 380, y: -10, width: 10, height: 10 },
-                    { x: 420, y: -10, width: 10, height: 10 },
-                    { x: 460, y: -10, width: 10, height: 10 },
-                    { x: 400, y: -70, width: 10, height: 10 },
-                    { x: 440, y: -70, width: 10, height: 10 },
-                    { x: 480, y: -70, width: 10, height: 10 },
-                    { x: 360, y: -70, width: 10, height: 10 },
-                    {
-                        x: 323.54799999713896,
-                        y: -403.76400000413264,
-                        width: 20,
-                        height: 20,
-                        movement: {
-                            point1: { x: 260, y: -500 },
-                            point2: { x: 440, y: -240 },
-                            cycleTime: 3,
-                            delay: 0
-                        }
-                    },
-                    { x: 90, y: 0, width: 140, height: 10 }
+                    { x: -400, y: -1280, width: 40, height: 1600 }
                 ],
                 growers: [
                     { x: 80, y: -640, width: 80, height: 80 }
@@ -982,2264 +551,1213 @@
                 ],
                 start: { x: 0, y: -80, width: 40, height: 40 },
                 finish: { x: 600, y: -80, width: 40, height: 80 }
-            },
-            {
-                id: 'possibly_impossible',
-                name: 'Possibly Impossible',
-                difficulty: 'Impossible',
-                description: 'A chaotic gauntlet of moving hazards - good luck!',
-                platforms: [
-                    { x: 0, y: 0, width: 520, height: 40 }
-                ],
-                hazards: [
-                    {
-                        x: 90,
-                        y: -45.5664000034333,
-                        width: 20,
-                        height: 20,
-                        movement: {
-                            point1: { x: 100, y: -200 },
-                            point2: { x: 100, y: -20 },
-                            cycleTime: 5,
-                            delay: 0
-                        }
-                    },
-                    {
-                        x: 250,
-                        y: -55.944000005722216,
-                        width: 20,
-                        height: 20,
-                        movement: {
-                            point1: { x: 260, y: -200 },
-                            point2: { x: 260, y: -20 },
-                            cycleTime: 3,
-                            delay: 0
-                        }
-                    },
-                    {
-                        x: 170,
-                        y: -94.45800000429166,
-                        width: 20,
-                        height: 20,
-                        movement: {
-                            point1: { x: 180, y: -200 },
-                            point2: { x: 180, y: -20 },
-                            cycleTime: 4,
-                            delay: 0
-                        }
-                    },
-                    {
-                        x: 330,
-                        y: -94.45800000429166,
-                        width: 20,
-                        height: 20,
-                        movement: {
-                            point1: { x: 340, y: -200 },
-                            point2: { x: 340, y: -20 },
-                            cycleTime: 4,
-                            delay: 0
-                        }
-                    },
-                    {
-                        x: 410,
-                        y: -45.5664000034333,
-                        width: 20,
-                        height: 20,
-                        movement: {
-                            point1: { x: 420, y: -200 },
-                            point2: { x: 420, y: -20 },
-                            cycleTime: 5,
-                            delay: 0
-                        }
-                    },
-                    {
-                        x: 178.3799999952315,
-                        y: -50,
-                        width: 20,
-                        height: 20,
-                        movement: {
-                            point1: { x: 60, y: -40 },
-                            point2: { x: 460, y: -40 },
-                            cycleTime: 8,
-                            delay: 0
-                        }
-                    },
-                    {
-                        x: 321.6200000047685,
-                        y: -190,
-                        width: 20,
-                        height: 20,
-                        movement: {
-                            point1: { x: 460, y: -180 },
-                            point2: { x: 60, y: -180 },
-                            cycleTime: 8,
-                            delay: 0
-                        }
-                    },
-                    {
-                        x: 253.86285713740745,
-                        y: -118.26171428816666,
-                        width: 20,
-                        height: 20,
-                        movement: {
-                            point1: { x: 460, y: -20 },
-                            point2: { x: 60, y: -200 },
-                            cycleTime: 7,
-                            delay: 0
-                        }
-                    },
-                    {
-                        x: 246.13714286259255,
-                        y: -118.26171428816666,
-                        width: 20,
-                        height: 20,
-                        movement: {
-                            point1: { x: 60, y: -20 },
-                            point2: { x: 460, y: -200 },
-                            cycleTime: 7,
-                            delay: 0
-                        }
-                    }
-                ],
-                growers: [],
-                shrinkers: [],
-                defaultSizeBlocks: [],
-                backgroundBlocks: [],
-                foregroundBlocks: [],
-                start: { x: 0, y: -40, width: 40, height: 40 },
-                finish: { x: 480, y: -40, width: 40, height: 40 },
-                physics: {
-                    gravity: 0.042,
-                    moveSpeed: 0.28,
-                    jumpPower: 3.7,
-                    maxSpeed: 3.5,
-                    friction: 0.94,
-                    airRes: 0.88,
-                    fastFallMultiplier: 2
-                }
-            },
-            {
-                id: 'backtrack',
-                name: 'Backtrack',
-                difficulty: 'Medium',
-                description: 'Navigate through vertical challenges - grow and shrink wisely!',
-                platforms: [
-                    { x: -40, y: 0, width: 200, height: 40 },
-                    { x: 320, y: 0, width: 640, height: 40 },
-                    { x: 1040, y: 0, width: 680, height: 40 },
-                    { x: 400, y: -360, width: 40, height: 340 },
-                    { x: -40, y: -400, width: 200, height: 40 },
-                    { x: 320, y: -400, width: 120, height: 40 },
-                    { x: 680, y: -400, width: 440, height: 40 },
-                    { x: 1360, y: -400, width: 360, height: 40 },
-                    { x: 760, y: -240, width: 40, height: 240 },
-                    { x: -40, y: 40, width: 40, height: 280 },
-                    { x: -40, y: -680, width: 40, height: 280 },
-                    { x: -40, y: -720, width: 400, height: 40 },
-                    { x: -40, y: 320, width: 400, height: 40 },
-                    { x: 320, y: -680, width: 40, height: 40 },
-                    { x: 320, y: -480, width: 40, height: 80 },
-                    { x: 320, y: 40, width: 40, height: 80 },
-                    { x: 320, y: 280, width: 40, height: 40 },
-                    { x: 0, y: 240, width: 40, height: 40 },
-                    { x: 120, y: 160, width: 80, height: 40 },
-                    { x: 280, y: 80, width: 40, height: 40 },
-                    { x: 0, y: -640, width: 40, height: 40 },
-                    { x: 120, y: -560, width: 80, height: 40 },
-                    { x: 280, y: -480, width: 40, height: 40 },
-                    { x: 360, y: -680, width: 280, height: 40 },
-                    { x: 440, y: 280, width: 640, height: 40 },
-                    { x: 480, y: -80, width: 40, height: 40 },
-                    { x: 480, y: -240, width: 40, height: 40 },
-                    { x: 1080, y: -360, width: 40, height: 340 },
-                    { x: 1040, y: 40, width: 40, height: 240 },
-                    { x: 920, y: 200, width: 120, height: 40 },
-                    { x: 960, y: 120, width: 80, height: 40 },
-                    { x: 1000, y: 40, width: 40, height: 40 },
-                    { x: 1160, y: -80, width: 40, height: 40 },
-                    { x: 1160, y: -240, width: 40, height: 40 },
-                    { x: 840, y: -680, width: 520, height: 40 },
-                    { x: 1320, y: -640, width: 40, height: 440 },
-                    { x: 1440, y: -240, width: 40, height: 240 },
-                    { x: 740, y: 100, width: 80, height: 160 },
-                    { x: -40, y: 360, width: 40, height: 80 },
-                    { x: 0, y: 400, width: 440, height: 40 },
-                    { x: 320, y: 120, width: 40, height: 160 },
-                    { x: 400, y: 320, width: 40, height: 80 },
-                    { x: -40, y: -760, width: 40, height: 40 },
-                    { x: -40, y: -800, width: 920, height: 40 },
-                    { x: 640, y: -680, width: 40, height: 480 },
-                    { x: 840, y: -760, width: 40, height: 80 },
-                    { x: 680, y: -560, width: 40, height: 40 }
-                ],
-                hazards: [
-                    { x: -80, y: -800, width: 40, height: 1240 }
-                ],
-                growers: [
-                    { x: 0, y: -680, width: 320, height: 40 },
-                    { x: 0, y: -760, width: 400, height: 40 }
-                ],
-                shrinkers: [
-                    { x: 0, y: 280, width: 320, height: 40 },
-                    { x: 0, y: 360, width: 400, height: 40 }
-                ],
-                defaultSizeBlocks: [
-                    { x: 520, y: -360, width: 40, height: 360 },
-                    { x: 880, y: -360, width: 40, height: 360 },
-                    { x: 1200, y: -360, width: 40, height: 360 },
-                    { x: 1560, y: -360, width: 40, height: 360 }
-                ],
-                backgroundBlocks: [],
-                foregroundBlocks: [],
-                start: { x: 0, y: -40, width: 40, height: 40 },
-                finish: { x: 1680, y: -360, width: 40, height: 360 }
-            },
-            {
-                id: 'khalil_map',
-                name: 'Khalil Map',
-                difficulty: 'Extreme',
-                description: 'An extreme challenge with moving hazards and precise platforming!',
-                platforms: [
-                    { x: 160, y: 0, width: 3840, height: 40 },
-                    { x: 560, y: -160, width: 400, height: 40 },
-                    { x: 920, y: -120, width: 40, height: 120 },
-                    { x: 480, y: -200, width: 40, height: 120 },
-                    { x: 480, y: -240, width: 480, height: 40 },
-                    { x: 480, y: -80, width: 400, height: 40 },
-                    { x: 1200, y: -360, width: 80, height: 40 },
-                    { x: 960, y: -160, width: 40, height: 40 },
-                    { x: 1640, y: -120, width: 40, height: 120 },
-                    { x: 1920, y: -120, width: 40, height: 120 },
-                    { x: 2200, y: -80, width: 40, height: 80 },
-                    { x: 2440, y: -40, width: 40, height: 40 },
-                    { x: 2560, y: -80, width: 40, height: 80 },
-                    { x: 2640, y: -160, width: 40, height: 160 },
-                    { x: 2720, y: -240, width: 40, height: 240 },
-                    { x: 2640, y: -360, width: 80, height: 40 },
-                    { x: 2640, y: -520, width: 40, height: 160 },
-                    { x: 2720, y: -440, width: 520, height: 40 },
-                    { x: 2680, y: -520, width: 600, height: 40 },
-                    { x: 3240, y: -40, width: 40, height: 40 },
-                    { x: 3400, y: -120, width: 40, height: 40 },
-                    { x: 3560, y: -200, width: 40, height: 40 },
-                    { x: 3720, y: -320, width: 40, height: 40 },
-                    { x: 3560, y: -440, width: 40, height: 40 },
-                    { x: 3720, y: -560, width: 40, height: 40 },
-                    { x: 1480, y: -240, width: 40, height: 80 },
-                    { x: 1400, y: -400, width: 40, height: 40 },
-                    { x: 160, y: 40, width: 40, height: 960 },
-                    { x: 0, y: 40, width: 40, height: 840 },
-                    { x: -160, y: 1000, width: 360, height: 40 },
-                    { x: -560, y: 720, width: 160, height: 80 },
-                    { x: -480, y: 400, width: 80, height: 80 },
-                    { x: -800, y: 240, width: 160, height: 80 },
-                    { x: -560, y: 0, width: 600, height: 40 },
-                    { x: -560, y: -40, width: 40, height: 40 },
-                    { x: -1000, y: 0, width: 160, height: 80 }
-                ],
-                hazards: [
-                    { x: -280, y: -700, width: 40, height: 680, movement: { point1: { x: -280, y: -360 }, point2: { x: 4960, y: -360 }, cycleTime: 88, delay: 4.5 } },
-                    { x: 200, y: -80, width: 40, height: 80 },
-                    { x: 1360, y: -480, width: 40, height: 480 },
-                    { x: 1680, y: -40, width: 240, height: 40 },
-                    { x: 480, y: -600, width: 40, height: 320 },
-                    { x: 120, y: 960, width: 40, height: 40 },
-                    { x: -240, y: 800, width: 80, height: 80 },
-                    { x: -80, y: -440, width: 40, height: 440 },
-                    { x: -720, y: -80, width: 80, height: 200 },
-                    { x: 120, y: 60, width: 40, height: 40, movement: { point1: { x: 120, y: 80 }, point2: { x: -40, y: 80 }, cycleTime: 3, delay: 8 } },
-                    { x: 2800, y: -400, width: 80, height: 400 },
-                    { x: -1200, y: 1120, width: 6600, height: 40 },
-                    { x: 5360, y: -1120, width: 40, height: 2240 },
-                    { x: -1200, y: -1160, width: 6600, height: 40 },
-                    { x: -1200, y: -1120, width: 40, height: 2240 }
-                ],
-                growers: [
-                    { x: 80, y: -80, width: 40, height: 40 }
-                ],
-                shrinkers: [],
-                defaultSizeBlocks: [
-                    { x: -200, y: -440, width: 80, height: 440 }
-                ],
-                backgroundBlocks: [],
-                foregroundBlocks: [],
-                start: { x: 0, y: -80, width: 40, height: 40 },
-                finish: { x: -120, y: -440, width: 40, height: 440 }
-            },
-            {
-                id: 'only_up',
-                name: 'Only Up',
-                difficulty: 'Easy',
-                description: 'A simple vertical climb - just keep going up!',
-                platforms: [
-                    { x: -120, y: 0, width: 280, height: 40 },
-                    { x: 120, y: -160, width: 80, height: 40 },
-                    { x: 160, y: -320, width: 80, height: 40 },
-                    { x: -120, y: -480, width: 80, height: 40 },
-                    { x: 0, y: -600, width: 40, height: 40 },
-                    { x: 0, y: -760, width: 40, height: 40 },
-                    { x: 0, y: -880, width: 40, height: 40 },
-                    { x: -120, y: -1120, width: 120, height: 40 },
-                    { x: 0, y: -1240, width: 120, height: 40 },
-                    { x: -200, y: -1360, width: 120, height: 40 },
-                    { x: -80, y: -1480, width: 120, height: 40 },
-                    { x: 80, y: -1000, width: 120, height: 40 },
-                    { x: 0, y: -1600, width: 40, height: 40 },
-                    { x: 0, y: -1760, width: 80, height: 40 },
-                    { x: -40, y: -1880, width: 120, height: 40 },
-                    { x: -40, y: -2000, width: 160, height: 40 },
-                    { x: -80, y: -2120, width: 200, height: 40 },
-                    { x: -80, y: -2240, width: 240, height: 40 },
-                    { x: -120, y: -2360, width: 280, height: 40 }
-                ],
-                hazards: [
-                    { x: -440, y: 120, width: 920, height: 40 },
-                    { x: -440, y: -2600, width: 920, height: 40 },
-                    { x: -480, y: -2600, width: 40, height: 2760 },
-                    { x: 480, y: -2600, width: 40, height: 2760 }
-                ],
-                growers: [],
-                shrinkers: [],
-                defaultSizeBlocks: [],
-                backgroundBlocks: [],
-                foregroundBlocks: [],
-                start: { x: 0, y: -40, width: 40, height: 40 },
-                finish: { x: -40, y: -2440, width: 120, height: 80 }
-            },
-            {
-                id: 'the_curve',
-                name: 'The Curve',
-                difficulty: 'Medium',
-                description: 'Follow the parabolic path upward - timing and precision required!',
-                platforms: [
-                    { x: 0, y: 0, width: 240, height: 40 },
-                    { x: 280, y: -40, width: 200, height: 40 },
-                    { x: 520, y: -80, width: 160, height: 40 },
-                    { x: 720, y: -120, width: 120, height: 40 },
-                    { x: 880, y: -160, width: 80, height: 40 },
-                    { x: 1000, y: -200, width: 40, height: 40 },
-                    { x: 1040, y: -320, width: 40, height: 80 },
-                    { x: 1080, y: -480, width: 40, height: 120 },
-                    { x: 1120, y: -680, width: 40, height: 160 },
-                    { x: 1160, y: -920, width: 40, height: 200 },
-                    { x: 1200, y: -1200, width: 40, height: 240 },
-                    { x: -320, y: 40, width: 280, height: 40 },
-                    { x: -680, y: 80, width: 320, height: 40 },
-                    { x: -1120, y: 120, width: 400, height: 40 },
-                    { x: 1240, y: -1520, width: 40, height: 280 },
-                    { x: 1280, y: -1880, width: 40, height: 320 },
-                    { x: 1320, y: -2280, width: 40, height: 360 },
-                    { x: 1360, y: -2720, width: 40, height: 400 },
-                    { x: 1030, y: -250, width: 10, height: 10 },
-                    { x: 1070, y: -400, width: 10, height: 10 },
-                    { x: 1110, y: -560, width: 10, height: 10 },
-                    { x: 1110, y: -640, width: 10, height: 10 },
-                    { x: 1150, y: -760, width: 10, height: 10 },
-                    { x: 1150, y: -840, width: 10, height: 10 },
-                    { x: 1180, y: -1080, width: 20, height: 20 },
-                    { x: 1220, y: -1360, width: 20, height: 20 },
-                    { x: 1260, y: -1640, width: 20, height: 20 },
-                    { x: 1260, y: -1760, width: 20, height: 20 },
-                    { x: 1300, y: -2040, width: 20, height: 20 },
-                    { x: 1300, y: -2180, width: 20, height: 20 },
-                    { x: 1340, y: -2400, width: 20, height: 20 },
-                    { x: 1340, y: -2520, width: 20, height: 20 },
-                    { x: 1340, y: -2640, width: 20, height: 20 },
-                    { x: 1400, y: -3200, width: 40, height: 440 },
-                    { x: 1440, y: -3680, width: 40, height: 440 },
-                    { x: 1360, y: -3040, width: 40, height: 40 },
-                    { x: 1320, y: -3960, width: 280, height: 40 },
-                    { x: -1600, y: 160, width: 440, height: 40 },
-                    { x: -2120, y: 200, width: 480, height: 40 },
-                    { x: 1400, y: -3480, width: 40, height: 40 },
-                    { x: 1400, y: -3720, width: 120, height: 40 }
-                ],
-                hazards: [],
-                growers: [
-                    { x: 1360, y: -2760, width: 40, height: 40 },
-                    { x: -2120, y: 120, width: 40, height: 80 },
-                    { x: -2080, y: 120, width: 40, height: 40 },
-                    { x: -2040, y: 120, width: 40, height: 80 }
-                ],
-                shrinkers: [
-                    { x: 280, y: -280, width: 20, height: 240 }
-                ],
-                defaultSizeBlocks: [
-                    { x: 1160, y: -930, width: 40, height: 10 },
-                    { x: 1560, y: -4160, width: 40, height: 200 },
-                    { x: 1360, y: -4160, width: 200, height: 40 },
-                    { x: 1320, y: -4160, width: 40, height: 200 },
-                    { x: -680, y: -280, width: 20, height: 360 }
-                ],
-                backgroundBlocks: [],
-                foregroundBlocks: [],
-                start: { x: 1320, y: -2840, width: 40, height: 40 },
-                finish: { x: 1400, y: -4080, width: 120, height: 120 }
             }
         ];
 
-        // Old maps removed - now using single custom level
-        /*
-            {
-                id: 'spike_path',
-                name: 'The Zigzag',
-                difficulty: 'Medium',
-                description: 'Left and right navigation',
-                platforms: [
-                    // Floor
-                    { x: 0, y: 570, width: 2000, height: 30 },
-                    // Left wall
-                    { x: 0, y: 0, width: 20, height: 600 },
-                    // Right wall
-                    { x: 1980, y: 0, width: 20, height: 600 },
-                    // Ceiling
-                    { x: 0, y: 0, width: 2000, height: 20 },
-                    // Zigzag pattern - alternating left and right
-                    { x: 100, y: 500, width: 150, height: 20 },
-                    { x: 350, y: 450, width: 150, height: 20 },
-                    { x: 100, y: 400, width: 150, height: 20 },
-                    { x: 350, y: 350, width: 150, height: 20 },
-                    { x: 100, y: 300, width: 150, height: 20 },
-                    { x: 350, y: 250, width: 150, height: 20 },
-                    // Middle section
-                    { x: 600, y: 400, width: 150, height: 20 },
-                    { x: 850, y: 350, width: 150, height: 20 },
-                    { x: 1100, y: 300, width: 150, height: 20 },
-                    // Right zigzag
-                    { x: 1350, y: 450, width: 150, height: 20 },
-                    { x: 1600, y: 400, width: 150, height: 20 },
-                    { x: 1350, y: 350, width: 150, height: 20 },
-                    { x: 1600, y: 300, width: 150, height: 20 },
-                    { x: 1800, y: 250, width: 150, height: 20 }
-                ],
-                hazards: [
-                    { x: 250, y: 570, width: 100, height: 10 },
-                    { x: 500, y: 570, width: 100, height: 10 },
-                    { x: 750, y: 570, width: 100, height: 10 },
-                    { x: 1000, y: 570, width: 100, height: 10 },
-                    { x: 1250, y: 570, width: 100, height: 10 },
-                    { x: 1500, y: 570, width: 100, height: 10 }
-                ],
-                start: { x: 50, y: 520 },
-                finish: { x: 1850, y: 200, width: 100, height: 50 }
-            },
-            {
-                id: 'rising_challenge',
-                name: 'The Pyramid',
-                difficulty: 'Hard',
-                description: 'Climb to the peak',
-                platforms: [
-                    // Floor
-                    { x: 0, y: 570, width: 2200, height: 30 },
-                    // Left wall
-                    { x: 0, y: 0, width: 20, height: 600 },
-                    // Right wall
-                    { x: 2180, y: 0, width: 20, height: 600 },
-                    // Ceiling
-                    { x: 0, y: 0, width: 2200, height: 20 },
-                    // Pyramid structure - climb up one side, down the other
-                    { x: 100, y: 520, width: 150, height: 20 },
-                    { x: 300, y: 470, width: 120, height: 20 },
-                    { x: 480, y: 420, width: 110, height: 20 },
-                    { x: 650, y: 370, width: 100, height: 20 },
-                    { x: 810, y: 320, width: 90, height: 20 },
-                    { x: 960, y: 270, width: 80, height: 20 },
-                    { x: 1100, y: 220, width: 80, height: 20 },  // Peak
-                    { x: 1240, y: 270, width: 80, height: 20 },
-                    { x: 1380, y: 320, width: 90, height: 20 },
-                    { x: 1530, y: 370, width: 100, height: 20 },
-                    { x: 1690, y: 420, width: 110, height: 20 },
-                    { x: 1860, y: 470, width: 120, height: 20 },
-                    { x: 2040, y: 520, width: 130, height: 20 }
-                ],
-                hazards: [
-                    { x: 250, y: 570, width: 50, height: 10 },
-                    { x: 420, y: 570, width: 60, height: 10 },
-                    { x: 590, y: 570, width: 60, height: 10 },
-                    { x: 750, y: 570, width: 60, height: 10 },
-                    { x: 900, y: 570, width: 60, height: 10 },
-                    { x: 1040, y: 570, width: 60, height: 10 },
-                    { x: 1180, y: 570, width: 60, height: 10 },
-                    { x: 1320, y: 570, width: 60, height: 10 },
-                    { x: 1470, y: 570, width: 60, height: 10 },
-                    { x: 1630, y: 570, width: 60, height: 10 },
-                    { x: 1800, y: 570, width: 60, height: 10 },
-                    { x: 1980, y: 570, width: 60, height: 10 }
-                ],
-                start: { x: 50, y: 520 },
-                finish: { x: 2080, y: 470, width: 80, height: 50 }
-            },
-            {
-                id: 'narrow_escape',
-                name: 'The Gauntlet',
-                difficulty: 'Extreme',
-                description: 'Speed and precision',
-                platforms: [
-                    // Floor
-                    { x: 0, y: 570, width: 1600, height: 30 },
-                    // Left wall
-                    { x: 0, y: 0, width: 20, height: 600 },
-                    // Right wall
-                    { x: 1580, y: 0, width: 20, height: 600 },
-                    // Ceiling
-                    { x: 0, y: 0, width: 1600, height: 20 },
-                    // Long horizontal run with many small platforms
-                    { x: 150, y: 520, width: 60, height: 20 },
-                    { x: 260, y: 480, width: 60, height: 20 },
-                    { x: 370, y: 440, width: 60, height: 20 },
-                    { x: 480, y: 400, width: 60, height: 20 },
-                    { x: 590, y: 360, width: 60, height: 20 },
-                    { x: 700, y: 320, width: 60, height: 20 },
-                    { x: 810, y: 360, width: 60, height: 20 },
-                    { x: 920, y: 400, width: 60, height: 20 },
-                    { x: 1030, y: 440, width: 60, height: 20 },
-                    { x: 1140, y: 480, width: 60, height: 20 },
-                    { x: 1250, y: 440, width: 60, height: 20 },
-                    { x: 1360, y: 400, width: 60, height: 20 },
-                    { x: 1470, y: 360, width: 100, height: 20 }
-                ],
-                hazards: [
-                    { x: 210, y: 570, width: 50, height: 10 },
-                    { x: 320, y: 570, width: 50, height: 10 },
-                    { x: 430, y: 570, width: 50, height: 10 },
-                    { x: 540, y: 570, width: 50, height: 10 },
-                    { x: 650, y: 570, width: 50, height: 10 },
-                    { x: 760, y: 570, width: 50, height: 10 },
-                    { x: 870, y: 570, width: 50, height: 10 },
-                    { x: 980, y: 570, width: 50, height: 10 },
-                    { x: 1090, y: 570, width: 50, height: 10 },
-                    { x: 1200, y: 570, width: 50, height: 10 },
-                    { x: 1310, y: 570, width: 50, height: 10 },
-                    { x: 1420, y: 570, width: 50, height: 10 }
-                ],
-                start: { x: 50, y: 520 },
-                finish: { x: 1490, y: 310, width: 70, height: 50 }
-            },
-            {
-                id: 'insanity',
-                name: 'The Towers',
-                difficulty: 'Insane',
-                description: 'Vertical ascension challenge',
-                platforms: [
-                    // Floor
-                    { x: 0, y: 570, width: 2400, height: 30 },
-                    // Left wall
-                    { x: 0, y: 0, width: 20, height: 600 },
-                    // Right wall
-                    { x: 2380, y: 0, width: 20, height: 600 },
-                    // Ceiling
-                    { x: 0, y: 0, width: 2400, height: 20 },
-                    // Four towers to climb
-                    // Tower 1
-                    { x: 100, y: 520, width: 80, height: 20 },
-                    { x: 120, y: 470, width: 60, height: 20 },
-                    { x: 130, y: 420, width: 50, height: 20 },
-                    { x: 135, y: 370, width: 40, height: 20 },
-                    { x: 140, y: 320, width: 35, height: 20 },
-                    { x: 145, y: 270, width: 30, height: 20 },
-                    // Jump to Tower 2
-                    { x: 400, y: 280, width: 30, height: 20 },
-                    { x: 395, y: 330, width: 35, height: 20 },
-                    { x: 390, y: 380, width: 40, height: 20 },
-                    { x: 385, y: 430, width: 50, height: 20 },
-                    { x: 380, y: 480, width: 60, height: 20 },
-                    { x: 375, y: 520, width: 80, height: 20 },
-                    // Jump to Tower 3
-                    { x: 650, y: 510, width: 80, height: 20 },
-                    { x: 655, y: 460, width: 60, height: 20 },
-                    { x: 660, y: 410, width: 50, height: 20 },
-                    { x: 665, y: 360, width: 40, height: 20 },
-                    { x: 670, y: 310, width: 35, height: 20 },
-                    { x: 675, y: 260, width: 30, height: 20 },
-                    { x: 680, y: 210, width: 25, height: 20 },
-                    // Jump to Tower 4
-                    { x: 950, y: 220, width: 25, height: 20 },
-                    { x: 945, y: 270, width: 30, height: 20 },
-                    { x: 940, y: 320, width: 35, height: 20 },
-                    { x: 935, y: 370, width: 40, height: 20 },
-                    { x: 930, y: 420, width: 50, height: 20 },
-                    { x: 925, y: 470, width: 60, height: 20 },
-                    { x: 920, y: 520, width: 80, height: 20 },
-                    // Final platforms
-                    { x: 1150, y: 450, width: 100, height: 20 },
-                    { x: 1350, y: 380, width: 100, height: 20 },
-                    { x: 1550, y: 450, width: 100, height: 20 }
-                ],
-                hazards: [
-                    { x: 180, y: 570, width: 220, height: 10 },
-                    { x: 455, y: 570, width: 195, height: 10 },
-                    { x: 705, y: 570, width: 215, height: 10 },
-                    { x: 1000, y: 570, width: 150, height: 10 },
-                    { x: 1250, y: 570, width: 100, height: 10 },
-                    { x: 1450, y: 570, width: 100, height: 10 }
-                ],
-                start: { x: 50, y: 520 },
-                finish: { x: 1580, y: 400, width: 60, height: 50 }
-            },
-            {
-                id: 'mega_jump',
-                name: 'The Chasm',
-                difficulty: 'Extreme',
-                description: 'Master long jumps',
-                platforms: [
-                    // Floor
-                    { x: 0, y: 570, width: 2600, height: 30 },
-                    // Left wall
-                    { x: 0, y: 0, width: 20, height: 600 },
-                    // Right wall
-                    { x: 2580, y: 0, width: 20, height: 600 },
-                    // Ceiling
-                    { x: 0, y: 0, width: 2600, height: 20 },
-                    // Wide gaps between platforms - requires long jumps
-                    { x: 100, y: 500, width: 100, height: 20 },
-                    { x: 400, y: 480, width: 90, height: 20 },
-                    { x: 680, y: 460, width: 80, height: 20 },
-                    { x: 950, y: 440, width: 70, height: 20 },
-                    { x: 1210, y: 420, width: 60, height: 20 },
-                    { x: 1460, y: 400, width: 60, height: 20 },
-                    { x: 1710, y: 420, width: 60, height: 20 },
-                    { x: 1960, y: 440, width: 70, height: 20 },
-                    { x: 2220, y: 460, width: 80, height: 20 },
-                    { x: 2480, y: 480, width: 100, height: 20 }
-                ],
-                hazards: [
-                    { x: 200, y: 570, width: 200, height: 10 },
-                    { x: 490, y: 570, width: 190, height: 10 },
-                    { x: 760, y: 570, width: 190, height: 10 },
-                    { x: 1020, y: 570, width: 190, height: 10 },
-                    { x: 1270, y: 570, width: 190, height: 10 },
-                    { x: 1520, y: 570, width: 190, height: 10 },
-                    { x: 1770, y: 570, width: 190, height: 10 },
-                    { x: 2030, y: 570, width: 190, height: 10 },
-                    { x: 2300, y: 570, width: 180, height: 10 }
-                ],
-                start: { x: 50, y: 450 },
-                finish: { x: 2500, y: 430, width: 70, height: 50 }
-            },
-            {
-                id: 'precision_valley',
-                name: 'The Spiral',
-                difficulty: 'Insane',
-                description: 'Navigate the twisting path',
-                platforms: [
-                    { x: 0, y: 550, width: 70, height: 20 },
-                    { x: 150, y: 510, width: 38, height: 20 },
-                    { x: 270, y: 470, width: 35, height: 20 },
-                    { x: 390, y: 430, width: 33, height: 20 },
-                    { x: 510, y: 390, width: 30, height: 20 },
-                    { x: 630, y: 350, width: 30, height: 20 },
-                    { x: 750, y: 310, width: 30, height: 20 },
-                    { x: 870, y: 270, width: 30, height: 20 },
-                    { x: 990, y: 230, width: 28, height: 20 },
-                    { x: 1110, y: 270, width: 30, height: 20 },
-                    { x: 1230, y: 310, width: 30, height: 20 },
-                    { x: 1350, y: 350, width: 30, height: 20 },
-                    { x: 1470, y: 310, width: 30, height: 20 },
-                    { x: 1590, y: 270, width: 30, height: 20 },
-                    { x: 1710, y: 230, width: 28, height: 20 },
-                    { x: 1830, y: 190, width: 28, height: 20 },
-                    { x: 1950, y: 230, width: 28, height: 20 },
-                    { x: 2070, y: 270, width: 30, height: 20 },
-                    { x: 2190, y: 310, width: 30, height: 20 },
-                    { x: 2310, y: 350, width: 30, height: 20 },
-                    { x: 2430, y: 390, width: 30, height: 20 },
-                    { x: 2550, y: 430, width: 33, height: 20 },
-                    { x: 2670, y: 470, width: 35, height: 20 },
-                    { x: 2790, y: 510, width: 38, height: 20 },
-                    { x: 2910, y: 550, width: 40, height: 20 },
-                    { x: 3030, y: 510, width: 38, height: 20 },
-                    { x: 3150, y: 470, width: 90, height: 20 }
-                ],
-                hazards: [
-                    { x: 70, y: 570, width: 80, height: 10 },
-                    { x: 188, y: 570, width: 82, height: 10 },
-                    { x: 305, y: 570, width: 85, height: 10 },
-                    { x: 423, y: 570, width: 87, height: 10 },
-                    { x: 540, y: 570, width: 90, height: 10 },
-                    { x: 660, y: 570, width: 90, height: 10 },
-                    { x: 780, y: 570, width: 90, height: 10 },
-                    { x: 900, y: 570, width: 90, height: 10 },
-                    { x: 1018, y: 570, width: 92, height: 10 },
-                    { x: 1140, y: 570, width: 90, height: 10 },
-                    { x: 1260, y: 570, width: 90, height: 10 },
-                    { x: 1380, y: 570, width: 90, height: 10 },
-                    { x: 1500, y: 570, width: 90, height: 10 },
-                    { x: 1620, y: 570, width: 90, height: 10 },
-                    { x: 1738, y: 570, width: 92, height: 10 },
-                    { x: 1858, y: 570, width: 92, height: 10 },
-                    { x: 1978, y: 570, width: 92, height: 10 },
-                    { x: 2100, y: 570, width: 90, height: 10 },
-                    { x: 2220, y: 570, width: 90, height: 10 },
-                    { x: 2340, y: 570, width: 90, height: 10 },
-                    { x: 2460, y: 570, width: 90, height: 10 },
-                    { x: 2583, y: 570, width: 87, height: 10 },
-                    { x: 2705, y: 570, width: 85, height: 10 },
-                    { x: 2828, y: 570, width: 82, height: 10 },
-                    { x: 2950, y: 570, width: 80, height: 10 },
-                    { x: 3068, y: 570, width: 82, height: 10 }
-                ],
-                start: { x: 20, y: 500 },
-                finish: { x: 3160, y: 420, width: 70, height: 50 }
-            },
-            {
-                id: 'sky_fortress',
-                name: 'The Final Test',
-                difficulty: 'GODLIKE',
-                description: 'Only legends survive',
-                platforms: [
-                    { x: 0, y: 550, width: 65, height: 20 },
-                    { x: 140, y: 510, width: 32, height: 20 },
-                    { x: 260, y: 470, width: 30, height: 20 },
-                    { x: 380, y: 430, width: 28, height: 20 },
-                    { x: 500, y: 390, width: 26, height: 20 },
-                    { x: 620, y: 350, width: 26, height: 20 },
-                    { x: 740, y: 310, width: 26, height: 20 },
-                    { x: 860, y: 270, width: 26, height: 20 },
-                    { x: 980, y: 230, width: 24, height: 20 },
-                    { x: 1100, y: 190, width: 24, height: 20 },
-                    { x: 1220, y: 150, width: 24, height: 20 },
-                    { x: 1340, y: 110, width: 24, height: 20 },
-                    { x: 1460, y: 150, width: 24, height: 20 },
-                    { x: 1580, y: 190, width: 24, height: 20 },
-                    { x: 1700, y: 230, width: 24, height: 20 },
-                    { x: 1820, y: 270, width: 26, height: 20 },
-                    { x: 1940, y: 230, width: 24, height: 20 },
-                    { x: 2060, y: 190, width: 24, height: 20 },
-                    { x: 2180, y: 150, width: 24, height: 20 },
-                    { x: 2300, y: 110, width: 24, height: 20 },
-                    { x: 2420, y: 70, width: 24, height: 20 },
-                    { x: 2540, y: 110, width: 24, height: 20 },
-                    { x: 2660, y: 150, width: 24, height: 20 },
-                    { x: 2780, y: 190, width: 24, height: 20 },
-                    { x: 2900, y: 230, width: 24, height: 20 },
-                    { x: 3020, y: 270, width: 26, height: 20 },
-                    { x: 3140, y: 310, width: 26, height: 20 },
-                    { x: 3260, y: 350, width: 26, height: 20 },
-                    { x: 3380, y: 390, width: 28, height: 20 },
-                    { x: 3500, y: 430, width: 30, height: 20 },
-                    { x: 3620, y: 470, width: 32, height: 20 },
-                    { x: 3740, y: 510, width: 35, height: 20 },
-                    { x: 3860, y: 470, width: 32, height: 20 },
-                    { x: 3980, y: 430, width: 30, height: 20 },
-                    { x: 4100, y: 390, width: 80, height: 20 }
-                ],
-                hazards: [
-                    { x: 65, y: 570, width: 75, height: 10 },
-                    { x: 172, y: 570, width: 88, height: 10 },
-                    { x: 290, y: 570, width: 90, height: 10 },
-                    { x: 408, y: 570, width: 92, height: 10 },
-                    { x: 526, y: 570, width: 94, height: 10 },
-                    { x: 646, y: 570, width: 94, height: 10 },
-                    { x: 766, y: 570, width: 94, height: 10 },
-                    { x: 886, y: 570, width: 94, height: 10 },
-                    { x: 1004, y: 570, width: 96, height: 10 },
-                    { x: 1124, y: 570, width: 96, height: 10 },
-                    { x: 1244, y: 570, width: 96, height: 10 },
-                    { x: 1364, y: 570, width: 96, height: 10 },
-                    { x: 1484, y: 570, width: 96, height: 10 },
-                    { x: 1604, y: 570, width: 96, height: 10 },
-                    { x: 1724, y: 570, width: 96, height: 10 },
-                    { x: 1846, y: 570, width: 94, height: 10 },
-                    { x: 1964, y: 570, width: 96, height: 10 },
-                    { x: 2084, y: 570, width: 96, height: 10 },
-                    { x: 2204, y: 570, width: 96, height: 10 },
-                    { x: 2324, y: 570, width: 96, height: 10 },
-                    { x: 2444, y: 570, width: 96, height: 10 },
-                    { x: 2564, y: 570, width: 96, height: 10 },
-                    { x: 2684, y: 570, width: 96, height: 10 },
-                    { x: 2804, y: 570, width: 96, height: 10 },
-                    { x: 2924, y: 570, width: 96, height: 10 },
-                    { x: 3046, y: 570, width: 94, height: 10 },
-                    { x: 3166, y: 570, width: 94, height: 10 },
-                    { x: 3286, y: 570, width: 94, height: 10 },
-                    { x: 3408, y: 570, width: 92, height: 10 },
-                    { x: 3530, y: 570, width: 90, height: 10 },
-                    { x: 3652, y: 570, width: 88, height: 10 },
-                    { x: 3775, y: 570, width: 85, height: 10 },
-                    { x: 3892, y: 570, width: 88, height: 10 },
-                    { x: 4010, y: 570, width: 90, height: 10 }
-                ],
-                start: { x: 20, y: 500 },
-                finish: { x: 4120, y: 340, width: 50, height: 50 }
+        // Player class for rendering
+        class Player {
+            constructor(x, y, cosmetics) {
+                this.x = x;
+                this.y = y;
+                this.width = 40;
+                this.height = 40;
+                this.velocityX = 0;
+                this.velocityY = 0;
+                this.cosmetics = cosmetics || { skin: 'default_orange', trail: 'none', hat: 'none', effect: 'none' };
+                this.trail = [];
+                this.currentSize = 40;
             }
-        */
 
-        // Check authentication
+            getSkinColor() {
+                const skin = cosmeticsCatalog.skins.find(s => s.id === this.cosmetics.skin);
+                return skin ? skin.color : '#FF8C42';
+            }
+
+            updateTrail() {
+                this.trail.push({ x: this.x, y: this.y });
+                if (this.trail.length > 10) {
+                    this.trail.shift();
+                }
+            }
+
+            draw(ctx, cameraX, cameraY, showName, name) {
+                const screenX = this.x - cameraX;
+                const screenY = this.y - cameraY;
+
+                // Draw trail
+                if (this.cosmetics.trail !== 'none' && this.trail.length > 1) {
+                    ctx.save();
+                    ctx.globalAlpha = 0.5;
+                    for (let i = 0; i < this.trail.length - 1; i++) {
+                        const alpha = i / this.trail.length;
+                        const trailX = this.trail[i].x - cameraX;
+                        const trailY = this.trail[i].y - cameraY;
+
+                        ctx.globalAlpha = alpha * 0.5;
+
+                        if (this.cosmetics.trail === 'rainbow') {
+                            ctx.fillStyle = `hsl(${(i * 36) % 360}, 100%, 50%)`;
+                        } else if (this.cosmetics.trail === 'fire') {
+                            ctx.fillStyle = i % 2 === 0 ? '#FF6600' : '#FF0000';
+                        } else if (this.cosmetics.trail === 'ice') {
+                            ctx.fillStyle = i % 2 === 0 ? '#00FFFF' : '#FFFFFF';
+                        } else if (this.cosmetics.trail === 'star') {
+                            ctx.fillStyle = '#FFFF00';
+                        }
+
+                        ctx.fillRect(trailX, trailY, this.width, this.height);
+                    }
+                    ctx.restore();
+                }
+
+                // Draw effect (behind player)
+                if (this.cosmetics.effect === 'glow') {
+                    ctx.save();
+                    ctx.shadowColor = this.getSkinColor();
+                    ctx.shadowBlur = 20;
+                    ctx.fillStyle = this.getSkinColor();
+                    ctx.fillRect(screenX, screenY, this.width, this.height);
+                    ctx.restore();
+                } else if (this.cosmetics.effect === 'shadow_clone') {
+                    ctx.save();
+                    ctx.globalAlpha = 0.3;
+                    ctx.fillStyle = this.getSkinColor();
+                    ctx.fillRect(screenX - 10, screenY + 5, this.width, this.height);
+                    ctx.restore();
+                }
+
+                // Draw player
+                ctx.fillStyle = this.getSkinColor();
+                ctx.fillRect(screenX, screenY, this.width, this.height);
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(screenX, screenY, this.width, this.height);
+
+                // Draw hat
+                if (this.cosmetics.hat === 'crown') {
+                    ctx.fillStyle = '#FFD700';
+                    ctx.beginPath();
+                    ctx.moveTo(screenX + this.width / 2, screenY - 15);
+                    ctx.lineTo(screenX + 5, screenY - 5);
+                    ctx.lineTo(screenX + this.width - 5, screenY - 5);
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (this.cosmetics.hat === 'propeller') {
+                    ctx.strokeStyle = '#666';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(screenX + 10, screenY - 10);
+                    ctx.lineTo(screenX + this.width - 10, screenY - 10);
+                    ctx.stroke();
+                } else if (this.cosmetics.hat === 'halo') {
+                    ctx.strokeStyle = '#FFD700';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(screenX + this.width / 2, screenY - 10, 15, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+
+                // Draw sparkles effect
+                if (this.cosmetics.effect === 'sparkles') {
+                    ctx.fillStyle = '#FFFF00';
+                    for (let i = 0; i < 5; i++) {
+                        const angle = (Date.now() / 100 + i * 72) % 360;
+                        const rad = angle * Math.PI / 180;
+                        const sparkX = screenX + this.width / 2 + Math.cos(rad) * 30;
+                        const sparkY = screenY + this.height / 2 + Math.sin(rad) * 30;
+                        ctx.fillRect(sparkX - 2, sparkY - 2, 4, 4);
+                    }
+                }
+
+                // Draw name
+                if (showName && name) {
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 14px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(name, screenX + this.width / 2, screenY - 10);
+                }
+            }
+        }
+
+        // Initialize user data
+        async function initUserData() {
+            if (!currentUser) return;
+
+            const userRef = database.ref('players/' + currentUser.uid);
+            const snapshot = await userRef.once('value');
+            const data = snapshot.val();
+
+            if (data) {
+                userCredits = data.credits || 0;
+                userCosmetics = data.cosmetics || { skins: ['default_orange'], trails: ['none'], hats: ['none'], effects: ['none'] };
+                equippedCosmetics = data.equippedCosmetics || { skin: 'default_orange', trail: 'none', hat: 'none', effect: 'none' };
+                userStats = data.stats || { racesWon: 0, racesPlayed: 0, totalCreditsEarned: 0 };
+            } else {
+                // Initialize new user
+                await userRef.set({
+                    username: currentUsername,
+                    credits: 0,
+                    cosmetics: userCosmetics,
+                    equippedCosmetics: equippedCosmetics,
+                    stats: userStats
+                });
+            }
+        }
+
+        // Update credits in Firebase
+        async function updateCredits(amount) {
+            userCredits += amount;
+            if (amount > 0) {
+                userStats.totalCreditsEarned += amount;
+            }
+            await database.ref('players/' + currentUser.uid).update({
+                credits: userCredits,
+                stats: userStats
+            });
+        }
+
+        // Main menu (interactive platformer)
+        let menuPlayer = null;
+        let menuKeys = {};
+        let menuPlatforms = [];
+        let menuCameraX = 0;
+        let menuCameraY = 0;
+
+        function initMainMenu() {
+            const canvas = document.getElementById('menuCanvas');
+            const ctx = canvas.getContext('2d');
+
+            canvas.style.display = 'block';
+            document.getElementById('menuHUD').style.display = 'block';
+            document.getElementById('menuUserInfo').innerHTML = `
+                ${currentUsername} | Credits: ${userCredits}
+            `;
+
+            // Create menu platforms with labels
+            menuPlatforms = [
+                { x: 100, y: 600, width: 200, height: 60, label: 'PRACTICE MODE', action: 'practice' },
+                { x: 400, y: 500, width: 200, height: 60, label: 'CREATE PARTY', action: 'createParty' },
+                { x: 700, y: 450, width: 200, height: 60, label: 'JOIN PARTY', action: 'joinParty' },
+                { x: 250, y: 350, width: 200, height: 60, label: 'COSMETIC SHOP', action: 'shop' },
+                { x: 600, y: 300, width: 180, height: 60, label: 'VIEW STATS', action: 'stats' },
+                { x: 100, y: 200, width: 200, height: 60, label: 'LEVEL CREATOR', action: 'creator' },
+                { x: 0, y: 720, width: 1200, height: 80, label: '', action: 'none' } // Ground
+            ];
+
+            menuPlayer = new Player(150, 500, equippedCosmetics);
+
+            // Game loop
+            function menuLoop() {
+                if (canvas.style.display === 'none') return;
+
+                // Update player physics
+                updateMenuPlayer();
+
+                // Render
+                ctx.fillStyle = '#87CEEB';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // Draw platforms
+                for (const platform of menuPlatforms) {
+                    const screenX = platform.x - menuCameraX;
+                    const screenY = platform.y - menuCameraY;
+
+                    if (platform.label) {
+                        ctx.fillStyle = 'rgba(79, 172, 254, 0.3)';
+                        ctx.fillRect(screenX, screenY, platform.width, platform.height);
+                        ctx.strokeStyle = '#4facfe';
+                        ctx.lineWidth = 3;
+                        ctx.strokeRect(screenX, screenY, platform.width, platform.height);
+
+                        ctx.fillStyle = '#4facfe';
+                        ctx.font = 'bold 16px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(platform.label, screenX + platform.width / 2, screenY + platform.height / 2 + 6);
+                    } else {
+                        ctx.fillStyle = '#8B4513';
+                        ctx.fillRect(screenX, screenY, platform.width, platform.height);
+                    }
+                }
+
+                // Draw player
+                menuPlayer.updateTrail();
+                menuPlayer.draw(ctx, menuCameraX, menuCameraY, false);
+
+                requestAnimationFrame(menuLoop);
+            }
+
+            menuLoop();
+        }
+
+        function updateMenuPlayer() {
+            // Apply gravity
+            menuPlayer.velocityY += GRAVITY;
+
+            // Handle input
+            if (menuKeys['a'] || menuKeys['ArrowLeft']) {
+                menuPlayer.velocityX -= MOVE_SPEED;
+            }
+            if (menuKeys['d'] || menuKeys['ArrowRight']) {
+                menuPlayer.velocityX += MOVE_SPEED;
+            }
+
+            // Limit speed
+            menuPlayer.velocityX = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, menuPlayer.velocityX));
+
+            // Apply friction/air resistance
+            let isGrounded = false;
+            for (const platform of menuPlatforms) {
+                if (checkCollision(menuPlayer, platform)) {
+                    if (menuPlayer.velocityY > 0 && menuPlayer.y + menuPlayer.height <= platform.y + 10) {
+                        menuPlayer.y = platform.y - menuPlayer.height;
+                        menuPlayer.velocityY = 0;
+                        isGrounded = true;
+
+                        // Check platform action
+                        if (platform.action && platform.action !== 'none' && menuKeys[' ']) {
+                            executePlatformAction(platform.action);
+                        }
+                    }
+                }
+            }
+
+            menuPlayer.velocityX *= isGrounded ? GROUND_FRICTION : AIR_RESISTANCE;
+
+            // Jump
+            if ((menuKeys['w'] || menuKeys['ArrowUp'] || menuKeys[' ']) && isGrounded) {
+                menuPlayer.velocityY = -JUMP_POWER;
+            }
+
+            // Update position
+            menuPlayer.x += menuPlayer.velocityX;
+            menuPlayer.y += menuPlayer.velocityY;
+
+            // Keep player in bounds
+            if (menuPlayer.x < 0) menuPlayer.x = 0;
+            if (menuPlayer.x > 1200 - menuPlayer.width) menuPlayer.x = 1200 - menuPlayer.width;
+            if (menuPlayer.y > 800) menuPlayer.y = 500;
+
+            // Update camera (simple follow)
+            menuCameraX = 0;
+            menuCameraY = 0;
+        }
+
+        function checkCollision(a, b) {
+            return a.x < b.x + b.width &&
+                   a.x + a.width > b.x &&
+                   a.y < b.y + b.height &&
+                   a.y + a.height > b.y;
+        }
+
+        function executePlatformAction(action) {
+            document.getElementById('menuCanvas').style.display = 'none';
+            document.getElementById('menuHUD').style.display = 'none';
+
+            switch(action) {
+                case 'practice':
+                    startPracticeMode();
+                    break;
+                case 'createParty':
+                    createParty();
+                    break;
+                case 'joinParty':
+                    showScreen('joinPartyScreen');
+                    break;
+                case 'shop':
+                    showShop();
+                    break;
+                case 'stats':
+                    showStats();
+                    break;
+                case 'creator':
+                    window.location.href = 'creator.html';
+                    break;
+            }
+        }
+
+        // Practice mode (infinite runner with credit earning)
+        let practiceMode = {
+            active: false,
+            player: null,
+            platforms: [],
+            platformsPassed: 0,
+            lastPlatformX: 0,
+            cameraX: 0,
+            cameraY: 0,
+            keys: {}
+        };
+
+        function startPracticeMode() {
+            const canvas = document.getElementById('practiceCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.style.display = 'block';
+            document.getElementById('hud').style.display = 'block';
+
+            practiceMode.active = true;
+            practiceMode.player = new Player(100, 300, equippedCosmetics);
+            practiceMode.platforms = [];
+            practiceMode.platformsPassed = 0;
+            practiceMode.lastPlatformX = 0;
+
+            // Generate initial platforms
+            for (let i = 0; i < 20; i++) {
+                generatePracticePlatform();
+            }
+
+            function practiceLoop() {
+                if (!practiceMode.active) return;
+
+                // Update
+                updatePracticePlayer();
+
+                // Generate new platforms
+                while (practiceMode.lastPlatformX < practiceMode.cameraX + 1500) {
+                    generatePracticePlatform();
+                }
+
+                // Remove old platforms
+                practiceMode.platforms = practiceMode.platforms.filter(p => p.x > practiceMode.cameraX - 200);
+
+                // Update HUD
+                document.getElementById('hud').innerHTML = `
+                    Platforms: ${practiceMode.platformsPassed} | Credits: ${userCredits}
+                `;
+
+                // Render
+                ctx.fillStyle = '#87CEEB';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // Draw platforms
+                for (const platform of practiceMode.platforms) {
+                    const screenX = platform.x - practiceMode.cameraX;
+                    const screenY = platform.y - practiceMode.cameraY;
+                    ctx.fillStyle = platform.isHazard ? '#FF0000' : '#8B4513';
+                    ctx.fillRect(screenX, screenY, platform.width, platform.height);
+                }
+
+                // Draw player
+                practiceMode.player.updateTrail();
+                practiceMode.player.draw(ctx, practiceMode.cameraX, practiceMode.cameraY, false);
+
+                requestAnimationFrame(practiceLoop);
+            }
+
+            practiceLoop();
+        }
+
+        function generatePracticePlatform() {
+            const lastPlatform = practiceMode.platforms[practiceMode.platforms.length - 1];
+            const baseX = lastPlatform ? lastPlatform.x + lastPlatform.width + Math.random() * 150 + 50 : 0;
+            const baseY = lastPlatform ? lastPlatform.y + (Math.random() - 0.5) * 100 : 500;
+
+            practiceMode.platforms.push({
+                x: baseX,
+                y: Math.max(200, Math.min(600, baseY)),
+                width: 80 + Math.random() * 100,
+                height: 40,
+                isHazard: false
+            });
+
+            practiceMode.lastPlatformX = baseX;
+        }
+
+        function updatePracticePlayer() {
+            const player = practiceMode.player;
+
+            // Apply gravity
+            player.velocityY += GRAVITY;
+
+            // Handle input
+            if (practiceMode.keys['a'] || practiceMode.keys['ArrowLeft']) {
+                player.velocityX -= MOVE_SPEED;
+            }
+            if (practiceMode.keys['d'] || practiceMode.keys['ArrowRight']) {
+                player.velocityX += MOVE_SPEED;
+            }
+
+            // Limit speed
+            player.velocityX = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, player.velocityX));
+
+            // Check collisions
+            let isGrounded = false;
+            for (const platform of practiceMode.platforms) {
+                if (checkCollision(player, platform)) {
+                    if (player.velocityY > 0 && player.y + player.height <= platform.y + 10) {
+                        player.y = platform.y - player.height;
+                        player.velocityY = 0;
+                        isGrounded = true;
+
+                        // Award credits every 20 platforms
+                        if (!platform.counted) {
+                            platform.counted = true;
+                            practiceMode.platformsPassed++;
+                            if (practiceMode.platformsPassed % 20 === 0) {
+                                updateCredits(1);
+                            }
+                        }
+                    }
+                }
+            }
+
+            player.velocityX *= isGrounded ? GROUND_FRICTION : AIR_RESISTANCE;
+
+            // Jump
+            if ((practiceMode.keys['w'] || practiceMode.keys['ArrowUp'] || practiceMode.keys[' ']) && isGrounded) {
+                player.velocityY = -JUMP_POWER;
+            }
+
+            // Update position
+            player.x += player.velocityX;
+            player.y += player.velocityY;
+
+            // Die if fall off
+            if (player.y > 1000) {
+                player.x = 100;
+                player.y = 300;
+                player.velocityX = 0;
+                player.velocityY = 0;
+            }
+
+            // Update camera
+            practiceMode.cameraX = player.x - 300;
+            practiceMode.cameraY = 0;
+        }
+
+        // Party system
+        async function createParty() {
+            const partyId = 'party_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            currentPartyId = partyId;
+
+            await database.ref('parties/' + partyId).set({
+                leaderId: currentUser.uid,
+                members: {
+                    [currentUser.uid]: {
+                        username: currentUsername,
+                        ready: false
+                    }
+                },
+                invitations: {},
+                createdAt: firebase.database.ServerValue.TIMESTAMP
+            });
+
+            listenToParty(partyId);
+            showScreen('partyScreen');
+        }
+
+        function listenToParty(partyId) {
+            database.ref('parties/' + partyId).on('value', (snapshot) => {
+                const party = snapshot.val();
+                if (!party) {
+                    // Party was deleted
+                    currentPartyId = null;
+                    backToMainMenu();
+                    return;
+                }
+
+                currentParty = party;
+                updatePartyUI();
+            });
+
+            // Listen for invitations
+            database.ref('parties/' + partyId + '/invitations/' + currentUser.uid).on('value', (snapshot) => {
+                const invite = snapshot.val();
+                if (invite && invite.status === 'pending') {
+                    // Show invitation
+                }
+            });
+        }
+
+        function updatePartyUI() {
+            if (!currentParty) return;
+
+            const isLeader = currentParty.leaderId === currentUser.uid;
+
+            document.getElementById('partyInfo').innerHTML = `
+                <div style="font-size: 20px; color: #4facfe; margin-bottom: 10px;">
+                    Party ID: <span style="color: #FFC107;">${currentPartyId}</span>
+                </div>
+                <div>Share this ID with friends to invite them!</div>
+            `;
+
+            let membersHTML = '<h3>Members:</h3>';
+            for (const [uid, member] of Object.entries(currentParty.members || {})) {
+                const readyBadge = member.ready ? ' [READY]' : '';
+                const leaderBadge = uid === currentParty.leaderId ? ' [LEADER]' : '';
+                membersHTML += `<div class="party-member ${member.ready ? 'ready' : ''}">${member.username}${leaderBadge}${readyBadge}</div>`;
+            }
+            document.getElementById('partyMembers').innerHTML = membersHTML;
+
+            // Party controls
+            if (isLeader) {
+                const memberCount = Object.keys(currentParty.members || {}).length;
+                const canStart = memberCount >= 2 && Object.values(currentParty.members).every(m => m.ready);
+                document.getElementById('partyControls').innerHTML = `
+                    <button onclick="toggleReady()">Toggle Ready</button>
+                    <button onclick="startRaceLobby()" ${canStart ? '' : 'disabled'}>Start Race</button>
+                `;
+            } else {
+                document.getElementById('partyControls').innerHTML = `
+                    <button onclick="toggleReady()">Toggle Ready</button>
+                `;
+            }
+        }
+
+        async function sendInvite() {
+            const username = document.getElementById('inviteUsername').value.trim();
+            if (!username) return;
+
+            // Find user by username
+            const usersSnapshot = await database.ref('users').orderByChild('username').equalTo(username).once('value');
+            const users = usersSnapshot.val();
+
+            if (!users) {
+                alert('User not found');
+                return;
+            }
+
+            const userId = Object.keys(users)[0];
+
+            await database.ref('parties/' + currentPartyId + '/invitations/' + userId).set({
+                username: username,
+                status: 'pending',
+                from: currentUsername
+            });
+
+            document.getElementById('inviteUsername').value = '';
+            alert('Invite sent!');
+        }
+
+        async function joinPartyById() {
+            const partyId = document.getElementById('partyIdInput').value.trim();
+            if (!partyId) return;
+
+            const partySnapshot = await database.ref('parties/' + partyId).once('value');
+            if (!partySnapshot.exists()) {
+                alert('Party not found');
+                return;
+            }
+
+            currentPartyId = partyId;
+            await database.ref('parties/' + partyId + '/members/' + currentUser.uid).set({
+                username: currentUsername,
+                ready: false
+            });
+
+            listenToParty(partyId);
+            showScreen('partyScreen');
+        }
+
+        async function toggleReady() {
+            if (!currentPartyId) return;
+            const currentReady = currentParty.members[currentUser.uid].ready;
+            await database.ref('parties/' + currentPartyId + '/members/' + currentUser.uid + '/ready').set(!currentReady);
+        }
+
+        async function leaveParty() {
+            if (!currentPartyId) return;
+
+            await database.ref('parties/' + currentPartyId + '/members/' + currentUser.uid).remove();
+
+            // If leader, delete party
+            if (currentParty.leaderId === currentUser.uid) {
+                await database.ref('parties/' + currentPartyId).remove();
+            }
+
+            database.ref('parties/' + currentPartyId).off();
+            currentPartyId = null;
+            backToMainMenu();
+        }
+
+        // Lobby system
+        async function startRaceLobby() {
+            const lobbyId = 'lobby_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            currentLobbyId = lobbyId;
+
+            // Move all party members to lobby
+            const lobbyPlayers = {};
+            for (const [uid, member] of Object.entries(currentParty.members)) {
+                lobbyPlayers[uid] = {
+                    username: member.username,
+                    ready: false,
+                    credits: 0 // Will be fetched
+                };
+            }
+
+            await database.ref('lobbies/' + lobbyId).set({
+                mapId: maps[0].id,
+                betAmount: 0,
+                players: lobbyPlayers,
+                raceStarted: false,
+                leaderId: currentParty.leaderId
+            });
+
+            // Notify all party members to join lobby
+            for (const uid of Object.keys(currentParty.members)) {
+                await database.ref('parties/' + currentPartyId + '/lobbyId').set(lobbyId);
+            }
+
+            listenToLobby(lobbyId);
+            showScreen('lobbyScreen');
+        }
+
+        function listenToLobby(lobbyId) {
+            database.ref('lobbies/' + lobbyId).on('value', (snapshot) => {
+                const lobby = snapshot.val();
+                if (!lobby) {
+                    currentLobbyId = null;
+                    backToMainMenu();
+                    return;
+                }
+
+                currentLobby = lobby;
+
+                if (lobby.raceStarted && lobby.raceStartTime) {
+                    startMultiplayerRace();
+                } else {
+                    updateLobbyUI();
+                }
+            });
+        }
+
+        function updateLobbyUI() {
+            if (!currentLobby) return;
+
+            const isLeader = currentLobby.leaderId === currentUser.uid;
+
+            // Map selection
+            let mapOptions = '';
+            for (const map of maps) {
+                mapOptions += `<option value="${map.id}" ${currentLobby.mapId === map.id ? 'selected' : ''}>${map.name}</option>`;
+            }
+
+            document.getElementById('lobbyInfo').innerHTML = `
+                <div>
+                    <label>Map:</label>
+                    <select id="lobbyMapSelect" onchange="updateLobbyMap()" ${isLeader ? '' : 'disabled'}>
+                        ${mapOptions}
+                    </select>
+                </div>
+                <div>
+                    <label>Bet Amount:</label>
+                    <input type="number" id="lobbyBetAmount" value="${currentLobby.betAmount}" min="0" max="1000" onchange="updateLobbyBet()" ${isLeader ? '' : 'readonly'}>
+                </div>
+            `;
+
+            // Players
+            let playersHTML = '<h3>Players:</h3>';
+            for (const [uid, player] of Object.entries(currentLobby.players || {})) {
+                const readyBadge = player.ready ? ' [READY]' : '';
+                playersHTML += `<div class="party-member ${player.ready ? 'ready' : ''}">${player.username}${readyBadge}</div>`;
+            }
+            document.getElementById('lobbyPlayers').innerHTML = playersHTML;
+
+            // Controls
+            const allReady = Object.values(currentLobby.players).every(p => p.ready);
+            if (isLeader) {
+                document.getElementById('lobbyControls').innerHTML = `
+                    <button onclick="toggleLobbyReady()">Toggle Ready</button>
+                    <button onclick="startRace()" ${allReady ? '' : 'disabled'}>Start Race</button>
+                `;
+            } else {
+                document.getElementById('lobbyControls').innerHTML = `
+                    <button onclick="toggleLobbyReady()">Toggle Ready</button>
+                `;
+            }
+        }
+
+        async function updateLobbyMap() {
+            const mapId = document.getElementById('lobbyMapSelect').value;
+            await database.ref('lobbies/' + currentLobbyId + '/mapId').set(mapId);
+        }
+
+        async function updateLobbyBet() {
+            const betAmount = parseInt(document.getElementById('lobbyBetAmount').value) || 0;
+            await database.ref('lobbies/' + currentLobbyId + '/betAmount').set(betAmount);
+        }
+
+        async function toggleLobbyReady() {
+            if (!currentLobbyId) return;
+            const currentReady = currentLobby.players[currentUser.uid].ready;
+            await database.ref('lobbies/' + currentLobbyId + '/players/' + currentUser.uid + '/ready').set(!currentReady);
+        }
+
+        async function startRace() {
+            await database.ref('lobbies/' + currentLobbyId).update({
+                raceStarted: true,
+                raceStartTime: firebase.database.ServerValue.TIMESTAMP
+            });
+        }
+
+        async function leaveLobby() {
+            if (!currentLobbyId) return;
+            database.ref('lobbies/' + currentLobbyId).off();
+            await database.ref('lobbies/' + currentLobbyId + '/players/' + currentUser.uid).remove();
+            currentLobbyId = null;
+            backToMainMenu();
+        }
+
+        // Multiplayer racing
+        let raceState = {
+            active: false,
+            player: null,
+            opponents: {},
+            map: null,
+            startTime: 0,
+            finishTime: 0,
+            finished: false,
+            cameraX: 0,
+            cameraY: 0,
+            keys: {},
+            platforms: [],
+            hazards: []
+        };
+
+        async function startMultiplayerRace() {
+            const canvas = document.getElementById('raceCanvas');
+            const ctx = canvas.getContext('2d');
+            canvas.style.display = 'block';
+            document.getElementById('timer').style.display = 'block';
+            document.getElementById('racePositions').style.display = 'block';
+
+            // Hide lobby screen
+            document.getElementById('lobbyScreen').classList.remove('active');
+
+            // Get map
+            raceState.map = maps.find(m => m.id === currentLobby.mapId);
+            raceState.platforms = raceState.map.platforms;
+            raceState.hazards = raceState.map.hazards;
+
+            // Create player at start position
+            raceState.player = new Player(raceState.map.start.x, raceState.map.start.y, equippedCosmetics);
+            raceState.active = true;
+            raceState.finished = false;
+            raceState.startTime = Date.now();
+
+            // Countdown
+            await showCountdown();
+
+            // Listen for opponent positions
+            database.ref('lobbies/' + currentLobbyId + '/players').on('value', (snapshot) => {
+                const players = snapshot.val();
+                raceState.opponents = {};
+                for (const [uid, player] of Object.entries(players)) {
+                    if (uid !== currentUser.uid && player.position) {
+                        raceState.opponents[uid] = {
+                            username: player.username,
+                            player: new Player(player.position.x, player.position.y, player.equippedCosmetics || {}),
+                            finished: player.finished || false
+                        };
+                    }
+                }
+            });
+
+            // Start position sync
+            const positionSyncInterval = setInterval(() => {
+                if (!raceState.active || raceState.finished) {
+                    clearInterval(positionSyncInterval);
+                    return;
+                }
+
+                database.ref('lobbies/' + currentLobbyId + '/players/' + currentUser.uid).update({
+                    position: { x: raceState.player.x, y: raceState.player.y },
+                    velocity: { x: raceState.player.velocityX, y: raceState.player.velocityY },
+                    equippedCosmetics: equippedCosmetics
+                });
+            }, 100);
+
+            function raceLoop() {
+                if (!raceState.active) return;
+
+                // Update
+                updateRacePlayer();
+
+                // Check finish
+                if (!raceState.finished && checkCollision(raceState.player, raceState.map.finish)) {
+                    finishRace();
+                }
+
+                // Update timer
+                const elapsed = (Date.now() - raceState.startTime) / 1000;
+                document.getElementById('timer').textContent = elapsed.toFixed(2);
+
+                // Update positions
+                updateRacePositions();
+
+                // Render
+                ctx.fillStyle = '#87CEEB';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // Draw platforms
+                for (const platform of raceState.platforms) {
+                    const screenX = platform.x - raceState.cameraX;
+                    const screenY = platform.y - raceState.cameraY;
+                    ctx.fillStyle = '#8B4513';
+                    ctx.fillRect(screenX, screenY, platform.width, platform.height);
+                }
+
+                // Draw hazards
+                for (const hazard of raceState.hazards) {
+                    const screenX = hazard.x - raceState.cameraX;
+                    const screenY = hazard.y - raceState.cameraY;
+                    ctx.fillStyle = '#FF0000';
+                    ctx.fillRect(screenX, screenY, hazard.width, hazard.height);
+                }
+
+                // Draw finish line
+                const finishScreenX = raceState.map.finish.x - raceState.cameraX;
+                const finishScreenY = raceState.map.finish.y - raceState.cameraY;
+                ctx.fillStyle = '#00FF00';
+                ctx.fillRect(finishScreenX, finishScreenY, raceState.map.finish.width, raceState.map.finish.height);
+
+                // Draw opponents
+                for (const opponent of Object.values(raceState.opponents)) {
+                    opponent.player.updateTrail();
+                    opponent.player.draw(ctx, raceState.cameraX, raceState.cameraY, true, opponent.username);
+                }
+
+                // Draw local player
+                raceState.player.updateTrail();
+                raceState.player.draw(ctx, raceState.cameraX, raceState.cameraY, true, currentUsername);
+
+                requestAnimationFrame(raceLoop);
+            }
+
+            raceLoop();
+        }
+
+        function updateRacePlayer() {
+            const player = raceState.player;
+
+            // Apply gravity
+            player.velocityY += GRAVITY;
+
+            // Handle input
+            if (raceState.keys['a'] || raceState.keys['ArrowLeft']) {
+                player.velocityX -= MOVE_SPEED;
+            }
+            if (raceState.keys['d'] || raceState.keys['ArrowRight']) {
+                player.velocityX += MOVE_SPEED;
+            }
+            if (raceState.keys['s'] || raceState.keys['ArrowDown']) {
+                player.velocityY += GRAVITY * FAST_FALL_MULTIPLIER;
+            }
+
+            // Limit speed
+            player.velocityX = Math.max(-MAX_SPEED, Math.min(MAX_SPEED, player.velocityX));
+
+            // Check collisions
+            let isGrounded = false;
+            for (const platform of raceState.platforms) {
+                if (checkCollision(player, platform)) {
+                    if (player.velocityY > 0 && player.y + player.height <= platform.y + 10) {
+                        player.y = platform.y - player.height;
+                        player.velocityY = 0;
+                        isGrounded = true;
+                    }
+                }
+            }
+
+            // Check hazards
+            for (const hazard of raceState.hazards) {
+                if (checkCollision(player, hazard)) {
+                    // Reset to start
+                    player.x = raceState.map.start.x;
+                    player.y = raceState.map.start.y;
+                    player.velocityX = 0;
+                    player.velocityY = 0;
+                }
+            }
+
+            player.velocityX *= isGrounded ? GROUND_FRICTION : AIR_RESISTANCE;
+
+            // Jump
+            if ((raceState.keys['w'] || raceState.keys['ArrowUp'] || raceState.keys[' ']) && isGrounded) {
+                player.velocityY = -JUMP_POWER;
+            }
+
+            // Update position
+            player.x += player.velocityX;
+            player.y += player.velocityY;
+
+            // Update camera
+            raceState.cameraX = player.x - 400;
+            raceState.cameraY = player.y - 300;
+        }
+
+        function updateRacePositions() {
+            // Calculate positions based on distance to finish
+            const finishX = raceState.map.finish.x;
+
+            const positions = [
+                { uid: currentUser.uid, username: currentUsername, distance: Math.abs(raceState.player.x - finishX), finished: raceState.finished }
+            ];
+
+            for (const [uid, opponent] of Object.entries(raceState.opponents)) {
+                positions.push({
+                    uid: uid,
+                    username: opponent.username,
+                    distance: Math.abs(opponent.player.x - finishX),
+                    finished: opponent.finished
+                });
+            }
+
+            positions.sort((a, b) => {
+                if (a.finished && !b.finished) return -1;
+                if (!a.finished && b.finished) return 1;
+                return a.distance - b.distance;
+            });
+
+            let html = '<h3>Positions</h3>';
+            for (let i = 0; i < positions.length; i++) {
+                html += `<div>${i + 1}. ${positions[i].username}${positions[i].finished ? ' [FINISHED]' : ''}</div>`;
+            }
+            document.getElementById('racePositions').innerHTML = html;
+        }
+
+        async function finishRace() {
+            raceState.finished = true;
+            raceState.finishTime = Date.now() - raceState.startTime;
+
+            await database.ref('lobbies/' + currentLobbyId + '/players/' + currentUser.uid).update({
+                finished: true,
+                finishTime: raceState.finishTime
+            });
+
+            // Check if all finished
+            setTimeout(checkRaceComplete, 2000);
+        }
+
+        async function checkRaceComplete() {
+            const snapshot = await database.ref('lobbies/' + currentLobbyId + '/players').once('value');
+            const players = snapshot.val();
+
+            const allFinished = Object.values(players).every(p => p.finished);
+
+            if (allFinished) {
+                // Calculate results
+                const results = [];
+                for (const [uid, player] of Object.entries(players)) {
+                    results.push({
+                        uid: uid,
+                        username: player.username,
+                        time: player.finishTime
+                    });
+                }
+
+                results.sort((a, b) => a.time - b.time);
+
+                // Award credits to winner
+                if (results[0].uid === currentUser.uid) {
+                    const pot = currentLobby.betAmount * Object.keys(players).length;
+                    await updateCredits(pot);
+                    userStats.racesWon++;
+                }
+
+                userStats.racesPlayed++;
+                await database.ref('players/' + currentUser.uid + '/stats').set(userStats);
+
+                // Show results
+                showRaceResults(results);
+            }
+        }
+
+        function showRaceResults(results) {
+            let html = '';
+            for (let i = 0; i < results.length; i++) {
+                const isMe = results[i].uid === currentUser.uid;
+                const isWinner = i === 0;
+                html += `<div class="result-entry ${isWinner ? 'winner' : ''}" style="${isMe ? 'font-weight: bold; color: #4facfe;' : ''}">
+                    ${i + 1}. ${results[i].username} - ${(results[i].time / 1000).toFixed(2)}s
+                </div>`;
+            }
+
+            if (results[0].uid === currentUser.uid) {
+                const pot = currentLobby.betAmount * results.length;
+                html = `<div style="color: #FFD700; font-size: 24px; margin-bottom: 20px;">YOU WIN! +${pot} credits</div>` + html;
+            }
+
+            document.getElementById('resultsContent').innerHTML = html;
+            document.getElementById('raceResults').style.display = 'block';
+        }
+
+        async function returnToParty() {
+            document.getElementById('raceResults').style.display = 'none';
+            document.getElementById('raceCanvas').style.display = 'none';
+            document.getElementById('timer').style.display = 'none';
+            document.getElementById('racePositions').style.display = 'none';
+
+            raceState.active = false;
+            database.ref('lobbies/' + currentLobbyId + '/players').off();
+
+            await database.ref('lobbies/' + currentLobbyId).remove();
+
+            showScreen('partyScreen');
+        }
+
+        async function showCountdown() {
+            const countdownEl = document.getElementById('countdown');
+            countdownEl.style.display = 'block';
+
+            for (let i = 3; i > 0; i--) {
+                countdownEl.textContent = i;
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+
+            countdownEl.textContent = 'GO!';
+            await new Promise(resolve => setTimeout(resolve, 500));
+            countdownEl.style.display = 'none';
+        }
+
+        // Cosmetic shop
+        function showShop() {
+            showScreen('shopScreen');
+            updateShopUI();
+        }
+
+        function updateShopUI() {
+            document.getElementById('shopCredits').textContent = `Credits: ${userCredits}`;
+
+            let html = '';
+
+            for (const [category, items] of Object.entries(cosmeticsCatalog)) {
+                html += `<div class="shop-category">
+                    <h2>${category.toUpperCase()}</h2>
+                    <div class="cosmetics-grid">`;
+
+                for (const item of items) {
+                    const owned = userCosmetics[category].includes(item.id);
+                    const equipped = equippedCosmetics[category === 'skins' ? 'skin' : category.slice(0, -1)] === item.id;
+
+                    html += `<div class="cosmetic-item ${owned ? 'owned' : ''} ${equipped ? 'equipped' : ''}">
+                        <div style="font-weight: bold;">${item.name}</div>
+                        <div style="color: #FFC107;">${item.price} credits</div>`;
+
+                    if (equipped) {
+                        html += `<div style="color: #0f0; margin-top: 5px;">EQUIPPED</div>`;
+                    } else if (owned) {
+                        html += `<button onclick="equipCosmetic('${category}', '${item.id}')">Equip</button>`;
+                    } else {
+                        html += `<button onclick="buyCosmetic('${category}', '${item.id}', ${item.price})" ${userCredits >= item.price ? '' : 'disabled'}>Buy</button>`;
+                    }
+
+                    html += `</div>`;
+                }
+
+                html += `</div></div>`;
+            }
+
+            document.getElementById('shopContent').innerHTML = html;
+        }
+
+        async function buyCosmetic(category, itemId, price) {
+            if (userCredits < price) {
+                alert('Not enough credits!');
+                return;
+            }
+
+            await updateCredits(-price);
+            userCosmetics[category].push(itemId);
+            await database.ref('players/' + currentUser.uid + '/cosmetics').set(userCosmetics);
+
+            updateShopUI();
+        }
+
+        async function equipCosmetic(category, itemId) {
+            const slot = category === 'skins' ? 'skin' : category.slice(0, -1);
+            equippedCosmetics[slot] = itemId;
+            await database.ref('players/' + currentUser.uid + '/equippedCosmetics').set(equippedCosmetics);
+
+            updateShopUI();
+        }
+
+        // Stats screen
+        function showStats() {
+            showScreen('statsScreen');
+            document.getElementById('statsContent').innerHTML = `
+                <div style="margin: 20px 0;">Races Won: ${userStats.racesWon}</div>
+                <div style="margin: 20px 0;">Races Played: ${userStats.racesPlayed}</div>
+                <div style="margin: 20px 0;">Win Rate: ${userStats.racesPlayed > 0 ? ((userStats.racesWon / userStats.racesPlayed) * 100).toFixed(1) : 0}%</div>
+                <div style="margin: 20px 0;">Total Credits Earned: ${userStats.totalCreditsEarned}</div>
+            `;
+        }
+
+        // Screen management
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function backToMainMenu() {
+            // Clean up listeners
+            if (currentPartyId) {
+                database.ref('parties/' + currentPartyId).off();
+            }
+            if (currentLobbyId) {
+                database.ref('lobbies/' + currentLobbyId).off();
+            }
+
+            currentPartyId = null;
+            currentLobbyId = null;
+            practiceMode.active = false;
+            raceState.active = false;
+
+            // Hide all screens
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('practiceCanvas').style.display = 'none';
+            document.getElementById('raceCanvas').style.display = 'none';
+            document.getElementById('hud').style.display = 'none';
+            document.getElementById('timer').style.display = 'none';
+            document.getElementById('racePositions').style.display = 'none';
+
+            // Show main menu
+            initMainMenu();
+        }
+
+        // Keyboard handling
+        document.addEventListener('keydown', (e) => {
+            menuKeys[e.key.toLowerCase()] = true;
+            practiceMode.keys[e.key] = true;
+            raceState.keys[e.key] = true;
+
+            if (e.key === 'Escape') {
+                if (practiceMode.active) {
+                    practiceMode.active = false;
+                    backToMainMenu();
+                }
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            menuKeys[e.key.toLowerCase()] = false;
+            delete practiceMode.keys[e.key];
+            delete raceState.keys[e.key];
+        });
+
+        // Initialize on auth
         auth.onAuthStateChanged(async (user) => {
             if (!user) {
                 window.location.href = 'index.html';
             } else {
                 currentUser = user;
-                // Get username from database
+
+                // Get username
                 const userSnapshot = await database.ref('users/' + user.uid).once('value');
                 const userData = userSnapshot.val();
 
                 if (userData && userData.username) {
                     currentUsername = userData.username;
                 } else {
-                    // Extract username from email (format: username@speedrun.local)
                     currentUsername = user.email.split('@')[0];
-
-                    // Save username to database for future use
                     await database.ref('users/' + user.uid).set({
                         username: currentUsername,
                         createdAt: firebase.database.ServerValue.TIMESTAMP
                     });
                 }
 
-                // Admin usernames - must match console.html
-                const ADMIN_USERNAMES = ['beanz'];
-
-                const consoleButton = ADMIN_USERNAMES.includes(currentUsername.toLowerCase()) ?
-                    '<button onclick="window.location.href=\'console.html\'" class="main-page-btn">Console</button>' : '';
-
-                document.getElementById('userInfo').innerHTML = `
-                    <div style="font-size: 18px; font-weight: bold;">👤 ${currentUsername}</div>
-                    <button onclick="window.location.href='times.html'" class="main-page-btn">My Times</button>
-                    ${consoleButton}
-                    <button onclick="backToMenu()" class="main-page-btn">Map Select</button>
-                    <button onclick="showSettings()" class="main-page-btn">⚙️ Settings</button>
-                    <button onclick="logout()">Logout</button>
-                `;
-                loadUserStats();
-                initMenu();
-
-                // Setup difficulty filter buttons
-                document.querySelectorAll('.difficulty-filter').forEach(button => {
-                    button.addEventListener('click', () => {
-                        // Update active state
-                        document.querySelectorAll('.difficulty-filter').forEach(btn => {
-                            btn.classList.remove('active');
-                            btn.style.opacity = '0.6';
-                        });
-                        button.classList.add('active');
-                        button.style.opacity = '1';
-
-                        // Filter maps
-                        const difficulty = button.getAttribute('data-difficulty');
-                        selectedDifficulty = difficulty;
-                        initMenu(difficulty);
-                    });
-                });
+                await initUserData();
+                initMainMenu();
             }
         });
-
-        // Logout
-        async function logout() {
-            try {
-                await auth.signOut();
-                window.location.href = 'index.html';
-            } catch (error) {
-                console.error('Logout failed:', error);
-            }
-        }
-
-        function showSettings() {
-            document.getElementById('settingsModal').classList.add('show');
-        }
-
-        function closeSettings() {
-            document.getElementById('settingsModal').classList.remove('show');
-        }
-
-        async function changePassword() {
-            const currentPassword = prompt('Enter your current password:');
-            if (!currentPassword) return;
-
-            const newPassword = prompt('Enter your new password (minimum 6 characters):');
-            if (!newPassword) return;
-
-            if (newPassword.length < 6) {
-                alert('Password must be at least 6 characters');
-                return;
-            }
-
-            const confirmPassword = prompt('Confirm your new password:');
-            if (newPassword !== confirmPassword) {
-                alert('Passwords do not match');
-                return;
-            }
-
-            try {
-                const email = currentUser.email;
-                const credential = firebase.auth.EmailAuthProvider.credential(email, currentPassword);
-
-                await currentUser.reauthenticateWithCredential(credential);
-                await currentUser.updatePassword(newPassword);
-
-                alert('Password changed successfully!');
-                closeSettings();
-            } catch (error) {
-                if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-                    alert('Current password is incorrect');
-                } else {
-                    alert('Error changing password. Please try again.');
-                }
-            }
-        }
-
-        async function deleteAccount() {
-            const confirm1 = confirm('⚠️ WARNING: This will permanently delete your account and all your times!\n\nAre you sure you want to continue?');
-            if (!confirm1) return;
-
-            const confirm2 = prompt('Type "DELETE" to confirm account deletion:');
-            if (confirm2 !== 'DELETE') {
-                alert('Account deletion cancelled');
-                return;
-            }
-
-            const password = prompt('Enter your password to confirm:');
-            if (!password) return;
-
-            try {
-                const email = currentUser.email;
-                const credential = firebase.auth.EmailAuthProvider.credential(email, password);
-
-                await currentUser.reauthenticateWithCredential(credential);
-
-                const uid = currentUser.uid;
-
-                // Delete all user data
-                await database.ref('users/' + uid).remove();
-                await database.ref('times_history/' + uid).remove();
-
-                // Get username to delete username mapping
-                const username = currentUsername.toLowerCase();
-                await database.ref('usernames/' + username).remove();
-
-                // Delete all scores from leaderboards
-                const scoresSnapshot = await database.ref('scores').once('value');
-                scoresSnapshot.forEach((mapSnapshot) => {
-                    const mapId = mapSnapshot.key;
-                    database.ref('scores/' + mapId + '/' + uid).remove();
-                });
-
-                // Delete the Firebase auth account
-                await currentUser.delete();
-
-                alert('Account deleted successfully');
-                window.location.href = 'index.html';
-            } catch (error) {
-                if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-                    alert('Incorrect password');
-                } else {
-                    alert('Error deleting account. Please try again.');
-                }
-            }
-        }
-
-        // Load user stats
-        async function loadUserStats() {
-            try {
-                const uid = currentUser.uid;
-                for (let map of maps) {
-                    const snapshot = await database.ref(`scores/${map.id}/${uid}`).once('value');
-                    if (snapshot.exists()) {
-                        personalBests[map.id] = snapshot.val().time;
-                    }
-                }
-            } catch (error) {
-                console.error('Failed to load user stats:', error);
-            }
-        }
-
-        // Initialize menu
-        let selectedDifficulty = 'All';
-
-        async function initMenu(filterDifficulty = 'All') {
-            const container = document.getElementById('mapsContainer');
-            container.innerHTML = '';
-
-            const filteredMaps = filterDifficulty === 'All'
-                ? maps
-                : maps.filter(map => map.difficulty === filterDifficulty);
-
-            // Sort maps by difficulty (Easy, Medium, Hard, Extreme, Impossible)
-            const difficultyOrder = ['Easy', 'Medium', 'Hard', 'Extreme', 'Impossible'];
-            const sortedMaps = filteredMaps.sort((a, b) => {
-                return difficultyOrder.indexOf(a.difficulty) - difficultyOrder.indexOf(b.difficulty);
-            });
-
-            for (let map of sortedMaps) {
-                const card = document.createElement('div');
-                card.className = 'map-card';
-
-                const pbTime = personalBests[map.id] ? formatTime(personalBests[map.id]) : 'N/A';
-
-                // Load leaderboard
-                const leaderboard = await loadLeaderboard(map.id);
-
-                let leaderboardHTML = '<div class="leaderboard"><h4>🏆 Top 5</h4>';
-                if (leaderboard.length === 0) {
-                    leaderboardHTML += '<p style="color: #888; font-size: 12px;">No times yet!</p>';
-                } else {
-                    leaderboard.forEach((entry, index) => {
-                        const rankClass = index === 0 ? 'top1' : index === 1 ? 'top2' : index === 2 ? 'top3' : '';
-                        const youClass = entry.username === currentUsername ? 'you' : '';
-                        leaderboardHTML += `
-                            <div class="leaderboard-entry ${rankClass} ${youClass}">
-                                <span>${index + 1}. ${entry.username}</span>
-                                <span>${formatTime(entry.time)}</span>
-                            </div>
-                        `;
-                    });
-                }
-                leaderboardHTML += '</div>';
-
-                const difficultyClass = map.difficulty.toLowerCase().replace(' ', '-');
-
-                card.innerHTML = `
-                    <h3>${map.name}</h3>
-                    <span class="difficulty ${difficultyClass}">${map.difficulty}</span>
-                    <p>${map.description}</p>
-                    <p style="margin-top: 10px; color: #FFD700;">Your PB: ${pbTime}</p>
-                    ${leaderboardHTML}
-                `;
-
-                card.onclick = () => startMap(map);
-                container.appendChild(card);
-            }
-
-            // Initialize menu leaderboard
-            initMenuLeaderboard();
-        }
-
-        // Initialize menu leaderboard dropdowns
-        function initMenuLeaderboard() {
-            const mapSelect = document.getElementById('mapSelect');
-            mapSelect.innerHTML = '';
-            maps.forEach(map => {
-                const option = document.createElement('option');
-                option.value = map.id;
-                option.textContent = map.name;
-                mapSelect.appendChild(option);
-            });
-
-            const averageMapChecks = document.getElementById('averageMapChecks');
-            averageMapChecks.innerHTML = '';
-            maps.forEach(map => {
-                const label = document.createElement('label');
-                label.style.display = 'block';
-                label.style.color = '#ccc';
-                label.style.padding = '5px';
-                label.style.cursor = 'pointer';
-                label.innerHTML = `<input type="checkbox" value="${map.id}" checked onchange="updateMenuLeaderboard()"> ${map.name}`;
-                averageMapChecks.appendChild(label);
-            });
-
-            updateMenuLeaderboard();
-        }
-
-        // Update menu leaderboard
-        async function updateMenuLeaderboard() {
-            const type = document.getElementById('leaderboardType').value;
-            const mapSelectContainer = document.getElementById('mapSelectContainer');
-            const averageMapSelectContainer = document.getElementById('averageMapSelectContainer');
-            const entriesDiv = document.getElementById('menuLeaderboardEntries');
-
-            if (type === 'map') {
-                mapSelectContainer.style.display = 'block';
-                averageMapSelectContainer.style.display = 'none';
-                const mapId = document.getElementById('mapSelect').value;
-                const leaderboard = await loadFullLeaderboard(mapId);
-                displayMenuLeaderboard(leaderboard, mapId);
-            } else if (type === 'average') {
-                mapSelectContainer.style.display = 'none';
-                averageMapSelectContainer.style.display = 'block';
-                const selectedMaps = Array.from(document.querySelectorAll('#averageMapChecks input:checked')).map(cb => cb.value);
-                const averageLeaderboard = await calculateAverageRankings(selectedMaps);
-                displayAverageLeaderboard(averageLeaderboard, selectedMaps);
-            }
-        }
-
-        // Load full leaderboard for a map
-        async function loadFullLeaderboard(mapId) {
-            try {
-                const snapshot = await database.ref('scores/' + mapId).orderByChild('time').limitToFirst(100).once('value');
-                const entries = [];
-                snapshot.forEach((child) => {
-                    entries.push(child.val());
-                });
-                return entries;
-            } catch (error) {
-                console.error('Failed to load leaderboard:', error);
-                return [];
-            }
-        }
-
-        // Calculate average rankings across selected maps
-        async function calculateAverageRankings(selectedMapIds) {
-            const userRankings = {};
-
-            for (const mapId of selectedMapIds) {
-                const leaderboard = await loadFullLeaderboard(mapId);
-                leaderboard.forEach((entry, index) => {
-                    const username = entry.username;
-                    if (!userRankings[username]) {
-                        userRankings[username] = { rankings: [], mapsCompleted: 0 };
-                    }
-                    userRankings[username].rankings.push(index + 1);
-                    userRankings[username].mapsCompleted++;
-                });
-            }
-
-            // Only include users who have completed all selected maps
-            const averageLeaderboard = Object.entries(userRankings)
-                .filter(([username, data]) => data.mapsCompleted === selectedMapIds.length)
-                .map(([username, data]) => {
-                    const avgRank = data.rankings.reduce((a, b) => a + b, 0) / data.rankings.length;
-                    return { username, avgRank, mapsCompleted: data.mapsCompleted };
-                })
-                .sort((a, b) => a.avgRank - b.avgRank);
-
-            return averageLeaderboard;
-        }
-
-        // Display menu leaderboard
-        function displayMenuLeaderboard(leaderboard, mapId) {
-            const entriesDiv = document.getElementById('menuLeaderboardEntries');
-            entriesDiv.innerHTML = '';
-
-            if (leaderboard.length === 0) {
-                entriesDiv.innerHTML = '<p style="color: #888;">No times yet!</p>';
-                return;
-            }
-
-            leaderboard.forEach((entry, index) => {
-                const rankClass = index === 0 ? 'top1' : index === 1 ? 'top2' : index === 2 ? 'top3' : '';
-                const youClass = entry.username === currentUsername ? 'you' : '';
-                const entryDiv = document.createElement('div');
-                entryDiv.className = `menu-lb-entry ${rankClass} ${youClass}`;
-                entryDiv.innerHTML = `
-                    <span>${index + 1}. ${entry.username}</span>
-                    <span>
-                        ${formatTime(entry.time)}
-                        <span class="ghost-icon" onclick="watchGhost('${mapId}', '${entry.username}'); event.stopPropagation();" title="Watch run">👁️</span>
-                        <span class="ghost-icon" onclick="raceGhost('${mapId}', '${entry.username}'); event.stopPropagation();" title="Race ghost">🏁</span>
-                    </span>
-                `;
-                entriesDiv.appendChild(entryDiv);
-            });
-        }
-
-        // Watch a ghost run
-        async function watchGhost(mapId, username) {
-            const map = maps.find(m => m.id === mapId);
-            if (!map) return;
-
-            // Load ghost data
-            const ghostDataSnapshot = await database.ref(`ghosts/${mapId}`).orderByChild('username').equalTo(username).once('value');
-            let loadedGhostData = null;
-            ghostDataSnapshot.forEach(snapshot => {
-                loadedGhostData = snapshot.val();
-            });
-
-            if (!loadedGhostData || !loadedGhostData.recording) {
-                alert('No ghost recording available for this run');
-                return;
-            }
-
-            ghostData = loadedGhostData;
-            watchingGhost = true;
-            racingGhost = false;
-            ghostPlayer = {
-                x: map.start.x,
-                y: map.start.y,
-                width: 40,
-                height: 40,
-                currentSize: 40
-            };
-
-            startMap(map);
-        }
-
-        // Race against a ghost
-        async function raceGhost(mapId, username) {
-            const map = maps.find(m => m.id === mapId);
-            if (!map) return;
-
-            // Load ghost data
-            const ghostDataSnapshot = await database.ref(`ghosts/${mapId}`).orderByChild('username').equalTo(username).once('value');
-            let loadedGhostData = null;
-            ghostDataSnapshot.forEach(snapshot => {
-                loadedGhostData = snapshot.val();
-            });
-
-            if (!loadedGhostData || !loadedGhostData.recording) {
-                alert('No ghost recording available for this run');
-                return;
-            }
-
-            ghostData = loadedGhostData;
-            watchingGhost = false;
-            racingGhost = true;
-            ghostPlayer = {
-                x: map.start.x,
-                y: map.start.y,
-                width: 40,
-                height: 40,
-                currentSize: 40
-            };
-
-            startMap(map);
-        }
-
-        // Display average leaderboard
-        function displayAverageLeaderboard(leaderboard, selectedMaps) {
-            const entriesDiv = document.getElementById('menuLeaderboardEntries');
-            entriesDiv.innerHTML = '';
-
-            if (selectedMaps.length === 0) {
-                entriesDiv.innerHTML = '<p style="color: #888;">Please select at least one map</p>';
-                return;
-            }
-
-            if (leaderboard.length === 0) {
-                entriesDiv.innerHTML = '<p style="color: #888;">No players have completed all selected maps</p>';
-                return;
-            }
-
-            leaderboard.forEach((entry, index) => {
-                const youClass = entry.username === currentUsername ? 'you' : '';
-                const rankClass = index === 0 ? 'top1' : index === 1 ? 'top2' : index === 2 ? 'top3' : '';
-                const entryDiv = document.createElement('div');
-                entryDiv.className = `menu-lb-entry ${rankClass} ${youClass}`;
-                entryDiv.innerHTML = `
-                    <span>${index + 1}. ${entry.username}</span>
-                    <span>Avg: ${entry.avgRank.toFixed(2)}</span>
-                `;
-                entriesDiv.appendChild(entryDiv);
-            });
-        }
-
-        // Load leaderboard
-        async function loadLeaderboard(mapId) {
-            try {
-                const snapshot = await database.ref('scores/' + mapId).orderByChild('time').limitToFirst(5).once('value');
-                const entries = [];
-                snapshot.forEach((child) => {
-                    entries.push(child.val());
-                });
-                return entries;
-            } catch (error) {
-                console.error('Failed to load leaderboard:', error);
-                return [];
-            }
-        }
-
-        // Start map
-        function startMap(map) {
-            currentMap = map;
-
-            platforms = map.platforms.map(p => ({
-                x: p.movement ? p.movement.point1.x - p.width / 2 : p.x,
-                y: p.movement ? p.movement.point1.y - p.height / 2 : p.y,
-                width: p.width,
-                height: p.height,
-                color: '#4CAF50',
-                movement: p.movement ? {
-                    point1: { x: p.movement.point1.x, y: p.movement.point1.y },
-                    point2: { x: p.movement.point2.x, y: p.movement.point2.y },
-                    cycleTime: p.movement.cycleTime,
-                    delay: p.movement.delay || 0
-                } : null
-            }));
-
-            hazards = map.hazards ? map.hazards.map(h => ({
-                x: h.movement ? h.movement.point1.x - h.width / 2 : h.x,
-                y: h.movement ? h.movement.point1.y - h.height / 2 : h.y,
-                width: h.width,
-                height: h.height,
-                movement: h.movement ? {
-                    point1: { x: h.movement.point1.x, y: h.movement.point1.y },
-                    point2: { x: h.movement.point2.x, y: h.movement.point2.y },
-                    cycleTime: h.movement.cycleTime,
-                    delay: h.movement.delay || 0
-                } : null
-            })) : [];
-
-            growers = map.growers ? map.growers.map(g => ({
-                x: g.x,
-                y: g.y,
-                width: g.width,
-                height: g.height
-            })) : [];
-
-            shrinkers = map.shrinkers ? map.shrinkers.map(s => ({
-                x: s.x,
-                y: s.y,
-                width: s.width,
-                height: s.height
-            })) : [];
-
-            defaultSizeBlocks = map.defaultSizeBlocks ? map.defaultSizeBlocks.map(d => ({
-                x: d.x,
-                y: d.y,
-                width: d.width,
-                height: d.height
-            })) : [];
-
-            finishLine = {
-                x: map.finish.x,
-                y: map.finish.y,
-                width: map.finish.width,
-                height: map.finish.height
-            };
-
-            player.x = map.start.x;
-            player.y = map.start.y;
-            player.velocityX = 0;
-            player.velocityY = 0;
-            player.width = 40;
-            player.height = 40;
-            player.currentSize = 40;
-            sizeTransitioning = false;
-
-            cameraX = 0;
-            cameraY = 0;
-
-            document.getElementById('menu').style.display = 'none';
-            document.getElementById('gameCanvas').style.display = 'block';
-            document.getElementById('controls').style.display = 'block';
-            document.getElementById('timer').style.display = 'block';
-            document.getElementById('gameLeaderboard').style.display = 'block';
-            document.getElementById('velocityIndicator').style.display = 'block';
-            document.getElementById('versionLabel').style.display = 'block';
-            document.getElementById('mapInfo').textContent = map.name;
-            updateVelocityIndicator();
-
-            // Load and display leaderboard for this map
-            loadGameLeaderboard(map.id);
-
-            // 3 second countdown before starting
-            let countdown = 3;
-            let countdownActive = true;
-            document.getElementById('timer').textContent = countdown.toString();
-
-            // Center camera on player for countdown
-            cameraX = player.x - canvas.width / 2;
-            cameraY = player.y - canvas.height / 2;
-
-            // Draw during countdown to show player position
-            const countdownDrawInterval = setInterval(() => {
-                if (countdownActive) {
-                    draw();
-                }
-            }, 16);
-
-            const countdownInterval = setInterval(() => {
-                countdown--;
-                if (countdown > 0) {
-                    document.getElementById('timer').textContent = countdown.toString();
-                } else if (countdown === 0) {
-                    document.getElementById('timer').textContent = 'GO!';
-                } else {
-                    clearInterval(countdownInterval);
-                    clearInterval(countdownDrawInterval);
-                    countdownActive = false;
-
-                    // Start the actual game
-                    startTime = Date.now();
-                    currentTime = 0;
-                    lastFrameTime = performance.now(); // Reset frame time for delta calculation
-                    mapStartTime = performance.now(); // Reset moving platforms to starting position
-
-                    // Start recording if not watching ghost
-                    if (!watchingGhost) {
-                        currentRecording = [];
-                        isRecording = true;
-                    }
-
-                    // Reset ghost frame index
-                    ghostFrameIndex = 0;
-
-                    gameActive = true;
-
-                    timerInterval = setInterval(() => {
-                        if (gameActive) {
-                            currentTime = Date.now() - startTime;
-                            document.getElementById('timer').textContent = formatTime(currentTime);
-                        }
-                    }, 10);
-                }
-            }, 1000);
-        }
-
-        // Load leaderboard for current game
-        async function loadGameLeaderboard(mapId) {
-            try {
-                const snapshot = await database.ref('scores/' + mapId).orderByChild('time').limitToFirst(100).once('value');
-                const entries = [];
-                snapshot.forEach((child) => {
-                    entries.push(child.val());
-                });
-
-                const container = document.getElementById('gameLeaderboardEntries');
-                container.innerHTML = '';
-
-                if (entries.length === 0) {
-                    container.innerHTML = '<p style="color: #888; font-size: 12px;">No scores yet!</p>';
-                } else {
-                    entries.forEach((entry, index) => {
-                        const rankClass = index === 0 ? 'top1' : index === 1 ? 'top2' : index === 2 ? 'top3' : '';
-                        const youClass = entry.username === currentUsername ? 'you' : '';
-                        const date = new Date(entry.timestamp);
-                        const dateStr = date.toLocaleDateString();
-                        const entryDiv = document.createElement('div');
-                        entryDiv.className = `game-lb-entry ${rankClass} ${youClass}`;
-                        entryDiv.innerHTML = `
-                            <div style="display: flex; flex-direction: column; gap: 2px;">
-                                <span style="font-weight: bold;">${index + 1}. ${entry.username}</span>
-                                <span style="font-size: 10px; color: #888;">${dateStr}</span>
-                            </div>
-                            <span style="font-weight: bold;">${formatTime(entry.time)}</span>
-                        `;
-                        container.appendChild(entryDiv);
-                    });
-                }
-            } catch (error) {
-                console.error('Failed to load game leaderboard:', error);
-            }
-        }
-
-        // Format time
-        function formatTime(ms) {
-            const seconds = Math.floor(ms / 1000);
-            const milliseconds = Math.floor((ms % 1000) / 10);
-            return seconds + '.' + (milliseconds < 10 ? '0' : '') + milliseconds + 's';
-        }
-
-        // Check if there's a gap the player can fit into
-        function canFitInGap(x, y, width, height) {
-            // Add a small buffer (1px) to prevent phasing through tight gaps
-            const buffer = 1;
-
-            // Check if this position would collide with any platform
-            for (let platform of platforms) {
-                if (x + width - buffer > platform.x &&
-                    x + buffer < platform.x + platform.width &&
-                    y + height - buffer > platform.y &&
-                    y + buffer < platform.y + platform.height) {
-                    return false; // Collision found, can't fit
-                }
-            }
-            return true; // No collision, can fit
-        }
-
-        // Check collision
-        function checkCollision() {
-            isGrounded = false;
-
-            // Skip collision if noclip is enabled
-            if (window.noclipEnabled) {
-                return;
-            }
-
-            for (let platform of platforms) {
-                // Check if player overlaps with platform
-                if (player.x + player.width > platform.x &&
-                    player.x < platform.x + platform.width &&
-                    player.y + player.height > platform.y &&
-                    player.y < platform.y + platform.height) {
-
-                    // Calculate overlap on each side
-                    const overlapLeft = (player.x + player.width) - platform.x;
-                    const overlapRight = (platform.x + platform.width) - player.x;
-                    const overlapTop = (player.y + player.height) - platform.y;
-                    const overlapBottom = (platform.y + platform.height) - player.y;
-
-                    // Find the smallest overlap (that's the side we hit)
-                    const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
-
-                    // Floor collision (landing on top)
-                    // Extra check: if moving down fast, only treat as floor if top overlap is clearly smallest
-                    if ((minOverlap === overlapTop && player.velocityY >= 0) ||
-                        (player.velocityY > 0 && overlapTop < overlapBottom &&
-                         overlapTop < overlapLeft * 0.5 && overlapTop < overlapRight * 0.5)) {
-                        // Don't allow gap sliding - always stop at platform edges
-                        player.y = platform.y - player.height;
-                        player.velocityY = 0;
-                        isGrounded = true;
-                    }
-                    // Ceiling collision (hitting from below)
-                    else if (minOverlap === overlapBottom && player.velocityY < 0) {
-                        player.y = platform.y + platform.height;
-                        player.velocityY = 0;
-                    }
-                    // Left wall collision
-                    else if (minOverlap === overlapLeft) {
-                        player.x = platform.x - player.width;
-                        player.velocityX = 0;
-                    }
-                    // Right wall collision
-                    else if (minOverlap === overlapRight) {
-                        player.x = platform.x + platform.width;
-                        player.velocityX = 0;
-                    }
-                }
-            }
-        }
-
-        // Check hazards
-        function checkHazards() {
-            // Skip hazards if noclip is enabled
-            if (window.noclipEnabled) {
-                return;
-            }
-
-            for (let hazard of hazards) {
-                if (player.x + player.width > hazard.x &&
-                    player.x < hazard.x + hazard.width &&
-                    player.y + player.height > hazard.y &&
-                    player.y < hazard.y + hazard.height) {
-                    restartMap();
-                    return;
-                }
-            }
-        }
-
-        // Check size blocks (growers = large, shrinkers = small)
-        function checkGrowers() {
-            for (let grower of growers) {
-                if (player.x + player.width > grower.x &&
-                    player.x < grower.x + grower.width &&
-                    player.y + player.height > grower.y &&
-                    player.y < grower.y + grower.height) {
-                    // Large size block - sets to 80
-                    if (player.currentSize !== 80 && !sizeTransitioning) {
-                        startSizeTransition(80);
-                    }
-                    return;
-                }
-            }
-        }
-
-        // Check shrinkers (small size block)
-        function checkShrinkers() {
-            for (let shrinker of shrinkers) {
-                if (player.x + player.width > shrinker.x &&
-                    player.x < shrinker.x + shrinker.width &&
-                    player.y + player.height > shrinker.y &&
-                    player.y < shrinker.y + shrinker.height) {
-                    // Small size block - sets to 20
-                    if (player.currentSize !== 20 && !sizeTransitioning) {
-                        startSizeTransition(20);
-                    }
-                    return;
-                }
-            }
-        }
-
-        // Check default size blocks
-        function checkDefaultSize() {
-            for (let defaultBlock of defaultSizeBlocks) {
-                if (player.x + player.width > defaultBlock.x &&
-                    player.x < defaultBlock.x + defaultBlock.width &&
-                    player.y + player.height > defaultBlock.y &&
-                    player.y < defaultBlock.y + defaultBlock.height) {
-                    // Default size block - sets to 40
-                    if (player.currentSize !== 40 && !sizeTransitioning) {
-                        startSizeTransition(40);
-                    }
-                    return;
-                }
-            }
-        }
-
-        function startSizeTransition(newSize) {
-            sizeTransitioning = true;
-            targetSize = newSize;
-            sizeTransitionProgress = 0;
-        }
-
-        function updateSizeTransition(deltaTime) {
-            if (!sizeTransitioning) return;
-
-            sizeTransitionProgress += deltaTime * 0.1;
-
-            if (sizeTransitionProgress >= 1) {
-                sizeTransitioning = false;
-                player.currentSize = targetSize;
-                player.width = targetSize;
-                player.height = targetSize;
-            } else {
-                // Interpolate size from center
-                const startSize = player.currentSize;
-                const t = sizeTransitionProgress;
-                const newSize = startSize + (targetSize - startSize) * t;
-
-                // Calculate center point before resize
-                const centerX = player.x + player.width / 2;
-                const centerY = player.y + player.height / 2;
-
-                // Update size
-                player.width = newSize;
-                player.height = newSize;
-
-                // Reposition to keep center point fixed
-                player.x = centerX - player.width / 2;
-                player.y = centerY - player.height / 2;
-            }
-        }
-
-        // Check finish line
-        function checkFinish() {
-            if (finishLine &&
-                player.x + player.width > finishLine.x &&
-                player.x < finishLine.x + finishLine.width &&
-                player.y + player.height > finishLine.y &&
-                player.y < finishLine.y + finishLine.height) {
-                finishMap();
-            }
-        }
-
-        // Finish map
-        async function finishMap() {
-            gameActive = false;
-            clearInterval(timerInterval);
-            isRecording = false;
-
-            const finalTime = currentTime;
-            const isNewPB = !personalBests[currentMap.id] || finalTime < personalBests[currentMap.id];
-
-            if (isNewPB) {
-                personalBests[currentMap.id] = finalTime;
-                // Save ghost recording for PB
-                await saveGhostRecording(currentMap.id, currentRecording, finalTime);
-            }
-
-            // Submit to leaderboard
-            await submitScore(currentMap.id, finalTime);
-
-            document.getElementById('finishTime').innerHTML = `<p style="font-size: 32px;">Time: ${formatTime(finalTime)}</p>`;
-
-            if (isNewPB) {
-                document.getElementById('pbIndicator').innerHTML = '<div class="pb-indicator">🏆 NEW PERSONAL BEST! 🏆</div>';
-            } else {
-                const pb = personalBests[currentMap.id];
-                document.getElementById('pbIndicator').innerHTML = `<p>Your PB: ${formatTime(pb)}</p>`;
-            }
-
-            await getRank(currentMap.id, finalTime);
-
-            document.getElementById('finishScreen').style.display = 'block';
-        }
-
-        // Save ghost recording
-        async function saveGhostRecording(mapId, recording, time) {
-            try {
-                const uid = currentUser.uid;
-                const ghostRef = database.ref(`ghosts/${mapId}/${uid}`);
-                await ghostRef.set({
-                    username: currentUsername,
-                    time: time,
-                    recording: recording,
-                    timestamp: firebase.database.ServerValue.TIMESTAMP
-                });
-            } catch (error) {
-                console.error('Failed to save ghost:', error);
-            }
-        }
-
-        // Submit score
-        async function submitScore(mapId, time) {
-            try {
-                const uid = currentUser.uid;
-                const scoreRef = database.ref(`scores/${mapId}/${uid}`);
-
-                // Check existing score and update if better
-                const existing = await scoreRef.once('value');
-                if (!existing.exists() || time < existing.val().time) {
-                    await scoreRef.set({
-                        username: currentUsername,
-                        time: time,
-                        timestamp: firebase.database.ServerValue.TIMESTAMP
-                    });
-                }
-
-                // Always save to times history (all times, not just best)
-                const historyRef = database.ref(`times_history/${uid}/${mapId}`).push();
-                await historyRef.set({
-                    username: currentUsername,
-                    time: time,
-                    timestamp: firebase.database.ServerValue.TIMESTAMP
-                });
-            } catch (error) {
-                console.error('Failed to submit score:', error);
-            }
-        }
-
-        // Get rank
-        async function getRank(mapId, time) {
-            try {
-                const snapshot = await database.ref('scores/' + mapId).orderByChild('time').once('value');
-                const entries = [];
-                snapshot.forEach((child) => {
-                    entries.push(child.val());
-                });
-
-                let rank = 1;
-                for (let entry of entries) {
-                    if (entry.time < time) {
-                        rank++;
-                    }
-                }
-
-                document.getElementById('rankInfo').innerHTML = `<p style="font-size: 18px;">Global Rank: #${rank} / ${entries.length}</p>`;
-            } catch (error) {
-                console.error('Failed to get rank:', error);
-            }
-        }
-
-
-        // Update velocity indicator
-        function updateVelocityIndicator() {
-            const velocityMagnitude = Math.sqrt(player.velocityX * player.velocityX + player.velocityY * player.velocityY);
-            const maxDisplaySpeed = 8; // Max velocity for display purposes
-            const normalizedMagnitude = Math.min(velocityMagnitude / maxDisplaySpeed, 1);
-
-            // Calculate angle from velocity
-            const angle = Math.atan2(player.velocityY, player.velocityX);
-
-            // Position the dot on the circle (radius of 50px, center at 60px)
-            const circleRadius = 50;
-            const dotX = 60 + (circleRadius * normalizedMagnitude * Math.cos(angle));
-            const dotY = 60 + (circleRadius * normalizedMagnitude * Math.sin(angle));
-
-            const dot = document.getElementById('velocityDot');
-            dot.style.left = dotX + 'px';
-            dot.style.top = dotY + 'px';
-        }
-
-        // Update moving platforms and hazards
-        function updateMovingBlocks(currentTime) {
-            const elapsed = (currentTime - mapStartTime) / 1000; // Convert to seconds
-
-            // Update platform positions based on movement paths
-            platforms.forEach(platform => {
-                if (platform.movement) {
-                    const { point1, point2, cycleTime, delay = 0 } = platform.movement;
-
-                    // Apply delay - platform stays at start position until delay expires
-                    if (elapsed < delay) {
-                        platform.x = point1.x - platform.width / 2;
-                        platform.y = point1.y - platform.height / 2;
-                        return;
-                    }
-
-                    const adjustedElapsed = elapsed - delay;
-                    const progress = (adjustedElapsed % cycleTime) / cycleTime;
-
-                    // Ping-pong between point1 and point2
-                    let t;
-                    if (progress < 0.5) {
-                        t = progress * 2; // 0 to 1
-                    } else {
-                        t = 2 - (progress * 2); // 1 to 0
-                    }
-
-                    // Linear interpolation between point1 and point2
-                    platform.x = point1.x + (point2.x - point1.x) * t - platform.width / 2;
-                    platform.y = point1.y + (point2.y - point1.y) * t - platform.height / 2;
-                }
-            });
-
-            // Update hazard positions
-            hazards.forEach(hazard => {
-                if (hazard.movement) {
-                    const { point1, point2, cycleTime, delay = 0 } = hazard.movement;
-
-                    // Apply delay
-                    if (elapsed < delay) {
-                        hazard.x = point1.x - hazard.width / 2;
-                        hazard.y = point1.y - hazard.height / 2;
-                        return;
-                    }
-
-                    const adjustedElapsed = elapsed - delay;
-                    const progress = (adjustedElapsed % cycleTime) / cycleTime;
-
-                    let t;
-                    if (progress < 0.5) {
-                        t = progress * 2;
-                    } else {
-                        t = 2 - (progress * 2);
-                    }
-
-                    hazard.x = point1.x + (point2.x - point1.x) * t - hazard.width / 2;
-                    hazard.y = point1.y + (point2.y - point1.y) * t - hazard.height / 2;
-                }
-            });
-        }
-
-        // Update player
-        function updatePlayer(deltaTime = 1) {
-            if (!gameActive) return;
-
-            // Update size transition
-            updateSizeTransition(deltaTime);
-
-            // If size changed, check for collisions and adjust position if needed
-            if (sizeTransitioning) {
-                // Simple collision correction during size transition
-                for (let platform of platforms) {
-                    if (player.x + player.width > platform.x &&
-                        player.x < platform.x + platform.width &&
-                        player.y + player.height > platform.y &&
-                        player.y < platform.y + platform.height) {
-                        // Push player out of collision
-                        const overlapLeft = (player.x + player.width) - platform.x;
-                        const overlapRight = (platform.x + platform.width) - player.x;
-                        const overlapTop = (player.y + player.height) - platform.y;
-                        const overlapBottom = (platform.y + platform.height) - player.y;
-                        const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
-
-                        if (minOverlap === overlapTop) {
-                            player.y = platform.y - player.height;
-                        } else if (minOverlap === overlapBottom) {
-                            player.y = platform.y + platform.height;
-                        } else if (minOverlap === overlapLeft) {
-                            player.x = platform.x - player.width;
-                        } else if (minOverlap === overlapRight) {
-                            player.x = platform.x + platform.width;
-                        }
-                    }
-                }
-            }
-
-            // Freeze movement during transition
-            if (!sizeTransitioning) {
-                // Scale factors based on player size (40 is base) - linear scaling
-                const sizeScale = player.currentSize / 40;
-
-                // Gravity (scaled by size for proportional physics)
-                if ((keys['KeyS'] || keys['ArrowDown']) && !isGrounded) {
-                    player.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;  // Fall 1.75x faster
-                } else {
-                    player.velocityY += GRAVITY * sizeScale * deltaTime;
-                }
-
-                // Movement (scaled by size)
-                const moveSpeed = MOVE_SPEED * sizeScale;
-                if (keys['KeyA'] || keys['ArrowLeft']) {
-                    player.velocityX -= moveSpeed * deltaTime;
-                }
-                if (keys['KeyD'] || keys['ArrowRight']) {
-                    player.velocityX += moveSpeed * deltaTime;
-                }
-
-                // Jump (W, UP arrow, or SPACE) - Variable height, scaled by size
-                if ((keys['ArrowUp'] || keys['KeyW'] || keys['Space']) && isGrounded) {
-                    player.velocityY = -JUMP_POWER * sizeScale;
-                    isJumping = true;
-                }
-
-                // Cut jump short if button released (variable jump height)
-                if (isJumping && !keys['ArrowUp'] && !keys['KeyW'] && !keys['Space']) {
-                    if (player.velocityY < 0) {  // Only if going up
-                        player.velocityY *= 0.5;  // Cut jump velocity in half
-                    }
-                    isJumping = false;
-                }
-
-                // Reset jump state when grounded
-                if (isGrounded && player.velocityY >= 0) {
-                    isJumping = false;
-                }
-
-                // Apply friction (using exponential decay for frame-rate independence)
-                if (isGrounded) {
-                    player.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
-                } else {
-                    player.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
-                }
-
-                player.velocityX = Math.max(-MAX_SPEED * sizeScale, Math.min(MAX_SPEED * sizeScale, player.velocityX));
-
-                // Cap vertical velocity to prevent tunneling through platforms
-                const maxFallSpeed = 8 * sizeScale; // Terminal velocity (reduced from 10 to prevent glitching)
-                player.velocityY = Math.min(player.velocityY, maxFallSpeed);
-
-                player.x += player.velocityX * deltaTime;
-                player.y += player.velocityY * deltaTime;
-            }
-
-            checkCollision();
-            checkHazards();
-            checkGrowers();
-            checkShrinkers();
-            checkDefaultSize();
-            checkFinish();
-
-            // Update velocity indicator (after collision so it shows actual velocity)
-            updateVelocityIndicator();
-
-            const targetCameraX = player.x - canvas.width / 2;
-            const targetCameraY = player.y - canvas.height / 2;
-            cameraX += (targetCameraX - cameraX) * 0.08 * deltaTime;
-            cameraY += (targetCameraY - cameraY) * 0.08 * deltaTime;
-
-        }
-
-        // Draw
-        function draw() {
-            ctx.fillStyle = '#87CEEB';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            ctx.save();
-            ctx.translate(-cameraX, -cameraY);
-
-            // Draw movement path lines for platforms
-            for (let platform of platforms) {
-                if (platform.movement) {
-                    ctx.strokeStyle = 'rgba(79, 172, 254, 0.5)';
-                    ctx.lineWidth = 3;
-                    ctx.setLineDash([5, 5]);
-                    ctx.beginPath();
-                    ctx.moveTo(platform.movement.point1.x, platform.movement.point1.y);
-                    ctx.lineTo(platform.movement.point2.x, platform.movement.point2.y);
-                    ctx.stroke();
-                    ctx.setLineDash([]);
-                }
-            }
-
-            // Draw movement path lines for hazards
-            for (let hazard of hazards) {
-                if (hazard.movement) {
-                    ctx.strokeStyle = 'rgba(255, 51, 51, 0.5)';
-                    ctx.lineWidth = 3;
-                    ctx.setLineDash([5, 5]);
-                    ctx.beginPath();
-                    ctx.moveTo(hazard.movement.point1.x, hazard.movement.point1.y);
-                    ctx.lineTo(hazard.movement.point2.x, hazard.movement.point2.y);
-                    ctx.stroke();
-                    ctx.setLineDash([]);
-                }
-            }
-
-            for (let platform of platforms) {
-                ctx.fillStyle = platform.color;
-                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
-                ctx.strokeStyle = '#333';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
-            }
-
-            for (let hazard of hazards) {
-                // Simple red rectangles for hazards - cleaner and more consistent
-                ctx.fillStyle = '#FF3333';
-                ctx.fillRect(hazard.x, hazard.y, hazard.width, hazard.height);
-                ctx.strokeStyle = '#CC0000';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(hazard.x, hazard.y, hazard.width, hazard.height);
-            }
-
-            for (let grower of growers) {
-                ctx.fillStyle = '#00FF88';
-                ctx.fillRect(grower.x, grower.y, grower.width, grower.height);
-                ctx.strokeStyle = '#00CC66';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(grower.x, grower.y, grower.width, grower.height);
-            }
-
-            for (let shrinker of shrinkers) {
-                ctx.fillStyle = '#BB66FF';
-                ctx.fillRect(shrinker.x, shrinker.y, shrinker.width, shrinker.height);
-                ctx.strokeStyle = '#9944DD';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(shrinker.x, shrinker.y, shrinker.width, shrinker.height);
-            }
-
-            for (let defaultBlock of defaultSizeBlocks) {
-                ctx.fillStyle = '#FFB84D';
-                ctx.fillRect(defaultBlock.x, defaultBlock.y, defaultBlock.width, defaultBlock.height);
-                ctx.strokeStyle = '#FF8800';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(defaultBlock.x, defaultBlock.y, defaultBlock.width, defaultBlock.height);
-            }
-
-            if (finishLine) {
-                const gradient = ctx.createLinearGradient(finishLine.x, 0, finishLine.x + finishLine.width, 0);
-                gradient.addColorStop(0, '#FFD700');
-                gradient.addColorStop(0.5, '#FFA500');
-                gradient.addColorStop(1, '#FFD700');
-                ctx.fillStyle = gradient;
-                ctx.fillRect(finishLine.x, finishLine.y, finishLine.width, finishLine.height);
-                ctx.strokeStyle = '#333';
-                ctx.lineWidth = 3;
-                ctx.strokeRect(finishLine.x, finishLine.y, finishLine.width, finishLine.height);
-
-                ctx.font = '30px Arial';
-                ctx.fillText('🏁', finishLine.x + finishLine.width / 2 - 15, finishLine.y - 10);
-            }
-
-            // Draw ghost player
-            if (ghostPlayer) {
-                ctx.fillStyle = 'rgba(100, 100, 255, 0.4)';
-                ctx.fillRect(ghostPlayer.x, ghostPlayer.y, ghostPlayer.width, ghostPlayer.height);
-                ctx.strokeStyle = 'rgba(100, 100, 255, 0.7)';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(ghostPlayer.x, ghostPlayer.y, ghostPlayer.width, ghostPlayer.height);
-            }
-
-            // Draw player
-            ctx.fillStyle = player.color;
-            ctx.fillRect(player.x, player.y, player.width, player.height);
-            ctx.strokeStyle = '#333';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(player.x, player.y, player.width, player.height);
-
-            ctx.restore();
-        }
-
-        // Game loop with delta time for consistent physics
-        let lastFrameTime = performance.now();
-        function gameLoop(currentTime) {
-            requestAnimationFrame(gameLoop);
-            if (gameActive) {
-                // Calculate delta time (normalize to 60fps baseline)
-                let deltaTime = (currentTime - lastFrameTime) / 16.67;
-                lastFrameTime = currentTime;
-
-                // Apply speed multiplier
-                deltaTime *= (window.speedMultiplier || 1.0);
-
-                // Update moving blocks
-                updateMovingBlocks(currentTime);
-
-                updatePlayer(deltaTime);
-
-                // Record player position for ghost
-                if (isRecording) {
-                    currentRecording.push({
-                        x: player.x,
-                        y: player.y,
-                        width: player.width,
-                        height: player.height,
-                        currentSize: player.currentSize
-                    });
-                }
-
-                // Update ghost player
-                if (ghostPlayer && ghostData) {
-                    if (ghostFrameIndex < ghostData.recording.length) {
-                        const ghostFrame = ghostData.recording[ghostFrameIndex];
-                        ghostPlayer.x = ghostFrame.x;
-                        ghostPlayer.y = ghostFrame.y;
-                        ghostPlayer.width = ghostFrame.width;
-                        ghostPlayer.height = ghostFrame.height;
-                        ghostPlayer.currentSize = ghostFrame.currentSize;
-                        ghostFrameIndex++;
-                    }
-                }
-
-                draw();
-            }
-        }
-
-        // Restart map
-        function restartMap() {
-            gameActive = false;
-            clearInterval(timerInterval);
-            document.getElementById('finishScreen').style.display = 'none';
-
-            // Reset ghost if racing
-            if (racingGhost && ghostPlayer) {
-                ghostPlayer.x = currentMap.start.x;
-                ghostPlayer.y = currentMap.start.y;
-                ghostPlayer.width = 40;
-                ghostPlayer.height = 40;
-                ghostPlayer.currentSize = 40;
-            }
-
-            if (currentMap) {
-                startMap(currentMap);
-            }
-        }
-
-        // Back to menu
-        function backToMenu() {
-            gameActive = false;
-            clearInterval(timerInterval);
-            document.getElementById('finishScreen').style.display = 'none';
-            document.getElementById('menu').style.display = 'block';
-            document.getElementById('gameCanvas').style.display = 'none';
-            document.getElementById('controls').style.display = 'none';
-            document.getElementById('timer').style.display = 'none';
-            document.getElementById('gameLeaderboard').style.display = 'none';
-            document.getElementById('velocityIndicator').style.display = 'none';
-            document.getElementById('versionLabel').style.display = 'none';
-
-            // Clear ghost data
-            ghostData = null;
-            ghostPlayer = null;
-            racingGhost = false;
-            watchingGhost = false;
-            isRecording = false;
-            currentRecording = [];
-
-            initMenu();
-        }
-
-
-        // Event listeners
-        document.addEventListener('keydown', (e) => {
-            keys[e.code] = true;
-            if (e.code === 'KeyR' && gameActive) {
-                restartMap();
-            }
-            e.preventDefault();
-        });
-
-        document.addEventListener('keyup', (e) => {
-            keys[e.code] = false;
-            e.preventDefault();
-        });
-
-        // Console commands API
-        window.gameCommands = {
-            // Player commands
-            teleport: (x, y) => {
-                if (gameActive) {
-                    player.x = x;
-                    player.y = y;
-                    console.log(`Teleported to (${x}, ${y})`);
-                } else {
-                    console.log('Game must be active to teleport');
-                }
-            },
-            setSize: (size) => {
-                if (gameActive) {
-                    player.currentSize = size;
-                    player.width = size;
-                    player.height = size;
-                    console.log(`Player size set to ${size}`);
-                } else {
-                    console.log('Game must be active to change size');
-                }
-            },
-            setVelocity: (vx, vy) => {
-                if (gameActive) {
-                    player.velocityX = vx;
-                    player.velocityY = vy;
-                    console.log(`Velocity set to (${vx}, ${vy})`);
-                } else {
-                    console.log('Game must be active to set velocity');
-                }
-            },
-            noclip: () => {
-                window.noclipEnabled = !window.noclipEnabled;
-                console.log(`Noclip ${window.noclipEnabled ? 'enabled' : 'disabled'}`);
-            },
-
-            // Map commands
-            loadMap: (mapId) => {
-                const map = maps.find(m => m.id === mapId);
-                if (map) {
-                    startGame(map);
-                    console.log(`Loaded map: ${map.name}`);
-                } else {
-                    console.log(`Map not found: ${mapId}`);
-                    console.log('Available maps:', maps.map(m => m.id).join(', '));
-                }
-            },
-            listMaps: () => {
-                console.log('Available maps:');
-                maps.forEach(m => console.log(`- ${m.id}: ${m.name} (${m.difficulty})`));
-            },
-            restart: () => {
-                if (currentMap) {
-                    restartMap();
-                    console.log('Map restarted');
-                } else {
-                    console.log('No map is currently active');
-                }
-            },
-            finish: () => {
-                if (gameActive) {
-                    finishGame();
-                    console.log('Game finished');
-                } else {
-                    console.log('Game must be active to finish');
-                }
-            },
-
-            // Ghost commands
-            watchGhost: (mapId, username) => {
-                watchGhost(mapId, username);
-                console.log(`Loading ghost for ${username} on ${mapId}`);
-            },
-            raceGhost: (mapId, username) => {
-                raceGhost(mapId, username);
-                console.log(`Racing against ${username} on ${mapId}`);
-            },
-            clearGhost: () => {
-                ghostData = null;
-                ghostPlayer = null;
-                racingGhost = false;
-                watchingGhost = false;
-                ghostFrameIndex = 0;
-                console.log('Ghost cleared');
-            },
-
-            // Leaderboard commands
-            viewLeaderboard: async (mapId) => {
-                const leaderboard = await loadFullLeaderboard(mapId);
-                console.log(`Leaderboard for ${mapId}:`);
-                leaderboard.forEach((entry, i) => {
-                    console.log(`${i + 1}. ${entry.username}: ${formatTime(entry.time)}`);
-                });
-            },
-
-            // Utility commands
-            getPosition: () => {
-                if (gameActive) {
-                    console.log(`Player position: (${player.x.toFixed(2)}, ${player.y.toFixed(2)})`);
-                    console.log(`Velocity: (${player.velocityX.toFixed(2)}, ${player.velocityY.toFixed(2)})`);
-                    console.log(`Size: ${player.currentSize}`);
-                } else {
-                    console.log('Game must be active to get position');
-                }
-            },
-            setSpeed: (multiplier) => {
-                window.speedMultiplier = multiplier;
-                console.log(`Speed multiplier set to ${multiplier}x`);
-            },
-            help: () => {
-                console.log('Available commands:');
-                console.log('Player Commands:');
-                console.log('  gameCommands.teleport(x, y) - Teleport player to position');
-                console.log('  gameCommands.setSize(size) - Set player size');
-                console.log('  gameCommands.setVelocity(vx, vy) - Set player velocity');
-                console.log('  gameCommands.noclip() - Toggle noclip mode');
-                console.log('  gameCommands.getPosition() - Get player position and stats');
-                console.log('  gameCommands.setSpeed(multiplier) - Set game speed multiplier');
-                console.log('');
-                console.log('Map Commands:');
-                console.log('  gameCommands.loadMap(mapId) - Load a specific map');
-                console.log('  gameCommands.listMaps() - List all available maps');
-                console.log('  gameCommands.restart() - Restart current map');
-                console.log('  gameCommands.finish() - Force finish the current game');
-                console.log('');
-                console.log('Ghost Commands:');
-                console.log('  gameCommands.watchGhost(mapId, username) - Watch a ghost run');
-                console.log('  gameCommands.raceGhost(mapId, username) - Race against a ghost');
-                console.log('  gameCommands.clearGhost() - Clear current ghost');
-                console.log('');
-                console.log('Leaderboard Commands:');
-                console.log('  gameCommands.viewLeaderboard(mapId) - View leaderboard for a map');
-            }
-        };
-
-        // Initialize speed multiplier
-        window.speedMultiplier = 1.0;
-        window.noclipEnabled = false;
-
-        console.log('%cGame Console Commands Available!', 'color: #4facfe; font-size: 16px; font-weight: bold;');
-        console.log('Type gameCommands.help() for a list of commands');
-
-        // Start game loop
-        gameLoop();
     </script>
 </body>
 </html>
