@@ -488,9 +488,6 @@
         // Game feel constants
         const COYOTE_TIME = 6; // Frames you can still jump after leaving platform
         const JUMP_BUFFER_TIME = 8; // Frames to remember jump input before landing
-        const DASH_SPEED = 8; // Speed of dash
-        const DASH_DURATION = 10; // Frames dash lasts
-        const DASH_COOLDOWN = 60; // Frames between dashes
         const ACCELERATION = 0.5; // Smoother acceleration
         const DECELERATION = 0.8; // Smoother deceleration
 
@@ -699,9 +696,6 @@
                 // Game feel variables
                 this.coyoteTimer = 0;
                 this.jumpBufferTimer = 0;
-                this.dashTimer = 0;
-                this.dashCooldown = 0;
-                this.dashDirection = 0;
                 this.wasGrounded = false;
                 this.squashStretch = 1; // For squash and stretch animation
             }
@@ -1275,12 +1269,10 @@
                     updatePracticePlayer(deltaTime);
 
                     // Update HUD
-                    const dashCooldownPercent = Math.max(0, (practiceMode.player.dashCooldown / DASH_COOLDOWN) * 100);
                     document.getElementById('hud').innerHTML = `
                         <div style="font-size: 24px; font-weight: bold;">${levelInfo.name}</div>
                         <div style="font-size: 14px; margin-top: 3px; color: #aaa;">By ${levelInfo.creator}</div>
-                        <div style="font-size: 14px; margin-top: 3px; color: ${dashCooldownPercent > 0 ? '#ff6666' : '#66ff66'};">Dash: ${dashCooldownPercent > 0 ? 'Cooling...' : 'READY!'}</div>
-                        <div style="font-size: 16px; color: #FFD700; margin-top: 5px;">Shift+Direction to Dash!</div>
+                        <div style="font-size: 16px; color: #FFD700; margin-top: 5px;">WASD/Arrows to move!</div>
                     `;
 
                     // Render
@@ -1554,14 +1546,12 @@
                 practiceMode.credits = practiceMode.credits.filter(c => c.x > practiceMode.cameraX - 200);
 
                 // Update HUD
-                const dashCooldownPercent = Math.max(0, (practiceMode.player.dashCooldown / DASH_COOLDOWN) * 100);
                 document.getElementById('hud').innerHTML = `
                     <div style="font-size: 24px; font-weight: bold;">EARN MODE</div>
                     <div style="font-size: 18px; margin-top: 5px;">Collected This Run: ${practiceMode.creditsCollected}</div>
                     <div style="font-size: 16px; margin-top: 3px;">Credits: ${secureCredits} <span style="font-size: 12px; color: #aaa;">(${userCredits} on hand)</span></div>
                     <div style="font-size: 14px; margin-top: 3px; color: #aaa;">Active Credits: ${practiceMode.credits.filter(c => !c.collected).length}</div>
-                    <div style="font-size: 14px; margin-top: 3px; color: ${dashCooldownPercent > 0 ? '#ff6666' : '#66ff66'};">Dash: ${dashCooldownPercent > 0 ? 'Cooling...' : 'READY!'}</div>
-                    <div style="font-size: 16px; color: #FFD700; margin-top: 5px;">Collect coins! Shift+Direction to Dash!</div>
+                    <div style="font-size: 16px; color: #FFD700; margin-top: 5px;">Collect coins!</div>
                 `;
 
                 // Render
@@ -1728,41 +1718,27 @@
             // Return squash/stretch to normal
             player.squashStretch += (1 - player.squashStretch) * 0.3;
 
-            // Update dash timers
-            if (player.dashTimer > 0) {
-                player.dashTimer -= deltaTime;
+            // Handle input with smoother acceleration
+            if (practiceMode.keys['a'] || practiceMode.keys['ArrowLeft']) {
+                player.velocityX -= MOVE_SPEED * deltaTime;
             }
-            if (player.dashCooldown > 0) {
-                player.dashCooldown -= deltaTime;
-            }
-
-            // DASH MECHANIC: Shift key to dash
-            if (practiceMode.keys['Shift'] && player.dashCooldown <= 0 && player.dashTimer <= 0) {
-                player.dashDirection = 0;
-                if (practiceMode.keys['a'] || practiceMode.keys['ArrowLeft']) {
-                    player.dashDirection = -1;
-                } else if (practiceMode.keys['d'] || practiceMode.keys['ArrowRight']) {
-                    player.dashDirection = 1;
-                }
-
-                if (player.dashDirection !== 0) {
-                    player.dashTimer = DASH_DURATION;
-                    player.dashCooldown = DASH_COOLDOWN;
-                    // Dash particles
-                    spawnParticles(player.x + player.width / 2, player.y + player.height / 2, 15, player.getSkinColor());
-                }
+            if (practiceMode.keys['d'] || practiceMode.keys['ArrowRight']) {
+                player.velocityX += MOVE_SPEED * deltaTime;
             }
 
-            // Apply dash speed
-            if (player.dashTimer > 0) {
-                player.velocityX = player.dashDirection * DASH_SPEED;
-            } else {
-                // Handle input with smoother acceleration
-                if (practiceMode.keys['a'] || practiceMode.keys['ArrowLeft']) {
-                    player.velocityX -= MOVE_SPEED * deltaTime;
-                }
-                if (practiceMode.keys['d'] || practiceMode.keys['ArrowRight']) {
-                    player.velocityX += MOVE_SPEED * deltaTime;
+            // Speed-based movement particles
+            const speed = Math.abs(player.velocityX);
+            if (speed > 0.5) {
+                // More particles = faster movement
+                const particleChance = Math.min(speed / 10, 0.8); // Max 80% chance
+                if (Math.random() < particleChance) {
+                    const particleCount = Math.floor(speed / 2);
+                    spawnParticles(
+                        player.x + player.width / 2 + (Math.random() - 0.5) * player.width,
+                        player.y + player.height,
+                        Math.max(1, particleCount),
+                        player.getSkinColor()
+                    );
                 }
             }
 
