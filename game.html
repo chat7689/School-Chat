@@ -1897,30 +1897,6 @@
         function updatePracticePlayer(deltaTime = 1) {
             const player = practiceMode.player;
 
-            // Check if grounded first
-            let isGrounded = false;
-            for (const platform of practiceMode.platforms) {
-                if (checkCollision(player, platform)) {
-                    if (player.velocityY > 0 && player.y + player.height <= platform.y + 10) {
-                        player.y = platform.y - player.height;
-                        player.velocityY = 0;
-                        isGrounded = true;
-                    }
-                }
-            }
-
-            // COYOTE TIME: Allow jumping shortly after leaving platform
-            if (isGrounded) {
-                player.coyoteTimer = COYOTE_TIME;
-                // Landing particles
-                if (!player.wasGrounded) {
-                    spawnParticles(player.x + player.width / 2, player.y + player.height, 8, 'rgb(200, 200, 200)');
-                }
-            } else {
-                player.coyoteTimer = Math.max(0, player.coyoteTimer - deltaTime);
-            }
-            player.wasGrounded = isGrounded;
-
             // Scale factors based on player size (from level creator) - freeze movement during transition
             if (!player.sizeTransitioning) {
                 const sizeScale = player.currentSize / 40;
@@ -1978,14 +1954,9 @@
                 practiceIsJumping = false;
             }
 
-            // Reset jump state when grounded
-            if (isGrounded && player.velocityY >= 0) {
-                practiceIsJumping = false;
-            }
-
             // Apply gravity scaled by size (from level creator)
             const sizeScale = player.currentSize / 40;
-            if ((practiceMode.keys['s'] || practiceMode.keys['ArrowDown']) && !isGrounded) {
+            if ((practiceMode.keys['s'] || practiceMode.keys['ArrowDown']) && !player.wasGrounded) {
                 player.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
                 // Fast fall particles
                 if (Math.random() < 0.3) {
@@ -1995,20 +1966,83 @@
                 player.velocityY += GRAVITY * sizeScale * deltaTime;
             }
 
-            // Apply friction using exponential decay
-            if (isGrounded) {
+            // Apply friction using exponential decay (use previous frame's grounded state)
+            if (player.wasGrounded) {
                 player.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
             } else {
                 player.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
             }
 
-            // Limit speed based on whether grounded or in air
-            const maxSpeed = isGrounded ? GROUND_MAX_SPEED : AIR_MAX_SPEED;
+            // Cap vertical velocity to prevent tunneling
+            const sizeScale = player.currentSize / 40;
+            const maxFallSpeed = 8 * sizeScale;
+            player.velocityY = Math.min(player.velocityY, maxFallSpeed);
+
+            // Limit horizontal speed
+            const maxSpeed = GROUND_MAX_SPEED;
             player.velocityX = Math.max(-maxSpeed, Math.min(maxSpeed, player.velocityX));
 
             // Update position
             player.x += player.velocityX * deltaTime;
             player.y += player.velocityY * deltaTime;
+
+            // Collision detection - matches level creator
+            let isGrounded = false;
+            for (const platform of practiceMode.platforms) {
+                if (player.x + player.width > platform.x &&
+                    player.x < platform.x + platform.width &&
+                    player.y + player.height > platform.y &&
+                    player.y < platform.y + platform.height) {
+
+                    const overlapLeft = (player.x + player.width) - platform.x;
+                    const overlapRight = (platform.x + platform.width) - player.x;
+                    const overlapTop = (player.y + player.height) - platform.y;
+                    const overlapBottom = (platform.y + platform.height) - player.y;
+
+                    const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+
+                    // Floor collision (landing on top)
+                    if ((minOverlap === overlapTop && player.velocityY >= 0) ||
+                        (player.velocityY > 0 && overlapTop < overlapBottom &&
+                         overlapTop < overlapLeft * 0.5 && overlapTop < overlapRight * 0.5)) {
+                        player.y = platform.y - player.height;
+                        player.velocityY = 0;
+                        isGrounded = true;
+                    }
+                    // Ceiling collision (hitting from below)
+                    else if (minOverlap === overlapBottom && player.velocityY < 0) {
+                        player.y = platform.y + platform.height;
+                        player.velocityY = 0;
+                    }
+                    // Left wall collision
+                    else if (minOverlap === overlapLeft) {
+                        player.x = platform.x - player.width;
+                        player.velocityX = 0;
+                    }
+                    // Right wall collision
+                    else if (minOverlap === overlapRight) {
+                        player.x = platform.x + platform.width;
+                        player.velocityX = 0;
+                    }
+                }
+            }
+
+            // COYOTE TIME: Allow jumping shortly after leaving platform
+            if (isGrounded) {
+                player.coyoteTimer = COYOTE_TIME;
+                // Landing particles
+                if (!player.wasGrounded) {
+                    spawnParticles(player.x + player.width / 2, player.y + player.height, 8, 'rgb(200, 200, 200)');
+                }
+            } else {
+                player.coyoteTimer = Math.max(0, player.coyoteTimer - deltaTime);
+            }
+            player.wasGrounded = isGrounded;
+
+            // Reset jump state when grounded
+            if (isGrounded && player.velocityY >= 0) {
+                practiceIsJumping = false;
+            }
 
             // Check credit collection
             for (const credit of practiceMode.credits) {
@@ -2887,15 +2921,16 @@
                 { x: 4000, y: 0, width: 40, height: 4080 }
             ];
 
-            // Initialize player 2 blocks (80px) above the highest block in base
+            // Initialize player next to one of the blocks in base
+            let spawnX = 2000;
             let spawnY = 3960; // Default spawn on ground
             if (baseBlocks.length > 0) {
-                // Find the highest (lowest Y value) block in the base
-                const highestBlockY = Math.min(...baseBlocks.map(block => block.y));
-                // Spawn 2 blocks (80px) above the highest block
-                spawnY = highestBlockY - 80;
+                // Pick the first block and spawn next to it (to the right)
+                const firstBlock = baseBlocks[0];
+                spawnX = firstBlock.x + 40; // Spawn to the right of the block
+                spawnY = firstBlock.y; // Same height as the block
             }
-            basePlayer = new Player(2000, spawnY, equippedCosmetics);
+            basePlayer = new Player(spawnX, spawnY, equippedCosmetics);
 
             renderBase();
 
