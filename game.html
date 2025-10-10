@@ -973,9 +973,9 @@
                 menuPlayer.velocityY = 0;
             }
 
-            // Update camera to follow player
-            menuCameraX = menuPlayer.x - 600 + 20; // Center horizontally
-            menuCameraY = menuPlayer.y - 400 + 20; // Center vertically
+            // Keep camera fixed (do not follow player on home page)
+            menuCameraX = 0;
+            menuCameraY = 0;
         }
 
         function checkCollision(a, b) {
