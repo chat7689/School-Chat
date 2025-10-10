@@ -468,6 +468,60 @@
         const JUMP_POWER = 3.70;
         const FAST_FALL_MULTIPLIER = 2.0;
 
+        // Game feel constants
+        const COYOTE_TIME = 6; // Frames you can still jump after leaving platform
+        const JUMP_BUFFER_TIME = 8; // Frames to remember jump input before landing
+        const DASH_SPEED = 8; // Speed of dash
+        const DASH_DURATION = 10; // Frames dash lasts
+        const DASH_COOLDOWN = 60; // Frames between dashes
+        const ACCELERATION = 0.5; // Smoother acceleration
+        const DECELERATION = 0.8; // Smoother deceleration
+
+        // Particle system
+        class Particle {
+            constructor(x, y, vx, vy, color, life) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.color = color;
+                this.life = life;
+                this.maxLife = life;
+            }
+
+            update(deltaTime) {
+                this.x += this.vx * deltaTime;
+                this.y += this.vy * deltaTime;
+                this.vy += GRAVITY * deltaTime * 0.5;
+                this.life -= deltaTime;
+            }
+
+            draw(ctx, cameraX, cameraY) {
+                const alpha = this.life / this.maxLife;
+                const screenX = this.x - cameraX;
+                const screenY = this.y - cameraY;
+                ctx.fillStyle = this.color.replace(')', `, ${alpha})`).replace('rgb', 'rgba');
+                ctx.fillRect(screenX, screenY, 4, 4);
+            }
+        }
+
+        let particles = [];
+
+        function spawnParticles(x, y, count, color) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 2 + 1;
+                particles.push(new Particle(
+                    x,
+                    y,
+                    Math.cos(angle) * speed,
+                    Math.sin(angle) * speed - 1,
+                    color,
+                    30 + Math.random() * 20
+                ));
+            }
+        }
+
         // Cosmetics catalog
         const cosmeticsCatalog = {
             skins: [
@@ -624,6 +678,15 @@
                 this.cosmetics = cosmetics || { skin: 'default_orange', trail: 'none', hat: 'none', effect: 'none' };
                 this.trail = [];
                 this.currentSize = 40;
+
+                // Game feel variables
+                this.coyoteTimer = 0;
+                this.jumpBufferTimer = 0;
+                this.dashTimer = 0;
+                this.dashCooldown = 0;
+                this.dashDirection = 0;
+                this.wasGrounded = false;
+                this.squashStretch = 1; // For squash and stretch animation
             }
 
             getSkinColor() {
@@ -684,12 +747,23 @@
                     ctx.restore();
                 }
 
-                // Draw player
+                // Draw player with squash and stretch
+                ctx.save();
+
+                // Apply squash/stretch transformation
+                const squash = this.squashStretch || 1;
+                const stretchWidth = this.width * squash;
+                const stretchHeight = this.height / squash;
+                const offsetX = (this.width - stretchWidth) / 2;
+                const offsetY = this.height - stretchHeight;
+
                 ctx.fillStyle = this.getSkinColor();
-                ctx.fillRect(screenX, screenY, this.width, this.height);
+                ctx.fillRect(screenX + offsetX, screenY + offsetY, stretchWidth, stretchHeight);
                 ctx.strokeStyle = '#333';
                 ctx.lineWidth = 2;
-                ctx.strokeRect(screenX, screenY, this.width, this.height);
+                ctx.strokeRect(screenX + offsetX, screenY + offsetY, stretchWidth, stretchHeight);
+
+                ctx.restore();
 
                 // Draw hat
                 if (this.cosmetics.hat === 'crown') {
@@ -815,7 +889,7 @@
             canvas.style.display = 'block';
             document.getElementById('menuHUD').style.display = 'block';
             document.getElementById('menuUserInfo').innerHTML = `
-                ${currentUsername} | Secure: ${secureCredits} | On-Hand: ${userCredits}
+                ${currentUsername} | Credits: ${secureCredits} <span style="font-size: 12px; color: #aaa;">(${userCredits} on hand)</span>
             `;
 
             // Create menu platforms with labels
@@ -1169,17 +1243,31 @@
                 practiceMode.credits = practiceMode.credits.filter(c => c.x > practiceMode.cameraX - 200);
 
                 // Update HUD
+                const dashCooldownPercent = Math.max(0, (player.dashCooldown / DASH_COOLDOWN) * 100);
                 document.getElementById('hud').innerHTML = `
                     <div style="font-size: 24px; font-weight: bold;">EARN MODE</div>
                     <div style="font-size: 18px; margin-top: 5px;">Collected This Run: ${practiceMode.creditsCollected}</div>
-                    <div style="font-size: 16px; margin-top: 3px;">Secure: ${secureCredits} | On-Hand: ${userCredits}</div>
+                    <div style="font-size: 16px; margin-top: 3px;">Credits: ${secureCredits} <span style="font-size: 12px; color: #aaa;">(${userCredits} on hand)</span></div>
                     <div style="font-size: 14px; margin-top: 3px; color: #aaa;">Active Credits: ${practiceMode.credits.filter(c => !c.collected).length}</div>
-                    <div style="font-size: 16px; color: #FFD700; margin-top: 5px;">Collect golden coins to earn on-hand credits!</div>
+                    <div style="font-size: 14px; margin-top: 3px; color: ${dashCooldownPercent > 0 ? '#ff6666' : '#66ff66'};">Dash: ${dashCooldownPercent > 0 ? 'Cooling...' : 'READY!'}</div>
+                    <div style="font-size: 16px; color: #FFD700; margin-top: 5px;">Collect coins! Shift+Direction to Dash!</div>
                 `;
 
                 // Render
                 ctx.fillStyle = '#87CEEB';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // Draw death zone at bottom (red warning blocks)
+                ctx.fillStyle = '#FF0000';
+                const deathZoneY = 900 - practiceMode.cameraY;
+                ctx.fillRect(0, deathZoneY, canvas.width, canvas.height - deathZoneY);
+
+                // Draw skull icons on death zone
+                ctx.fillStyle = '#000000';
+                ctx.font = 'bold 30px Arial';
+                for (let x = 0; x < canvas.width; x += 60) {
+                    ctx.fillText('☠', x, deathZoneY + 40);
+                }
 
                 // Draw platforms
                 for (const platform of practiceMode.platforms) {
@@ -1243,7 +1331,14 @@
                     }
                 }
 
-                // Draw player
+                // Update and draw particles
+                particles = particles.filter(p => p.life > 0);
+                for (const particle of particles) {
+                    particle.update(deltaTime);
+                    particle.draw(ctx, practiceMode.cameraX, practiceMode.cameraY);
+                }
+
+                // Draw player with squash/stretch
                 practiceMode.player.updateTrail();
                 practiceMode.player.draw(ctx, practiceMode.cameraX, practiceMode.cameraY, false);
 
@@ -1300,25 +1395,76 @@
                 }
             }
 
-            // Apply gravity with fast fall
-            if ((practiceMode.keys['s'] || practiceMode.keys['ArrowDown']) && !isGrounded) {
-                player.velocityY += GRAVITY * FAST_FALL_MULTIPLIER * deltaTime;
+            // COYOTE TIME: Allow jumping shortly after leaving platform
+            if (isGrounded) {
+                player.coyoteTimer = COYOTE_TIME;
+                // Landing particles and squash
+                if (!player.wasGrounded) {
+                    spawnParticles(player.x + player.width / 2, player.y + player.height, 8, 'rgb(200, 200, 200)');
+                    player.squashStretch = 0.7; // Squash on landing
+                }
             } else {
-                player.velocityY += GRAVITY * deltaTime;
+                player.coyoteTimer = Math.max(0, player.coyoteTimer - deltaTime);
+            }
+            player.wasGrounded = isGrounded;
+
+            // Return squash/stretch to normal
+            player.squashStretch += (1 - player.squashStretch) * 0.3;
+
+            // Update dash timers
+            if (player.dashTimer > 0) {
+                player.dashTimer -= deltaTime;
+            }
+            if (player.dashCooldown > 0) {
+                player.dashCooldown -= deltaTime;
             }
 
-            // Handle input
-            if (practiceMode.keys['a'] || practiceMode.keys['ArrowLeft']) {
-                player.velocityX -= MOVE_SPEED * deltaTime;
-            }
-            if (practiceMode.keys['d'] || practiceMode.keys['ArrowRight']) {
-                player.velocityX += MOVE_SPEED * deltaTime;
+            // DASH MECHANIC: Shift key to dash
+            if (practiceMode.keys['Shift'] && player.dashCooldown <= 0 && player.dashTimer <= 0) {
+                player.dashDirection = 0;
+                if (practiceMode.keys['a'] || practiceMode.keys['ArrowLeft']) {
+                    player.dashDirection = -1;
+                } else if (practiceMode.keys['d'] || practiceMode.keys['ArrowRight']) {
+                    player.dashDirection = 1;
+                }
+
+                if (player.dashDirection !== 0) {
+                    player.dashTimer = DASH_DURATION;
+                    player.dashCooldown = DASH_COOLDOWN;
+                    // Dash particles
+                    spawnParticles(player.x + player.width / 2, player.y + player.height / 2, 15, player.getSkinColor());
+                }
             }
 
-            // Jump with variable height
-            if ((practiceMode.keys['w'] || practiceMode.keys['ArrowUp'] || practiceMode.keys[' ']) && isGrounded) {
+            // Apply dash speed
+            if (player.dashTimer > 0) {
+                player.velocityX = player.dashDirection * DASH_SPEED;
+            } else {
+                // Handle input with smoother acceleration
+                if (practiceMode.keys['a'] || practiceMode.keys['ArrowLeft']) {
+                    player.velocityX -= MOVE_SPEED * deltaTime;
+                }
+                if (practiceMode.keys['d'] || practiceMode.keys['ArrowRight']) {
+                    player.velocityX += MOVE_SPEED * deltaTime;
+                }
+            }
+
+            // JUMP BUFFER: Remember jump input
+            if (practiceMode.keys['w'] || practiceMode.keys['ArrowUp'] || practiceMode.keys[' ']) {
+                player.jumpBufferTimer = JUMP_BUFFER_TIME;
+            } else {
+                player.jumpBufferTimer = Math.max(0, player.jumpBufferTimer - deltaTime);
+            }
+
+            // Jump with coyote time and jump buffering
+            if (player.jumpBufferTimer > 0 && player.coyoteTimer > 0 && !practiceIsJumping) {
                 player.velocityY = -JUMP_POWER;
                 practiceIsJumping = true;
+                player.coyoteTimer = 0;
+                player.jumpBufferTimer = 0;
+                player.squashStretch = 1.3; // Stretch on jump
+                // Jump particles
+                spawnParticles(player.x + player.width / 2, player.y + player.height, 12, 'rgb(255, 255, 255)');
             }
 
             // Cut jump short if button released (variable jump height)
@@ -1332,6 +1478,17 @@
             // Reset jump state when grounded
             if (isGrounded && player.velocityY >= 0) {
                 practiceIsJumping = false;
+            }
+
+            // Apply gravity with fast fall
+            if ((practiceMode.keys['s'] || practiceMode.keys['ArrowDown']) && !isGrounded) {
+                player.velocityY += GRAVITY * FAST_FALL_MULTIPLIER * deltaTime;
+                // Fast fall particles
+                if (Math.random() < 0.3) {
+                    spawnParticles(player.x + player.width / 2, player.y, 1, 'rgb(200, 255, 255)');
+                }
+            } else {
+                player.velocityY += GRAVITY * deltaTime;
             }
 
             // Apply friction using exponential decay
@@ -1357,12 +1514,20 @@
                 }
             }
 
-            // Die if fall off
-            if (player.y > 1000) {
+            // Die if fall off (instant death, respawn at start)
+            if (player.y > 900) {
+                // Death particles
+                spawnParticles(player.x + player.width / 2, player.y + player.height / 2, 30, 'rgb(255, 0, 0)');
+
+                // Reset to start
                 player.x = 100;
                 player.y = 300;
                 player.velocityX = 0;
                 player.velocityY = 0;
+                practiceMode.creditsCollected = 0; // Lose collected credits on death
+
+                // Reset camera
+                practiceMode.cameraX = 0;
             }
 
             // Update camera
@@ -2106,7 +2271,7 @@
 
         async function showBase() {
             showScreen('baseScreen');
-            document.getElementById('baseCredits').textContent = `On-Hand Credits: ${userCredits} | Secure Credits: ${secureCredits}`;
+            document.getElementById('baseCredits').textContent = `Credits: ${secureCredits} (${userCredits} on hand)`;
 
             baseCanvas = document.getElementById('baseCanvas');
             baseCtx = baseCanvas.getContext('2d');
@@ -2352,7 +2517,7 @@
             await updateCredits(-1, 'onhand');
             await database.ref('players/' + currentUser.uid + '/baseBlocks').set(baseBlocks);
 
-            document.getElementById('baseCredits').textContent = `On-Hand Credits: ${userCredits} | Secure Credits: ${secureCredits}`;
+            document.getElementById('baseCredits').textContent = `Credits: ${secureCredits} (${userCredits} on hand)`;
         }
 
         async function handleBaseRightClick(e) {
@@ -2384,7 +2549,7 @@
             await updateCredits(1, 'onhand');
             await database.ref('players/' + currentUser.uid + '/baseBlocks').set(baseBlocks);
 
-            document.getElementById('baseCredits').textContent = `On-Hand Credits: ${userCredits} | Secure Credits: ${secureCredits}`;
+            document.getElementById('baseCredits').textContent = `Credits: ${secureCredits} (${userCredits} on hand)`;
 
             return false;
         }
