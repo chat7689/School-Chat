@@ -282,8 +282,7 @@
         const auth = firebase.auth();
         const database = firebase.database();
 
-        // Set auth persistence to NONE - users must log in every time
-        auth.setPersistence(firebase.auth.Auth.Persistence.NONE);
+        // Don't set persistence here - it will be set to SESSION during login/register
 
         // Create favicon with orange square character
         const faviconCanvas = document.createElement('canvas');
@@ -363,6 +362,8 @@
             const email = username.toLowerCase() + '@speedrun.local';
 
             try {
+                // Set persistence to SESSION before logging in
+                await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
                 await auth.signInWithEmailAndPassword(email, password);
                 showSuccess('Login successful! Redirecting...');
                 setTimeout(() => {
@@ -443,6 +444,9 @@
                     hideLoading();
                     return;
                 }
+
+                // Set persistence to SESSION before creating account
+                await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
 
                 // Create user
                 console.log('Creating Firebase auth user with email:', email);
