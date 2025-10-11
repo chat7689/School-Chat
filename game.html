@@ -1055,26 +1055,15 @@
             canvas.style.display = 'block';
             document.getElementById('menuHUD').style.display = 'block';
 
-            // Portal platforms - 3 blocks wide (120px total)
-            const menuPortals = [
-                { x: 750, y: 347, label: 'LEADERBOARD', action: 'leaderboard' },
-                { x: 748, y: 782, label: 'EARN MODE', action: 'practice' },
-                { x: 997, y: 740, label: 'PRACTICE LEVELS', action: 'practiceLevels' },
-                { x: 988, y: 583, label: 'SETTINGS', action: 'settings' },
-                { x: 1001, y: 431, label: 'LEVEL CREATOR', action: 'creator' },
-                { x: 502, y: 736, label: 'BASE', action: 'base' },
-                { x: 495, y: 443, label: 'VIEW STATS', action: 'stats' },
-                { x: 753, y: 490, label: 'CREATE PARTY', action: 'createParty' },
-                { x: 758, y: 640, label: 'JOIN PARTY', action: 'joinParty' },
-                { x: 494, y: 580, label: 'COSMETIC SHOP', action: 'shop' }
-            ];
-
+            // Use exact platforms from JSON - simple and clean
             menuPlatforms = [
-                // Structural platforms from JSON (exact copy)
+                // Boundary walls and ceiling/floor
                 { x: 600, y: -560, width: 40, height: 560, label: '', action: 'none' },
                 { x: -600, y: -560, width: 40, height: 560, label: '', action: 'none' },
                 { x: -600, y: -600, width: 1240, height: 40, label: '', action: 'none' },
                 { x: -600, y: 0, width: 1240, height: 40, label: '', action: 'none' },
+
+                // Interior platforms
                 { x: -40, y: -120, width: 120, height: 40, label: '', action: 'none' },
                 { x: -40, y: -240, width: 120, height: 40, label: '', action: 'none' },
                 { x: -40, y: -360, width: 120, height: 40, label: '', action: 'none' },
@@ -1085,6 +1074,8 @@
                 { x: -240, y: -400, width: 120, height: 40, label: '', action: 'none' },
                 { x: -40, y: -480, width: 120, height: 40, label: '', action: 'none' },
                 { x: 160, y: -400, width: 120, height: 40, label: '', action: 'none' },
+
+                // Stepped walls
                 { x: -360, y: -80, width: 40, height: 80, label: '', action: 'none' },
                 { x: -400, y: -160, width: 40, height: 160, label: '', action: 'none' },
                 { x: -440, y: -240, width: 40, height: 240, label: '', action: 'none' },
@@ -1098,27 +1089,28 @@
                 { x: 520, y: -400, width: 40, height: 400, label: '', action: 'none' },
                 { x: 560, y: -480, width: 40, height: 480, label: '', action: 'none' },
 
-                // Portal platforms - 3 blocks wide (120px) with labels and blue outline
-                ...menuPortals.map(portal => ({
-                    x: portal.x,
-                    y: portal.y,
-                    width: 120,
-                    height: 40,
-                    label: portal.label,
-                    action: portal.action
-                }))
+                // 10 Portal platforms - 3 blocks wide (120px) - positioned in accessible locations
+                { x: 100, y: 600, width: 120, height: 40, label: 'EARN MODE', action: 'practice' },
+                { x: 350, y: 550, width: 120, height: 40, label: 'PRACTICE LEVELS', action: 'practiceLevels' },
+                { x: 620, y: 500, width: 120, height: 40, label: 'CREATE PARTY', action: 'createParty' },
+                { x: 870, y: 450, width: 120, height: 40, label: 'JOIN PARTY', action: 'joinParty' },
+                { x: 150, y: 400, width: 120, height: 40, label: 'COSMETIC SHOP', action: 'shop' },
+                { x: 400, y: 350, width: 120, height: 40, label: 'VIEW STATS', action: 'stats' },
+                { x: 650, y: 300, width: 120, height: 40, label: 'LEVEL CREATOR', action: 'creator' },
+                { x: 200, y: 250, width: 120, height: 40, label: 'BASE', action: 'base' },
+                { x: 450, y: 200, width: 120, height: 40, label: 'LEADERBOARD', action: 'leaderboard' },
+                { x: 750, y: 150, width: 120, height: 40, label: 'SETTINGS', action: 'settings' },
+
+                // Ground platform for player to stand on
+                { x: 0, y: 720, width: 1200, height: 80, label: '', action: 'none' }
             ];
 
-            // Find bottom portal (highest Y value) and spawn 2 blocks (80px) below its center
-            const bottomPortal = menuPortals.reduce((prev, curr) => curr.y > prev.y ? curr : prev);
-            const spawnX = bottomPortal.x + 60 - 20; // Center of 120px platform (60px) minus half player width (20px)
-            const spawnY = bottomPortal.y + 40 + 80 - 40; // Bottom of platform (40px) + 2 blocks (80px) - player height (40px)
-            menuPlayer = new Player(spawnX, spawnY, equippedCosmetics);
+            // Spawn player on ground, centered horizontally
+            menuPlayer = new Player(600 - 20, 720 - 40, equippedCosmetics);
 
-            // Center camera on player spawn position
-            const canvas = document.getElementById('menuCanvas');
-            menuCameraX = spawnX + 20 - canvas.width / 2; // Player center X - half canvas width
-            menuCameraY = spawnY + 20 - canvas.height / 2; // Player center Y - half canvas height
+            // Center camera on player
+            menuCameraX = 600 - 600; // Player X - half canvas (1200/2)
+            menuCameraY = 720 - 400; // Player Y - half canvas (800/2)
 
             // Populate and show credit panel with player preview
             const skinData = cosmeticsCatalog.skins.find(s => s.id === equippedCosmetics.skin);
