@@ -1055,22 +1055,22 @@
             canvas.style.display = 'block';
             document.getElementById('menuHUD').style.display = 'block';
 
-            // Create menu platforms with portals centered on platforms
-            const menuPortals = {
-                'leaderboard': { x: 810, y: 347 },
-                'earnmode': { x: 808, y: 782 },
-                'practicelevels': { x: 1057, y: 740 },
-                'settings': { x: 1048, y: 583 },
-                'levelcreator': { x: 1061, y: 431 },
-                'base': { x: 562, y: 736 },
-                'viewstats': { x: 555, y: 443 },
-                'createparty': { x: 813, y: 490 },
-                'joinpartyd': { x: 818, y: 640 },
-                'cosmeticshop': { x: 554, y: 580 }
-            };
+            // Portal platforms - 3 blocks wide (120px total)
+            const menuPortals = [
+                { x: 750, y: 347, label: 'LEADERBOARD', action: 'leaderboard' },
+                { x: 748, y: 782, label: 'EARN MODE', action: 'practice' },
+                { x: 997, y: 740, label: 'PRACTICE LEVELS', action: 'practiceLevels' },
+                { x: 988, y: 583, label: 'SETTINGS', action: 'settings' },
+                { x: 1001, y: 431, label: 'LEVEL CREATOR', action: 'creator' },
+                { x: 502, y: 736, label: 'BASE', action: 'base' },
+                { x: 495, y: 443, label: 'VIEW STATS', action: 'stats' },
+                { x: 753, y: 490, label: 'CREATE PARTY', action: 'createParty' },
+                { x: 758, y: 640, label: 'JOIN PARTY', action: 'joinParty' },
+                { x: 494, y: 580, label: 'COSMETIC SHOP', action: 'shop' }
+            ];
 
             menuPlatforms = [
-                // Structural platforms from JSON
+                // Structural platforms from JSON (exact copy)
                 { x: 600, y: -560, width: 40, height: 560, label: '', action: 'none' },
                 { x: -600, y: -560, width: 40, height: 560, label: '', action: 'none' },
                 { x: -600, y: -600, width: 1240, height: 40, label: '', action: 'none' },
@@ -1098,29 +1098,15 @@
                 { x: 520, y: -400, width: 40, height: 400, label: '', action: 'none' },
                 { x: 560, y: -480, width: 40, height: 480, label: '', action: 'none' },
 
-                // Portal platforms - 280px wide (120px left + 40px portal + 120px right) centered on portal
-                { x: menuPortals.leaderboard.x - 120, y: menuPortals.leaderboard.y, width: 280, height: 40, label: '', action: 'none' },
-                { x: menuPortals.earnmode.x - 120, y: menuPortals.earnmode.y, width: 280, height: 40, label: '', action: 'none' },
-                { x: menuPortals.practicelevels.x - 120, y: menuPortals.practicelevels.y, width: 280, height: 40, label: '', action: 'none' },
-                { x: menuPortals.settings.x - 120, y: menuPortals.settings.y, width: 280, height: 40, label: '', action: 'none' },
-                { x: menuPortals.levelcreator.x - 120, y: menuPortals.levelcreator.y, width: 280, height: 40, label: '', action: 'none' },
-                { x: menuPortals.base.x - 120, y: menuPortals.base.y, width: 280, height: 40, label: '', action: 'none' },
-                { x: menuPortals.viewstats.x - 120, y: menuPortals.viewstats.y, width: 280, height: 40, label: '', action: 'none' },
-                { x: menuPortals.createparty.x - 120, y: menuPortals.createparty.y, width: 280, height: 40, label: '', action: 'none' },
-                { x: menuPortals.joinpartyd.x - 120, y: menuPortals.joinpartyd.y, width: 280, height: 40, label: '', action: 'none' },
-                { x: menuPortals.cosmeticshop.x - 120, y: menuPortals.cosmeticshop.y, width: 280, height: 40, label: '', action: 'none' },
-
-                // Portal blocks (40x40) at center of platforms
-                { x: menuPortals.leaderboard.x, y: menuPortals.leaderboard.y, width: 40, height: 40, label: 'LEADERBOARD', action: 'leaderboard' },
-                { x: menuPortals.earnmode.x, y: menuPortals.earnmode.y, width: 40, height: 40, label: 'EARN MODE', action: 'practice' },
-                { x: menuPortals.practicelevels.x, y: menuPortals.practicelevels.y, width: 40, height: 40, label: 'PRACTICE LEVELS', action: 'practiceLevels' },
-                { x: menuPortals.settings.x, y: menuPortals.settings.y, width: 40, height: 40, label: 'SETTINGS', action: 'settings' },
-                { x: menuPortals.levelcreator.x, y: menuPortals.levelcreator.y, width: 40, height: 40, label: 'LEVEL CREATOR', action: 'creator' },
-                { x: menuPortals.base.x, y: menuPortals.base.y, width: 40, height: 40, label: 'BASE', action: 'base' },
-                { x: menuPortals.viewstats.x, y: menuPortals.viewstats.y, width: 40, height: 40, label: 'VIEW STATS', action: 'stats' },
-                { x: menuPortals.createparty.x, y: menuPortals.createparty.y, width: 40, height: 40, label: 'CREATE PARTY', action: 'createParty' },
-                { x: menuPortals.joinpartyd.x, y: menuPortals.joinpartyd.y, width: 40, height: 40, label: 'JOIN PARTY', action: 'joinParty' },
-                { x: menuPortals.cosmeticshop.x, y: menuPortals.cosmeticshop.y, width: 40, height: 40, label: 'COSMETIC SHOP', action: 'shop' }
+                // Portal platforms - 3 blocks wide (120px) with labels and blue outline
+                ...menuPortals.map(portal => ({
+                    x: portal.x,
+                    y: portal.y,
+                    width: 120,
+                    height: 40,
+                    label: portal.label,
+                    action: portal.action
+                }))
             ];
 
             // Spawn player at start position from JSON (0, -40)
