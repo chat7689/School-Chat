@@ -1592,8 +1592,8 @@
                     const leftmostPlatform = levelData.platforms.reduce((prev, curr) =>
                         curr.x < prev.x ? curr : prev
                     );
-                    startX = leftmostPlatform.x + 20;  // Spawn 20px from left edge
-                    startY = leftmostPlatform.y - 50;   // Spawn 50px above platform
+                    startX = leftmostPlatform.x + 40;  // Spawn 40px from left edge
+                    startY = leftmostPlatform.y - 40;   // Spawn at same Y height (player is 40px tall)
                 }
                 practiceMode.player = new Player(startX, startY, equippedCosmetics);
 
