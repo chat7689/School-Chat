@@ -1345,6 +1345,14 @@
                 menuIsJumping = false;
             }
 
+            // Fast-fall particles (white) - spawn when holding down/S in air
+            if ((menuKeys['s'] || menuKeys['ArrowDown']) && !isGrounded && menuPlayer.velocityY > 0) {
+                // Spawn particles continuously during fast fall
+                if (Math.random() < 0.3) { // 30% chance each frame for smooth particle trail
+                    spawnParticles(menuPlayer.x + menuPlayer.width / 2, menuPlayer.y, 3, 'rgb(255, 255, 255)');
+                }
+            }
+
             // Apply friction using exponential decay
             if (isGrounded) {
                 menuPlayer.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
@@ -2185,9 +2193,9 @@
             const sizeScale = player.currentSize / 40;
             if ((practiceMode.keys['s'] || practiceMode.keys['ArrowDown']) && !player.wasGrounded) {
                 player.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
-                // Fast fall particles
+                // Fast fall particles (white) - match jump particles
                 if (Math.random() < 0.3) {
-                    spawnParticles(player.x + player.width / 2, player.y, 1, 'rgb(200, 255, 255)');
+                    spawnParticles(player.x + player.width / 2, player.y, 3, 'rgb(255, 255, 255)');
                 }
             } else {
                 player.velocityY += GRAVITY * sizeScale * deltaTime;
@@ -2972,6 +2980,10 @@
             // Apply gravity with fast fall
             if ((raceState.keys['s'] || raceState.keys['ArrowDown']) && !isGrounded) {
                 player.velocityY += GRAVITY * FAST_FALL_MULTIPLIER * deltaTime;
+                // Fast-fall particles (white)
+                if (Math.random() < 0.3) {
+                    spawnParticles(player.x + player.width / 2, player.y, 3, 'rgb(255, 255, 255)');
+                }
             } else {
                 player.velocityY += GRAVITY * deltaTime;
             }
@@ -3432,6 +3444,10 @@
             // Apply gravity
             if ((baseKeys['s'] || baseKeys['ArrowDown']) && !isGrounded) {
                 basePlayer.velocityY += GRAVITY * FAST_FALL_MULTIPLIER * deltaTime;
+                // Fast-fall particles (white)
+                if (Math.random() < 0.3) {
+                    spawnParticles(basePlayer.x + basePlayer.width / 2, basePlayer.y, 3, 'rgb(255, 255, 255)');
+                }
             } else {
                 basePlayer.velocityY += GRAVITY * deltaTime;
             }
