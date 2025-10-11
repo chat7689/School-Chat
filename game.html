@@ -1478,10 +1478,22 @@
             const canvas = document.getElementById('levelSelectCanvas');
             const ctx = canvas.getContext('2d');
 
-            // Load levels from Firebase (for now just create one default level)
-            availableLevels = [
-                { id: 'vertical_challenge', name: 'Vertical Challenge', x: 300, y: 700 }
-            ];
+            // Load all levels from Firebase
+            const levelsSnapshot = await database.ref('levels').once('value');
+            const levelsData = levelsSnapshot.val();
+
+            availableLevels = [];
+            if (levelsData) {
+                Object.entries(levelsData).forEach(([levelId, levelInfo]) => {
+                    availableLevels.push({
+                        id: levelId,
+                        name: levelInfo.name || levelId,
+                        createdAt: levelInfo.createdAt || 0
+                    });
+                });
+                // Sort by creation date (oldest first)
+                availableLevels.sort((a, b) => a.createdAt - b.createdAt);
+            }
 
             // Load player's best times
             const timesSnapshot = await database.ref('times_history/' + currentUser.uid).once('value');
@@ -1500,25 +1512,54 @@
                 }
             });
 
-            // Create platforms for level selection
+            // Create platformer-style layout like main menu
+            // Portal platforms: 120px wide, 40px tall, stacked with 80px gap (120px total spacing)
+            const spacing = 120; // 40px platform + 80px gap
+            const portalWidth = 120;
+            const portalHeight = 40;
+
+            // Calculate how many levels per column (max 4)
+            const levelsPerColumn = 4;
+            const numColumns = Math.ceil(availableLevels.length / levelsPerColumn);
+
+            // Center the columns
+            const columnSpacing = 200; // Horizontal space between columns
+            const totalWidth = numColumns * columnSpacing;
+            const startX = (1200 - totalWidth) / 2 + 100; // Center and offset
+
+            const groundY = 720;
+            const bottomPortalY = groundY - 120; // 120px above ground
+
             levelSelectPlatforms = [
-                { x: 0, y: 760, width: 1200, height: 40 }, // Ground
+                // Boundary walls
+                { x: -40, y: -40, width: 40, height: 880 }, // Left wall
+                { x: 1200, y: -40, width: 40, height: 880 }, // Right wall
+                { x: -40, y: -40, width: 1280, height: 40 }, // Ceiling
+                { x: -40, y: groundY, width: 1280, height: 40 }, // Ground
             ];
 
-            // Create platforms for each level
-            availableLevels.forEach(level => {
+            // Create portal platforms for each level
+            availableLevels.forEach((level, index) => {
+                const columnIndex = Math.floor(index / levelsPerColumn);
+                const rowIndex = index % levelsPerColumn;
+
+                const x = startX + columnIndex * columnSpacing;
+                const y = bottomPortalY - (rowIndex * spacing);
+
                 levelSelectPlatforms.push({
-                    x: level.x,
-                    y: level.y,
-                    width: 200,
-                    height: 60,
+                    x: x,
+                    y: y,
+                    width: portalWidth,
+                    height: portalHeight,
                     levelId: level.id,
                     levelName: level.name
                 });
             });
 
-            // Create player
-            levelSelectPlayer = new Player(100, 650, equippedCosmetics);
+            // Create player on ground
+            const spawnX = 600 - 20; // Center
+            const spawnY = groundY - 40; // On top of ground
+            levelSelectPlayer = new Player(spawnX, spawnY, equippedCosmetics);
 
             // Start render loop
             let lastFrameTime = performance.now();
@@ -1541,6 +1582,24 @@
         function updateLevelSelect(deltaTime) {
             if (!levelSelectPlayer) return;
 
+            // Apply gravity
+            levelSelectPlayer.velocityY += GRAVITY * deltaTime;
+
+            // Apply friction (use previous frame's grounded state)
+            if (levelSelectPlayer.wasGrounded) {
+                levelSelectPlayer.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
+            } else {
+                levelSelectPlayer.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
+            }
+
+            // Cap vertical velocity to prevent tunneling
+            const maxFallSpeed = 8;
+            levelSelectPlayer.velocityY = Math.min(levelSelectPlayer.velocityY, maxFallSpeed);
+
+            // Limit horizontal speed
+            const maxSpeed = GROUND_MAX_SPEED;
+            levelSelectPlayer.velocityX = Math.max(-maxSpeed, Math.min(maxSpeed, levelSelectPlayer.velocityX));
+
             // Handle movement
             if (levelSelectKeys['a'] || levelSelectKeys['ArrowLeft']) {
                 levelSelectPlayer.velocityX -= MOVE_SPEED * deltaTime;
@@ -1549,37 +1608,62 @@
                 levelSelectPlayer.velocityX += MOVE_SPEED * deltaTime;
             }
 
-            // Apply gravity
-            levelSelectPlayer.velocityY += GRAVITY * deltaTime;
-
-            // Apply friction
-            levelSelectPlayer.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
-
-            // Limit speed
-            levelSelectPlayer.velocityX = Math.max(-GROUND_MAX_SPEED, Math.min(GROUND_MAX_SPEED, levelSelectPlayer.velocityX));
-
             // Update position
             levelSelectPlayer.x += levelSelectPlayer.velocityX * deltaTime;
             levelSelectPlayer.y += levelSelectPlayer.velocityY * deltaTime;
 
-            // Collision detection
+            // Collision detection - matches main menu and level creator
             let isGrounded = false;
+            let standingOnPlatform = null;
+
             for (const platform of levelSelectPlatforms) {
-                if (checkCollision(levelSelectPlayer, platform)) {
-                    if (levelSelectPlayer.velocityY > 0) {
+                if (levelSelectPlayer.x + levelSelectPlayer.width > platform.x &&
+                    levelSelectPlayer.x < platform.x + platform.width &&
+                    levelSelectPlayer.y + levelSelectPlayer.height > platform.y &&
+                    levelSelectPlayer.y < platform.y + platform.height) {
+
+                    const overlapLeft = (levelSelectPlayer.x + levelSelectPlayer.width) - platform.x;
+                    const overlapRight = (platform.x + platform.width) - levelSelectPlayer.x;
+                    const overlapTop = (levelSelectPlayer.y + levelSelectPlayer.height) - platform.y;
+                    const overlapBottom = (platform.y + platform.height) - levelSelectPlayer.y;
+
+                    const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+
+                    // Floor collision (landing on top)
+                    if ((minOverlap === overlapTop && levelSelectPlayer.velocityY >= 0) ||
+                        (levelSelectPlayer.velocityY > 0 && overlapTop < overlapBottom &&
+                         overlapTop < overlapLeft * 0.5 && overlapTop < overlapRight * 0.5)) {
                         levelSelectPlayer.y = platform.y - levelSelectPlayer.height;
                         levelSelectPlayer.velocityY = 0;
                         isGrounded = true;
-
-                        // Check if player pressed space on a level platform
-                        if ((levelSelectKeys[' '] || levelSelectKeys['Space']) && platform.levelId) {
-                            levelSelectActive = false; // Stop level selection loop
-                            playLevel(platform.levelId);
-                            levelSelectKeys[' '] = false;
-                            levelSelectKeys['Space'] = false;
-                        }
+                        standingOnPlatform = platform;
+                    }
+                    // Ceiling collision (hitting from below)
+                    else if (minOverlap === overlapBottom && levelSelectPlayer.velocityY < 0) {
+                        levelSelectPlayer.y = platform.y + platform.height;
+                        levelSelectPlayer.velocityY = 0;
+                    }
+                    // Left wall collision
+                    else if (minOverlap === overlapLeft) {
+                        levelSelectPlayer.x = platform.x - levelSelectPlayer.width;
+                        levelSelectPlayer.velocityX = 0;
+                    }
+                    // Right wall collision
+                    else if (minOverlap === overlapRight) {
+                        levelSelectPlayer.x = platform.x + platform.width;
+                        levelSelectPlayer.velocityX = 0;
                     }
                 }
+            }
+
+            levelSelectPlayer.wasGrounded = isGrounded;
+
+            // Check if player pressed space on a level platform
+            if (standingOnPlatform && standingOnPlatform.levelId && (levelSelectKeys[' '] || levelSelectKeys['Space'])) {
+                levelSelectActive = false; // Stop level selection loop
+                playLevel(standingOnPlatform.levelId);
+                levelSelectKeys[' '] = false;
+                levelSelectKeys['Space'] = false;
             }
 
             // Jump with W or Up (no space)
@@ -1589,38 +1673,61 @@
         }
 
         function renderLevelSelect(ctx) {
-            // Clear
+            // Clear with sky blue background
             ctx.fillStyle = '#87CEEB';
             ctx.fillRect(0, 0, 1200, 800);
+
+            // Draw background gridlines (40x40px)
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 1;
+
+            // Vertical lines
+            for (let x = 0; x < 1200; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, 800);
+                ctx.stroke();
+            }
+
+            // Horizontal lines
+            for (let y = 0; y < 800; y += 40) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(1200, y);
+                ctx.stroke();
+            }
 
             // Draw platforms
             for (const platform of levelSelectPlatforms) {
                 if (platform.levelId) {
-                    // Level platform
-                    ctx.fillStyle = '#4CAF50';
+                    // Level portal platform - green with blue outline
+                    ctx.fillStyle = '#00AA00';
                     ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
-                    ctx.strokeStyle = '#2E7D32';
-                    ctx.lineWidth = 3;
+
+                    // Blue portal outline
+                    ctx.strokeStyle = '#0066FF';
+                    ctx.lineWidth = 4;
                     ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
 
-                    // Level name
-                    ctx.fillStyle = '#fff';
-                    ctx.font = 'bold 16px Arial';
+                    // Level name (white text, smaller font)
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.font = 'bold 10px Arial';
                     ctx.textAlign = 'center';
-                    ctx.fillText(platform.levelName, platform.x + platform.width / 2, platform.y + 25);
+                    ctx.fillText(platform.levelName, platform.x + platform.width / 2, platform.y + 20);
 
-                    // Best time
+                    // Best time indicator
                     const bestTime = playerBestTimes[platform.levelId];
                     if (bestTime) {
-                        ctx.font = '14px Arial';
-                        ctx.fillText(`Best: ${formatTime(bestTime)}`, platform.x + platform.width / 2, platform.y + 45);
-                    } else {
-                        ctx.font = '14px Arial';
+                        ctx.font = '8px Arial';
                         ctx.fillStyle = '#FFD700';
-                        ctx.fillText('No time yet!', platform.x + platform.width / 2, platform.y + 45);
+                        ctx.fillText(`${formatTime(bestTime)}`, platform.x + platform.width / 2, platform.y + 32);
+                    } else {
+                        ctx.font = '8px Arial';
+                        ctx.fillStyle = '#CCCCCC';
+                        ctx.fillText('No time', platform.x + platform.width / 2, platform.y + 32);
                     }
                 } else {
-                    // Ground
+                    // Boundary platforms - dark green
                     ctx.fillStyle = '#00AA00';
                     ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
                 }
@@ -1628,6 +1735,14 @@
 
             // Draw player
             levelSelectPlayer.draw(ctx, 0, 0);
+
+            // Draw instructions at top
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Jump to a portal and press SPACE to play!', 600, 30);
+            ctx.font = '12px Arial';
+            ctx.fillText('WASD or Arrow Keys to move | ESC to go back', 600, 50);
         }
 
         function formatTime(ms) {
