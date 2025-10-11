@@ -1977,7 +1977,6 @@
             }
 
             // Cap vertical velocity to prevent tunneling
-            const sizeScale = player.currentSize / 40;
             const maxFallSpeed = 8 * sizeScale;
             player.velocityY = Math.min(player.velocityY, maxFallSpeed);
 
