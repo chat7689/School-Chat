@@ -1061,8 +1061,10 @@
             const leftX = 200;   // Left stack X position
             const middleX = 540; // Middle stack X position (centered at 600)
             const rightX = 880;  // Right stack X position
-            const bottomY = 600; // Bottom platform Y position
+            const middleBottomY = 600; // Middle stack bottom (EARN MODE)
+            const sideBottomY = middleBottomY - 40; // Side stacks 40px higher
             const spacing = 120; // 40px platform + 80px gap = 120px total spacing
+            const groundY = middleBottomY + 120; // Ground 120px below EARN MODE
 
             menuPlatforms = [
                 // Boundary walls from JSON
@@ -1097,26 +1099,29 @@
                 { x: 520, y: -400, width: 40, height: 400, label: '', action: 'none' },
                 { x: 560, y: -480, width: 40, height: 480, label: '', action: 'none' },
 
-                // LEFT STACK (3 portals)
-                { x: leftX, y: bottomY, width: 120, height: 40, label: 'BASE', action: 'base' },
-                { x: leftX, y: bottomY - spacing, width: 120, height: 40, label: 'VIEW STATS', action: 'stats' },
-                { x: leftX, y: bottomY - spacing * 2, width: 120, height: 40, label: 'COSMETIC SHOP', action: 'shop' },
+                // Ground platform - 40px thick, from left wall to right wall, 120px below EARN MODE
+                { x: -600, y: groundY, width: 1240, height: 40, label: '', action: 'none' },
+
+                // LEFT STACK (3 portals) - 40px higher than middle
+                { x: leftX, y: sideBottomY, width: 120, height: 40, label: 'BASE', action: 'base' },
+                { x: leftX, y: sideBottomY - spacing, width: 120, height: 40, label: 'VIEW STATS', action: 'stats' },
+                { x: leftX, y: sideBottomY - spacing * 2, width: 120, height: 40, label: 'COSMETIC SHOP', action: 'shop' },
 
                 // MIDDLE STACK (4 portals)
-                { x: middleX, y: bottomY, width: 120, height: 40, label: 'EARN MODE', action: 'practice' },
-                { x: middleX, y: bottomY - spacing, width: 120, height: 40, label: 'PRACTICE LEVELS', action: 'practiceLevels' },
-                { x: middleX, y: bottomY - spacing * 2, width: 120, height: 40, label: 'CREATE PARTY', action: 'createParty' },
-                { x: middleX, y: bottomY - spacing * 3, width: 120, height: 40, label: 'JOIN PARTY', action: 'joinParty' },
+                { x: middleX, y: middleBottomY, width: 120, height: 40, label: 'EARN MODE', action: 'practice' },
+                { x: middleX, y: middleBottomY - spacing, width: 120, height: 40, label: 'PRACTICE LEVELS', action: 'practiceLevels' },
+                { x: middleX, y: middleBottomY - spacing * 2, width: 120, height: 40, label: 'CREATE PARTY', action: 'createParty' },
+                { x: middleX, y: middleBottomY - spacing * 3, width: 120, height: 40, label: 'JOIN PARTY', action: 'joinParty' },
 
-                // RIGHT STACK (3 portals)
-                { x: rightX, y: bottomY, width: 120, height: 40, label: 'LEVEL CREATOR', action: 'creator' },
-                { x: rightX, y: bottomY - spacing, width: 120, height: 40, label: 'LEADERBOARD', action: 'leaderboard' },
-                { x: rightX, y: bottomY - spacing * 2, width: 120, height: 40, label: 'SETTINGS', action: 'settings' }
+                // RIGHT STACK (3 portals) - 40px higher than middle
+                { x: rightX, y: sideBottomY, width: 120, height: 40, label: 'LEVEL CREATOR', action: 'creator' },
+                { x: rightX, y: sideBottomY - spacing, width: 120, height: 40, label: 'LEADERBOARD', action: 'leaderboard' },
+                { x: rightX, y: sideBottomY - spacing * 2, width: 120, height: 40, label: 'SETTINGS', action: 'settings' }
             ];
 
-            // Spawn player at center X, 2 blocks below bottom portal
+            // Spawn player on ground platform, centered
             const spawnX = 600 - 20; // Center X (600) - half player width (20)
-            const spawnY = bottomY + 40 + 80 - 40; // Bottom portal + platform height + 2 blocks - player height
+            const spawnY = groundY - 40; // On top of ground platform
             menuPlayer = new Player(spawnX, spawnY, equippedCosmetics);
 
             // Center camera on player
