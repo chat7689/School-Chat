@@ -1303,8 +1303,14 @@
                 playerPreview.visible = true;
                 draw();
             } else if (currentTool === 'comment') {
-                // Create a new comment at the clicked position
-                createComment(e.clientX - rect.left, e.clientY - rect.top);
+                // Find which block was clicked (in world coordinates)
+                const clickedBlock = findBlockAtPosition(worldPos.x, worldPos.y);
+                // Create a new comment at the world position, connected to the clicked block
+                const commentWorldX = snapToGrid(worldPos.x);
+                const commentWorldY = snapToGrid(worldPos.y);
+                createComment(commentWorldX, commentWorldY, clickedBlock);
+                saveState();
+                draw();
             } else {
                 // For drawing tools, allow both click-to-place and drag-to-draw
                 isDrawing = true;
@@ -1714,14 +1720,35 @@
             }
         }
 
+        // Find block at position (returns block object or null)
+        function findBlockAtPosition(x, y) {
+            const allBlocks = [
+                ...platforms.map(p => ({...p, type: 'platform'})),
+                ...hazards.map(h => ({...h, type: 'hazard'})),
+                ...growers.map(g => ({...g, type: 'grower'})),
+                ...shrinkers.map(s => ({...s, type: 'shrinker'})),
+                ...defaultSizeBlocks.map(d => ({...d, type: 'defaultSize'})),
+                ...finishZones.map(f => ({...f, type: 'finish'}))
+            ];
+
+            for (const block of allBlocks) {
+                if (x >= block.x && x <= block.x + block.width &&
+                    y >= block.y && y <= block.y + block.height) {
+                    return block;
+                }
+            }
+            return null;
+        }
+
         // Comment system functions
-        function createComment(screenX, screenY) {
+        function createComment(screenX, screenY, connectedBlock = null) {
             const commentId = 'comment-' + Date.now();
             const commentData = {
                 id: commentId,
                 x: screenX,
                 y: screenY,
-                text: ''
+                text: '',
+                connectedBlock: connectedBlock  // Store the connected block
             };
             comments.push(commentData);
 
@@ -1780,6 +1807,7 @@
                     comment.x = newX;
                     comment.y = newY;
                     updateLevelData();
+                    drawCommentLines(); // Update lines while dragging
                 }
             });
 
@@ -1877,6 +1905,46 @@
                 });
 
                 document.body.appendChild(commentBox);
+            }
+
+            // Update comment lines after loading comments
+            drawCommentLines();
+        }
+
+        function drawCommentLines() {
+            const svg = document.getElementById('comment-lines-svg');
+            svg.innerHTML = ''; // Clear existing lines
+
+            const canvas = document.getElementById('canvas');
+            const rect = canvas.getBoundingClientRect();
+
+            for (const comment of comments) {
+                if (!comment.connectedBlock) continue;
+
+                // Get comment box position
+                const commentBox = document.getElementById(comment.id);
+                if (!commentBox) continue;
+
+                const commentRect = commentBox.getBoundingClientRect();
+                const commentCenterX = commentRect.left + commentRect.width / 2 - rect.left;
+                const commentCenterY = commentRect.top + commentRect.height / 2 - rect.top;
+
+                // Get block position in world coordinates, convert to screen coordinates
+                const block = comment.connectedBlock;
+                const blockCenterX = block.x + block.width / 2 - cameraX;
+                const blockCenterY = block.y + block.height / 2 - cameraY;
+
+                // Create line element
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', commentCenterX);
+                line.setAttribute('y1', commentCenterY);
+                line.setAttribute('x2', blockCenterX);
+                line.setAttribute('y2', blockCenterY);
+                line.setAttribute('stroke', '#FFD700');
+                line.setAttribute('stroke-width', '2');
+                line.setAttribute('stroke-dasharray', '5,5');
+                line.setAttribute('opacity', '0.7');
+                svg.appendChild(line);
             }
         }
 
@@ -2572,6 +2640,9 @@
             }
 
             ctx.restore();
+
+            // Draw comment lines (outside of canvas transform)
+            drawCommentLines();
         }
 
         function goToCoordinates() {

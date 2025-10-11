@@ -266,6 +266,8 @@
                     addOutput('  /help - Show this help message', 'info');
                     addOutput('  /all - Show all usernames', 'info');
                     addOutput('  /(username) - Show user info (email/password, credits, secure credits)', 'info');
+                    addOutput('  /(username) secure delete - Delete user\'s BASE and set secure credits to 0', 'error');
+                    addOutput('  /(username) onhand delete - Set user\'s onhand credits to 0', 'error');
                     addOutput('  /reset (username) - Reset password for user', 'warning');
                     addOutput('  /delete all - Delete all YOUR times (requires password)', 'warning');
                     addOutput('  /delete [mapid] - Delete YOUR time for specific map (requires password)', 'warning');
@@ -326,7 +328,15 @@
                     // Check if command starts with / and is a username lookup
                     if (mainCommand.startsWith('/') && mainCommand.length > 1) {
                         const username = mainCommand.substring(1); // Remove the /
-                        await showUserInfo(username);
+
+                        // Check for subcommands: "secure delete" and "onhand delete"
+                        if (parts[1] === 'secure' && parts[2] === 'delete') {
+                            await deleteUserSecureCredits(username);
+                        } else if (parts[1] === 'onhand' && parts[2] === 'delete') {
+                            await deleteUserOnhandCredits(username);
+                        } else {
+                            await showUserInfo(username);
+                        }
                     } else {
                         addOutput(`Unknown command: ${mainCommand}. Type /help for available commands.`, 'error');
                     }
@@ -680,6 +690,152 @@
 
             } catch (error) {
                 addOutput('Error resetting password: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteUserSecureCredits(username) {
+            addOutput(`⚠️  Preparing to DELETE BASE and SECURE CREDITS for: ${username}...`, 'warning');
+
+            try {
+                const playersSnapshot = await database.ref('players').once('value');
+                const playersData = playersSnapshot.val();
+
+                if (!playersData) {
+                    addOutput('No users found in database.', 'error');
+                    return;
+                }
+
+                // Find user by username
+                let foundUser = null;
+                let foundUid = null;
+
+                for (const [uid, playerData] of Object.entries(playersData)) {
+                    if (playerData.username && playerData.username.toLowerCase() === username.toLowerCase()) {
+                        foundUser = playerData;
+                        foundUid = uid;
+                        break;
+                    }
+                }
+
+                if (!foundUser) {
+                    addOutput(`User "${username}" not found.`, 'error');
+                    return;
+                }
+
+                // Show current status
+                const currentSecure = foundUser.secureCredits || 0;
+                const currentBlocks = foundUser.baseBlocks ? foundUser.baseBlocks.length : 0;
+                addOutput(`Current secure credits: ${currentSecure}`, 'info');
+                addOutput(`Current BASE blocks: ${currentBlocks}`, 'info');
+
+                // Confirm deletion
+                const confirmation = prompt(`⚠️ CRITICAL: Delete BASE and reset secure credits for ${username}?\n\nType "DELETE" to confirm:`);
+                if (confirmation !== 'DELETE') {
+                    addOutput('Deletion cancelled.', 'warning');
+                    return;
+                }
+
+                // Require admin password
+                const adminPassword = prompt('Enter YOUR admin password to confirm:');
+                if (!adminPassword) {
+                    addOutput('Deletion cancelled.', 'warning');
+                    return;
+                }
+
+                try {
+                    const email = currentUser.email;
+                    const credential = firebase.auth.EmailAuthProvider.credential(email, adminPassword);
+                    await currentUser.reauthenticateWithCredential(credential);
+
+                    // Delete BASE blocks and reset secure credits
+                    await database.ref('players/' + foundUid + '/baseBlocks').remove();
+                    await database.ref('players/' + foundUid + '/secureCredits').set(0);
+
+                    addOutput(`✅ Successfully deleted BASE and reset secure credits for ${username}`, 'success');
+                    addOutput(`  - Deleted ${currentBlocks} BASE block(s)`, 'success');
+                    addOutput(`  - Reset ${currentSecure} secure credits to 0`, 'success');
+
+                } catch (error) {
+                    if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                        addOutput('Incorrect admin password.', 'error');
+                    } else {
+                        addOutput('Error occurred. Please try again.', 'error');
+                    }
+                }
+
+            } catch (error) {
+                addOutput('Error deleting secure credits: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteUserOnhandCredits(username) {
+            addOutput(`⚠️  Preparing to DELETE ONHAND CREDITS for: ${username}...`, 'warning');
+
+            try {
+                const playersSnapshot = await database.ref('players').once('value');
+                const playersData = playersSnapshot.val();
+
+                if (!playersData) {
+                    addOutput('No users found in database.', 'error');
+                    return;
+                }
+
+                // Find user by username
+                let foundUser = null;
+                let foundUid = null;
+
+                for (const [uid, playerData] of Object.entries(playersData)) {
+                    if (playerData.username && playerData.username.toLowerCase() === username.toLowerCase()) {
+                        foundUser = playerData;
+                        foundUid = uid;
+                        break;
+                    }
+                }
+
+                if (!foundUser) {
+                    addOutput(`User "${username}" not found.`, 'error');
+                    return;
+                }
+
+                // Show current status
+                const currentOnhand = foundUser.credits || 0;
+                addOutput(`Current onhand credits: ${currentOnhand}`, 'info');
+
+                // Confirm deletion
+                const confirmation = prompt(`⚠️ CRITICAL: Reset onhand credits to 0 for ${username}?\n\nType "DELETE" to confirm:`);
+                if (confirmation !== 'DELETE') {
+                    addOutput('Deletion cancelled.', 'warning');
+                    return;
+                }
+
+                // Require admin password
+                const adminPassword = prompt('Enter YOUR admin password to confirm:');
+                if (!adminPassword) {
+                    addOutput('Deletion cancelled.', 'warning');
+                    return;
+                }
+
+                try {
+                    const email = currentUser.email;
+                    const credential = firebase.auth.EmailAuthProvider.credential(email, adminPassword);
+                    await currentUser.reauthenticateWithCredential(credential);
+
+                    // Reset onhand credits to 0
+                    await database.ref('players/' + foundUid + '/credits').set(0);
+
+                    addOutput(`✅ Successfully reset onhand credits for ${username}`, 'success');
+                    addOutput(`  - Reset ${currentOnhand} credits to 0`, 'success');
+
+                } catch (error) {
+                    if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                        addOutput('Incorrect admin password.', 'error');
+                    } else {
+                        addOutput('Error occurred. Please try again.', 'error');
+                    }
+                }
+
+            } catch (error) {
+                addOutput('Error deleting onhand credits: ' + error.message, 'error');
             }
         }
 
