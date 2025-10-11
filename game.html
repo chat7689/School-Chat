@@ -118,7 +118,7 @@
             left: calc(50% - 600px - 180px); /* Canvas is 1200px wide, center - half - panel spacing */
             transform: translateY(-50%);
             width: 160px;
-            height: 600px;
+            height: 800px;
             background: linear-gradient(135deg, rgba(79, 172, 254, 0.3), rgba(79, 172, 254, 0.1));
             border: 3px solid #4facfe;
             border-radius: 15px;
@@ -137,7 +137,7 @@
             right: calc(50% - 600px - 180px); /* Match left panel positioning */
             transform: translateY(-50%);
             width: 160px;
-            height: 600px;
+            height: 800px;
             background: linear-gradient(135deg, rgba(79, 172, 254, 0.3), rgba(79, 172, 254, 0.1));
             border: 3px solid #4facfe;
             border-radius: 15px;
@@ -458,11 +458,10 @@
 
     <!-- Practice Levels Screen -->
     <div id="practiceLevelsScreen" class="screen">
-        <h1>Practice Levels</h1>
-        <div class="scroll-container">
-            <div id="practiceLevelsContent"></div>
+        <canvas id="levelSelectCanvas" width="1200" height="800" style="display: block; margin: 0 auto; background: #87CEEB;"></canvas>
+        <div id="levelSelectHUD" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 15px; border-radius: 10px; color: white; font-size: 18px; text-align: center;">
+            Use arrow keys to move, press SPACE to select level
         </div>
-        <button onclick="backToMainMenu()">Back to Menu</button>
     </div>
 
     <!-- Stats Screen -->
@@ -478,9 +477,9 @@
         <div id="baseCredits" style="font-size: 24px; color: #FFC107; margin-bottom: 20px;"></div>
         <canvas id="baseCanvas" width="800" height="600" style="border: 3px solid #4facfe; border-radius: 10px;"></canvas>
         <div style="margin-top: 20px;">
-            <p>Click on the grid to place 20x20px blocks (costs 1 credit each)</p>
+            <p>Click/hold to place 40x40px blocks (costs 1 credit each)</p>
             <p>Click on existing blocks to add more credits (max 3 per block)</p>
-            <p>Right-click to remove blocks (refunds all credits in that block)</p>
+            <p>Right-click/hold to remove ONE credit from blocks</p>
             <p>Mouse wheel to zoom, press G to reset zoom</p>
         </div>
         <button onclick="backToMainMenu()">Back to Menu</button>
@@ -1384,29 +1383,179 @@
             }
         }
 
+        // Level selection variables
+        let levelSelectActive = false;
+        let levelSelectPlayer = null;
+        let levelSelectPlatforms = [];
+        let levelSelectKeys = {};
+        let availableLevels = [];
+        let playerBestTimes = {};
+
         async function showPracticeLevels() {
             showScreen('practiceLevelsScreen');
+            levelSelectActive = true;
 
-            // Load levels from Firebase
-            const levelsSnapshot = await database.ref('levels').once('value');
-            const levels = levelsSnapshot.val();
+            const canvas = document.getElementById('levelSelectCanvas');
+            const ctx = canvas.getContext('2d');
 
-            let html = '<div class="levels-grid">';
+            // Load levels from Firebase (for now just create one default level)
+            availableLevels = [
+                { id: 'vertical_challenge', name: 'Vertical Challenge', x: 300, y: 700 }
+            ];
 
-            if (levels) {
-                for (const [levelId, levelData] of Object.entries(levels)) {
-                    html += `<div class="level-card">
-                        <div style="font-weight: bold; font-size: 18px;">${levelData.name}</div>
-                        <div style="color: #aaa; margin: 5px 0;">By ${levelData.creator}</div>
-                        <button onclick="playLevel('${levelId}')">Play</button>
-                    </div>`;
+            // Load player's best times
+            const timesSnapshot = await database.ref('times_history/' + currentUser.uid).once('value');
+            playerBestTimes = {};
+            timesSnapshot.forEach((levelSnapshot) => {
+                const levelId = levelSnapshot.key;
+                let bestTime = Infinity;
+                levelSnapshot.forEach((timeSnapshot) => {
+                    const timeData = timeSnapshot.val();
+                    if (timeData.time < bestTime) {
+                        bestTime = timeData.time;
+                    }
+                });
+                if (bestTime !== Infinity) {
+                    playerBestTimes[levelId] = bestTime;
                 }
-            } else {
-                html += '<div style="color: #fff; font-size: 18px;">No levels available yet!</div>';
+            });
+
+            // Create platforms for level selection
+            levelSelectPlatforms = [
+                { x: 0, y: 760, width: 1200, height: 40 }, // Ground
+            ];
+
+            // Create platforms for each level
+            availableLevels.forEach(level => {
+                levelSelectPlatforms.push({
+                    x: level.x,
+                    y: level.y,
+                    width: 200,
+                    height: 60,
+                    levelId: level.id,
+                    levelName: level.name
+                });
+            });
+
+            // Create player
+            levelSelectPlayer = new Player(100, 650, equippedCosmetics);
+
+            // Start render loop
+            let lastFrameTime = performance.now();
+            function levelSelectLoop(currentTime) {
+                if (!levelSelectActive) return;
+
+                if (!currentTime) currentTime = performance.now();
+                let deltaTime = (currentTime - lastFrameTime) / 16.67;
+                if (deltaTime <= 0 || deltaTime > 10) deltaTime = 1;
+                lastFrameTime = currentTime;
+
+                updateLevelSelect(deltaTime);
+                renderLevelSelect(ctx);
+
+                requestAnimationFrame(levelSelectLoop);
+            }
+            levelSelectLoop();
+        }
+
+        function updateLevelSelect(deltaTime) {
+            if (!levelSelectPlayer) return;
+
+            // Handle movement
+            if (levelSelectKeys['a'] || levelSelectKeys['ArrowLeft']) {
+                levelSelectPlayer.velocityX -= MOVE_SPEED * deltaTime;
+            }
+            if (levelSelectKeys['d'] || levelSelectKeys['ArrowRight']) {
+                levelSelectPlayer.velocityX += MOVE_SPEED * deltaTime;
             }
 
-            html += '</div>';
-            document.getElementById('practiceLevelsContent').innerHTML = html;
+            // Apply gravity
+            levelSelectPlayer.velocityY += GRAVITY * deltaTime;
+
+            // Apply friction
+            levelSelectPlayer.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
+
+            // Limit speed
+            levelSelectPlayer.velocityX = Math.max(-GROUND_MAX_SPEED, Math.min(GROUND_MAX_SPEED, levelSelectPlayer.velocityX));
+
+            // Update position
+            levelSelectPlayer.x += levelSelectPlayer.velocityX * deltaTime;
+            levelSelectPlayer.y += levelSelectPlayer.velocityY * deltaTime;
+
+            // Collision detection
+            let isGrounded = false;
+            for (const platform of levelSelectPlatforms) {
+                if (checkCollision(levelSelectPlayer, platform)) {
+                    if (levelSelectPlayer.velocityY > 0) {
+                        levelSelectPlayer.y = platform.y - levelSelectPlayer.height;
+                        levelSelectPlayer.velocityY = 0;
+                        isGrounded = true;
+
+                        // Check if player pressed space on a level platform
+                        if ((levelSelectKeys[' '] || levelSelectKeys['Space']) && platform.levelId) {
+                            levelSelectActive = false; // Stop level selection loop
+                            playLevel(platform.levelId);
+                            levelSelectKeys[' '] = false;
+                            levelSelectKeys['Space'] = false;
+                        }
+                    }
+                }
+            }
+
+            // Jump with W or Up (no space)
+            if ((levelSelectKeys['w'] || levelSelectKeys['ArrowUp']) && isGrounded) {
+                levelSelectPlayer.velocityY = -JUMP_POWER;
+            }
+        }
+
+        function renderLevelSelect(ctx) {
+            // Clear
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, 1200, 800);
+
+            // Draw platforms
+            for (const platform of levelSelectPlatforms) {
+                if (platform.levelId) {
+                    // Level platform
+                    ctx.fillStyle = '#4CAF50';
+                    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                    ctx.strokeStyle = '#2E7D32';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+
+                    // Level name
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 16px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(platform.levelName, platform.x + platform.width / 2, platform.y + 25);
+
+                    // Best time
+                    const bestTime = playerBestTimes[platform.levelId];
+                    if (bestTime) {
+                        ctx.font = '14px Arial';
+                        ctx.fillText(`Best: ${formatTime(bestTime)}`, platform.x + platform.width / 2, platform.y + 45);
+                    } else {
+                        ctx.font = '14px Arial';
+                        ctx.fillStyle = '#FFD700';
+                        ctx.fillText('No time yet!', platform.x + platform.width / 2, platform.y + 45);
+                    }
+                } else {
+                    // Ground
+                    ctx.fillStyle = '#00AA00';
+                    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                }
+            }
+
+            // Draw player
+            levelSelectPlayer.draw(ctx, 0, 0);
+        }
+
+        function formatTime(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            const milliseconds = ms % 1000;
+            return `${minutes}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0')}`;
         }
 
         async function playLevel(levelId) {
@@ -1933,8 +2082,8 @@
                 }
             }
 
-            // JUMP BUFFER: Remember jump input
-            if (practiceMode.keys['w'] || practiceMode.keys['ArrowUp'] || practiceMode.keys[' ']) {
+            // JUMP BUFFER: Remember jump input (W or Up only, NOT space)
+            if (practiceMode.keys['w'] || practiceMode.keys['ArrowUp']) {
                 player.jumpBufferTimer = JUMP_BUFFER_TIME;
             } else {
                 player.jumpBufferTimer = Math.max(0, player.jumpBufferTimer - deltaTime);
@@ -1953,7 +2102,7 @@
             }
 
             // Cut jump short if button released (variable jump height)
-            if (practiceIsJumping && !practiceMode.keys['w'] && !practiceMode.keys['ArrowUp'] && !practiceMode.keys[' ']) {
+            if (practiceIsJumping && !practiceMode.keys['w'] && !practiceMode.keys['ArrowUp']) {
                 if (player.velocityY < 0) {
                     player.velocityY *= 0.5;
                 }
@@ -2610,8 +2759,8 @@
                 player.velocityX += MOVE_SPEED * deltaTime;
             }
 
-            // Jump with variable height
-            if ((raceState.keys['w'] || raceState.keys['ArrowUp'] || raceState.keys[' ']) && isGrounded) {
+            // Jump with variable height (W or Up only, NOT space)
+            if ((raceState.keys['w'] || raceState.keys['ArrowUp']) && isGrounded) {
                 // Scale jump power by size
                 const sizeScale = player.currentSize / 40;
                 player.velocityY = -JUMP_POWER * sizeScale;
@@ -2619,7 +2768,7 @@
             }
 
             // Cut jump short if button released (variable jump height)
-            if (raceIsJumping && !raceState.keys['w'] && !raceState.keys['ArrowUp'] && !raceState.keys[' ']) {
+            if (raceIsJumping && !raceState.keys['w'] && !raceState.keys['ArrowUp']) {
                 if (player.velocityY < 0) {
                     player.velocityY *= 0.5;
                 }
@@ -2909,6 +3058,7 @@
         let baseKeys = {};
         let baseIsJumping = false;
         let basePlatforms = [];
+        let lastPlacedBlock = null; // Track last placed block for continuous placement
 
         async function showBase() {
             showScreen('baseScreen');
@@ -2944,9 +3094,49 @@
 
             renderBase();
 
-            // Add click handlers
-            baseCanvas.onclick = handleBaseClick;
-            baseCanvas.oncontextmenu = handleBaseRightClick;
+            // Track mouse state for continuous placement/removal
+            let isMouseDown = false;
+            let isRightMouseDown = false;
+
+            // Add mouse handlers for continuous placement/removal
+            baseCanvas.addEventListener('mousedown', (e) => {
+                if (e.button === 0) { // Left click
+                    isMouseDown = true;
+                    handleBaseClick(e);
+                } else if (e.button === 2) { // Right click
+                    isRightMouseDown = true;
+                    handleBaseRightClick(e);
+                }
+            });
+
+            baseCanvas.addEventListener('mouseup', (e) => {
+                if (e.button === 0) {
+                    isMouseDown = false;
+                    lastPlacedBlock = null;
+                } else if (e.button === 2) {
+                    isRightMouseDown = false;
+                    lastPlacedBlock = null;
+                }
+            });
+
+            baseCanvas.addEventListener('mouseleave', () => {
+                isMouseDown = false;
+                isRightMouseDown = false;
+                lastPlacedBlock = null;
+            });
+
+            baseCanvas.addEventListener('mousemove', (e) => {
+                if (isMouseDown) {
+                    handleBaseClick(e);
+                } else if (isRightMouseDown) {
+                    handleBaseRightClick(e);
+                }
+            });
+
+            baseCanvas.oncontextmenu = (e) => {
+                e.preventDefault();
+                return false;
+            };
 
             // Add zoom with mouse wheel
             baseCanvas.addEventListener('wheel', (e) => {
@@ -3086,7 +3276,7 @@
             const cameraX = basePlayer.x - baseCanvas.width / 2;
             const cameraY = basePlayer.y - baseCanvas.height / 2;
 
-            // Draw grid (20x20px blocks)
+            // Draw grid (40x40px blocks)
             baseCtx.strokeStyle = '#ccc';
             baseCtx.lineWidth = 0.5;
             for (let x = 0; x <= 4000; x += 20) {
@@ -3142,10 +3332,10 @@
                 } else {
                     baseCtx.fillStyle = '#B8860B'; // Dark gold
                 }
-                baseCtx.fillRect(screenX, screenY, 20, 20);
+                baseCtx.fillRect(screenX, screenY, 40, 40);
                 baseCtx.strokeStyle = '#FFA500';
-                baseCtx.lineWidth = 1;
-                baseCtx.strokeRect(screenX, screenY, 20, 20);
+                baseCtx.lineWidth = 2;
+                baseCtx.strokeRect(screenX, screenY, 40, 40);
             }
 
             // Draw player
@@ -3166,27 +3356,31 @@
             const worldX = clickX + cameraX;
             const worldY = clickY + cameraY;
 
-            // Snap to 20x20 grid
-            const gridX = Math.floor(worldX / 20) * 20;
-            const gridY = Math.floor(worldY / 20) * 20;
+            // Snap to 40x40 grid
+            const gridX = Math.floor(worldX / 40) * 40;
+            const gridY = Math.floor(worldY / 40) * 40;
 
-            // Check if within base bounds (0-4000, 0-4000)
+            // Check if within base bounds (0-4000, 0-4000) - silently prevent
             if (gridX < 0 || gridX >= 4000 || gridY < 0 || gridY >= 4000) {
-                alert('Cannot place blocks outside the base area!');
                 return;
             }
+
+            // Skip if this is the same block we just interacted with (prevents spam during drag)
+            const blockKey = `${gridX},${gridY}`;
+            if (lastPlacedBlock === blockKey) {
+                return;
+            }
+            lastPlacedBlock = blockKey;
 
             // Check if block already exists
             const existingBlock = baseBlocks.find(b => b.x === gridX && b.y === gridY);
             if (existingBlock) {
                 // Block exists - try to add another credit (max 3)
                 if (existingBlock.credits >= 3) {
-                    alert('This block already has maximum credits (3)!');
-                    return;
+                    return; // Silently prevent adding more than 3 credits
                 }
                 if (userCredits < 1) {
-                    alert('Not enough on-hand credits!');
-                    return;
+                    return; // Silently prevent if no credits
                 }
                 // Add credit to existing block
                 existingBlock.credits = (existingBlock.credits || 1) + 1;
@@ -3196,9 +3390,8 @@
                 return;
             }
 
-            // Check if user has credits
+            // Check if user has credits - silently prevent
             if (userCredits < 1) {
-                alert('Not enough on-hand credits! Transfer from secure credits first.');
                 return;
             }
 
@@ -3224,24 +3417,38 @@
             const worldX = clickX + cameraX;
             const worldY = clickY + cameraY;
 
-            // Snap to 20x20 grid
-            const gridX = Math.floor(worldX / 20) * 20;
-            const gridY = Math.floor(worldY / 20) * 20;
+            // Snap to 40x40 grid
+            const gridX = Math.floor(worldX / 40) * 40;
+            const gridY = Math.floor(worldY / 40) * 40;
 
-            // Find and remove block
-            const index = baseBlocks.findIndex(b => b.x === gridX && b.y === gridY);
-            if (index === -1) {
-                alert('No block here!');
+            // Skip if this is the same block we just interacted with (prevents spam during drag)
+            const blockKey = `${gridX},${gridY}`;
+            if (lastPlacedBlock === blockKey) {
                 return false;
             }
+            lastPlacedBlock = blockKey;
 
-            // Refund all credits in the block
+            // Find block
+            const index = baseBlocks.findIndex(b => b.x === gridX && b.y === gridY);
+            if (index === -1) {
+                return false; // Silently prevent if no block
+            }
+
+            // Remove ONE credit from the block
             const block = baseBlocks[index];
             const creditsInBlock = block.credits || 1;
 
-            baseBlocks.splice(index, 1);
-            await updateCredits(creditsInBlock, 'secure');  // All credits from block go to secure storage
-            await database.ref('players/' + currentUser.uid + '/baseBlocks').set(baseBlocks);
+            if (creditsInBlock > 1) {
+                // Block has multiple credits - just remove one
+                block.credits = creditsInBlock - 1;
+                await updateCredits(1, 'secure');  // One credit goes to secure storage
+                await database.ref('players/' + currentUser.uid + '/baseBlocks').set(baseBlocks);
+            } else {
+                // Block has only 1 credit - remove entire block
+                baseBlocks.splice(index, 1);
+                await updateCredits(1, 'secure');  // One credit goes to secure storage
+                await database.ref('players/' + currentUser.uid + '/baseBlocks').set(baseBlocks);
+            }
 
             document.getElementById('baseCredits').textContent = `Credits: ${secureCredits} (${userCredits} on hand)`;
 
@@ -3441,6 +3648,8 @@
             raceState.keys[e.key] = true;
             baseKeys[e.key] = true;
             baseKeys[e.key.toLowerCase()] = true;
+            levelSelectKeys[e.key] = true;
+            levelSelectKeys[e.key.toLowerCase()] = true;
 
             if (e.key === 'Escape') {
                 if (practiceMode.active) {
@@ -3454,6 +3663,8 @@
             menuKeys[e.key.toLowerCase()] = false;
             baseKeys[e.key] = false;
             baseKeys[e.key.toLowerCase()] = false;
+            levelSelectKeys[e.key] = false;
+            levelSelectKeys[e.key.toLowerCase()] = false;
             delete practiceMode.keys[e.key];
             delete raceState.keys[e.key];
         });

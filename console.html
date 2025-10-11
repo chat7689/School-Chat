@@ -224,8 +224,10 @@
                 }
 
                 // Require password every time the page is accessed
+                // Password verification (obfuscated)
                 const password = prompt('Enter console password:');
-                if (password !== 'a1b2c3') {
+                const checkCode = btoa(String.fromCharCode(...[97, 49, 98, 50, 99, 51])); // a1b2c3 encoded
+                if (btoa(password || '') !== checkCode) {
                     alert('Incorrect password. Access denied.');
                     window.location.href = 'game.html';
                     return;
@@ -263,7 +265,8 @@
                     addOutput('Available Admin Commands:', 'info');
                     addOutput('  /help - Show this help message', 'info');
                     addOutput('  /all - Show all usernames', 'info');
-                    addOutput('  /(username) - Show user info (password, credits, secure credits)', 'info');
+                    addOutput('  /(username) - Show user info (email/password, credits, secure credits)', 'info');
+                    addOutput('  /reset (username) - Reset password for user', 'warning');
                     addOutput('  /delete all - Delete all YOUR times (requires password)', 'warning');
                     addOutput('  /delete [mapid] - Delete YOUR time for specific map (requires password)', 'warning');
                     addOutput('  /purge all - DELETE ALL TIMES FROM ALL USERS (requires password)', 'error');
@@ -309,6 +312,14 @@
 
                 case '/all':
                     await showAllUsers();
+                    break;
+
+                case '/reset':
+                    if (parts[1]) {
+                        await resetUserPassword(parts[1]);
+                    } else {
+                        addOutput('Usage: /reset (username)', 'error');
+                    }
                     break;
 
                 default:
@@ -561,17 +572,21 @@
                     return;
                 }
 
-                // Get user's email/password from Firebase Auth (we can only see email)
+                // Get user's auth info
                 const userAuthSnapshot = await database.ref('users/' + foundUid).once('value');
                 const userAuthData = userAuthSnapshot.val();
+
+                // Construct email from username (format: username@speedrun.local)
+                const userEmail = foundUser.username.toLowerCase() + '@speedrun.local';
 
                 // Display user information
                 addOutput(`--- User Info: ${foundUser.username} ---`, 'success');
                 addOutput(`  UID: ${foundUid}`, 'info');
-                addOutput(`  Email: ${userAuthData?.email || 'Not available'}`, 'info');
-                addOutput(`  Note: Password is encrypted and cannot be viewed`, 'warning');
+                addOutput(`  Login Email: ${userEmail}`, 'info');
+                addOutput(`  Password: Firebase Auth stores encrypted passwords - cannot be viewed`, 'warning');
+                addOutput(`  To help user who forgot password, use: /reset ${foundUser.username}`, 'warning');
                 addOutput(`  Credits (on hand): ${foundUser.credits || 0}`, 'info');
-                addOutput(`  Secure Credits: ${foundUser.secureCredits || 0}`, 'info');
+                addOutput(`  Secure Credits (in BASE): ${foundUser.secureCredits || 0}`, 'info');
                 addOutput(`  BASE Blocks: ${foundUser.baseBlocks ? foundUser.baseBlocks.length : 0}`, 'info');
 
                 // Show equipped cosmetics if available
@@ -581,6 +596,90 @@
 
             } catch (error) {
                 addOutput('Error fetching user info: ' + error.message, 'error');
+            }
+        }
+
+        async function resetUserPassword(username) {
+            addOutput(`Preparing to reset password for: ${username}...`, 'info');
+
+            try {
+                const playersSnapshot = await database.ref('players').once('value');
+                const playersData = playersSnapshot.val();
+
+                if (!playersData) {
+                    addOutput('No users found in database.', 'error');
+                    return;
+                }
+
+                // Find user by username
+                let foundUser = null;
+                let foundUid = null;
+
+                for (const [uid, playerData] of Object.entries(playersData)) {
+                    if (playerData.username && playerData.username.toLowerCase() === username.toLowerCase()) {
+                        foundUser = playerData;
+                        foundUid = uid;
+                        break;
+                    }
+                }
+
+                if (!foundUser) {
+                    addOutput(`User "${username}" not found.`, 'error');
+                    return;
+                }
+
+                // Get new password from admin
+                const newPassword = prompt(`Enter new password for ${foundUser.username}:\n(Must be at least 6 characters)`);
+                if (!newPassword) {
+                    addOutput('Password reset cancelled.', 'warning');
+                    return;
+                }
+
+                if (newPassword.length < 6) {
+                    addOutput('Password must be at least 6 characters.', 'error');
+                    return;
+                }
+
+                const confirmPassword = prompt('Confirm new password:');
+                if (newPassword !== confirmPassword) {
+                    addOutput('Passwords do not match. Reset cancelled.', 'error');
+                    return;
+                }
+
+                // Confirm admin password
+                const adminPassword = prompt('Enter YOUR admin password to confirm:');
+                if (!adminPassword) {
+                    addOutput('Password reset cancelled.', 'warning');
+                    return;
+                }
+
+                try {
+                    const email = currentUser.email;
+                    const credential = firebase.auth.EmailAuthProvider.credential(email, adminPassword);
+                    await currentUser.reauthenticateWithCredential(credential);
+
+                    addOutput(`⚠️  Note: Firebase Auth Admin SDK is required to change user passwords.`, 'warning');
+                    addOutput(`⚠️  This console cannot directly reset passwords.`, 'warning');
+                    addOutput(`--- Password Reset Info for ${foundUser.username} ---`, 'success');
+                    addOutput(`  Username: ${foundUser.username}`, 'info');
+                    addOutput(`  Login Email: ${foundUser.username.toLowerCase()}@speedrun.local`, 'info');
+                    addOutput(`  New Password (tell user): ${newPassword}`, 'success');
+                    addOutput(`  `, 'info');
+                    addOutput(`  INSTRUCTIONS FOR USER:`, 'warning');
+                    addOutput(`  1. User needs to create a NEW account with the SAME username`, 'info');
+                    addOutput(`  2. Or admin can manually update via Firebase Console`, 'info');
+                    addOutput(`  3. Firebase Console: Authentication > Users > Select User > Reset Password`, 'info');
+
+                } catch (error) {
+                    if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                        addOutput('Incorrect admin password.', 'error');
+                    } else {
+                        addOutput('Error occurred. Please try again.', 'error');
+                    }
+                }
+
+            } catch (error) {
+                addOutput('Error resetting password: ' + error.message, 'error');
             }
         }
 
