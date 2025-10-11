@@ -478,8 +478,10 @@
         <div id="baseCredits" style="font-size: 24px; color: #FFC107; margin-bottom: 20px;"></div>
         <canvas id="baseCanvas" width="800" height="600" style="border: 3px solid #4facfe; border-radius: 10px;"></canvas>
         <div style="margin-top: 20px;">
-            <p>Click on the grid to place 40x40px blocks (costs 1 credit each)</p>
-            <p>Right-click to remove blocks (refunds 1 credit)</p>
+            <p>Click on the grid to place 20x20px blocks (costs 1 credit each)</p>
+            <p>Click on existing blocks to add more credits (max 3 per block)</p>
+            <p>Right-click to remove blocks (refunds all credits in that block)</p>
+            <p>Mouse wheel to zoom, press G to reset zoom</p>
         </div>
         <button onclick="backToMainMenu()">Back to Menu</button>
     </div>
@@ -945,9 +947,9 @@
                 equippedItem = data.equippedItem || 'none';
                 userStats = data.stats || { racesWon: 0, racesPlayed: 0, totalCreditsEarned: 0 };
 
-                // Calculate secure credits from BASE blocks (physical credits in BASE)
+                // Calculate secure credits from BASE blocks (sum of all credits in blocks)
                 const baseBlocks = data.baseBlocks || [];
-                secureCredits = baseBlocks.length;
+                secureCredits = baseBlocks.reduce((sum, block) => sum + (block.credits || 1), 0);
 
                 // Update Firebase to match actual BASE block count
                 await userRef.update({
@@ -2894,8 +2896,13 @@
             `;
         }
 
+        // Zoom variables for all modes
+        let baseZoom = 1;
+        let practiceZoom = 1;
+        let menuZoom = 1;
+
         // Base screen (build with credits)
-        let baseBlocks = [];
+        let baseBlocks = []; // Each block: { x, y, credits } where credits can be 1-3
         let baseCanvas, baseCtx;
         let basePlayer = null;
         let baseKeys = {};
@@ -2929,7 +2936,7 @@
             if (baseBlocks.length > 0) {
                 // Pick the first block and spawn next to it (to the right)
                 const firstBlock = baseBlocks[0];
-                spawnX = firstBlock.x + 40; // Spawn to the right of the block
+                spawnX = firstBlock.x + 20; // Spawn to the right of the block (20x20 blocks)
                 spawnY = firstBlock.y; // Same height as the block
             }
             basePlayer = new Player(spawnX, spawnY, equippedCosmetics);
@@ -2939,6 +2946,18 @@
             // Add click handlers
             baseCanvas.onclick = handleBaseClick;
             baseCanvas.oncontextmenu = handleBaseRightClick;
+
+            // Add zoom with mouse wheel
+            baseCanvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                if (e.deltaY < 0) {
+                    // Zoom in
+                    baseZoom = Math.min(baseZoom * 1.1, 3); // Max 3x zoom
+                } else {
+                    // Zoom out
+                    baseZoom = Math.max(baseZoom / 1.1, 0.3); // Min 0.3x zoom
+                }
+            }, { passive: false });
 
             // Start base loop
             let lastBaseFrameTime = performance.now();
@@ -2963,7 +2982,7 @@
             if (!basePlayer) return;
 
             // Combine user-placed blocks with boundary platforms for collision
-            const allPlatforms = [...basePlatforms, ...baseBlocks.map(b => ({ x: b.x, y: b.y, width: 40, height: 40 }))];
+            const allPlatforms = [...basePlatforms, ...baseBlocks.map(b => ({ x: b.x, y: b.y, width: 20, height: 20 }))];
 
             // Check grounded state
             let isGrounded = false;
@@ -3052,24 +3071,31 @@
         function renderBase() {
             if (!basePlayer) return;
 
+            // Clear and apply zoom
+            baseCtx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+            baseCtx.fillStyle = '#87CEEB';
+            baseCtx.fillRect(0, 0, baseCanvas.width, baseCanvas.height);
+
+            // Apply zoom transform (scale from center)
+            baseCtx.translate(baseCanvas.width / 2, baseCanvas.height / 2);
+            baseCtx.scale(baseZoom, baseZoom);
+            baseCtx.translate(-baseCanvas.width / 2, -baseCanvas.height / 2);
+
             // Camera follows player
             const cameraX = basePlayer.x - baseCanvas.width / 2;
             const cameraY = basePlayer.y - baseCanvas.height / 2;
 
-            baseCtx.fillStyle = '#87CEEB';
-            baseCtx.fillRect(0, 0, baseCanvas.width, baseCanvas.height);
-
-            // Draw grid
+            // Draw grid (20x20px blocks)
             baseCtx.strokeStyle = '#ccc';
             baseCtx.lineWidth = 0.5;
-            for (let x = 0; x <= 4000; x += 40) {
+            for (let x = 0; x <= 4000; x += 20) {
                 const screenX = x - cameraX;
                 baseCtx.beginPath();
                 baseCtx.moveTo(screenX, -cameraY);
                 baseCtx.lineTo(screenX, 4080 - cameraY);
                 baseCtx.stroke();
             }
-            for (let y = 0; y <= 4080; y += 40) {
+            for (let y = 0; y <= 4080; y += 20) {
                 const screenY = y - cameraY;
                 baseCtx.beginPath();
                 baseCtx.moveTo(-cameraX, screenY);
@@ -3101,17 +3127,24 @@
                 }
             }
 
-            // Draw placed blocks (golden)
+            // Draw placed blocks (golden, darker with more credits)
             for (const block of baseBlocks) {
                 const screenX = block.x - cameraX;
                 const screenY = block.y - cameraY;
 
-                // Golden block
-                baseCtx.fillStyle = '#FFD700';
-                baseCtx.fillRect(screenX, screenY, 40, 40);
+                // Gold color gets darker with more credits (1-3)
+                const credits = block.credits || 1;
+                if (credits === 1) {
+                    baseCtx.fillStyle = '#FFD700'; // Light gold
+                } else if (credits === 2) {
+                    baseCtx.fillStyle = '#DAA520'; // Medium gold (goldenrod)
+                } else {
+                    baseCtx.fillStyle = '#B8860B'; // Dark gold
+                }
+                baseCtx.fillRect(screenX, screenY, 20, 20);
                 baseCtx.strokeStyle = '#FFA500';
-                baseCtx.lineWidth = 2;
-                baseCtx.strokeRect(screenX, screenY, 40, 40);
+                baseCtx.lineWidth = 1;
+                baseCtx.strokeRect(screenX, screenY, 20, 20);
             }
 
             // Draw player
@@ -3132,9 +3165,9 @@
             const worldX = clickX + cameraX;
             const worldY = clickY + cameraY;
 
-            // Snap to grid
-            const gridX = Math.floor(worldX / 40) * 40;
-            const gridY = Math.floor(worldY / 40) * 40;
+            // Snap to 20x20 grid
+            const gridX = Math.floor(worldX / 20) * 20;
+            const gridY = Math.floor(worldY / 20) * 20;
 
             // Check if within base bounds (0-4000, 0-4000)
             if (gridX < 0 || gridX >= 4000 || gridY < 0 || gridY >= 4000) {
@@ -3143,9 +3176,22 @@
             }
 
             // Check if block already exists
-            const exists = baseBlocks.some(b => b.x === gridX && b.y === gridY);
-            if (exists) {
-                alert('Block already placed here!');
+            const existingBlock = baseBlocks.find(b => b.x === gridX && b.y === gridY);
+            if (existingBlock) {
+                // Block exists - try to add another credit (max 3)
+                if (existingBlock.credits >= 3) {
+                    alert('This block already has maximum credits (3)!');
+                    return;
+                }
+                if (userCredits < 1) {
+                    alert('Not enough on-hand credits!');
+                    return;
+                }
+                // Add credit to existing block
+                existingBlock.credits = (existingBlock.credits || 1) + 1;
+                await updateCredits(-1, 'onhand');
+                await database.ref('players/' + currentUser.uid + '/baseBlocks').set(baseBlocks);
+                document.getElementById('baseCredits').textContent = `Credits: ${secureCredits} (${userCredits} on hand)`;
                 return;
             }
 
@@ -3155,8 +3201,8 @@
                 return;
             }
 
-            // Place block
-            baseBlocks.push({ x: gridX, y: gridY });
+            // Place new block with 1 credit
+            baseBlocks.push({ x: gridX, y: gridY, credits: 1 });
             await updateCredits(-1, 'onhand');
             await database.ref('players/' + currentUser.uid + '/baseBlocks').set(baseBlocks);
 
@@ -3177,9 +3223,9 @@
             const worldX = clickX + cameraX;
             const worldY = clickY + cameraY;
 
-            // Snap to grid
-            const gridX = Math.floor(worldX / 40) * 40;
-            const gridY = Math.floor(worldY / 40) * 40;
+            // Snap to 20x20 grid
+            const gridX = Math.floor(worldX / 20) * 20;
+            const gridY = Math.floor(worldY / 20) * 20;
 
             // Find and remove block
             const index = baseBlocks.findIndex(b => b.x === gridX && b.y === gridY);
@@ -3188,8 +3234,12 @@
                 return false;
             }
 
+            // Refund all credits in the block
+            const block = baseBlocks[index];
+            const creditsInBlock = block.credits || 1;
+
             baseBlocks.splice(index, 1);
-            await updateCredits(1, 'secure');  // Credits from BASE go to secure storage
+            await updateCredits(creditsInBlock, 'secure');  // All credits from block go to secure storage
             await database.ref('players/' + currentUser.uid + '/baseBlocks').set(baseBlocks);
 
             document.getElementById('baseCredits').textContent = `Credits: ${secureCredits} (${userCredits} on hand)`;
@@ -3376,6 +3426,13 @@
 
         // Keyboard handling
         document.addEventListener('keydown', (e) => {
+            // G key resets zoom in all modes
+            if (e.key === 'g' || e.key === 'G') {
+                baseZoom = 1;
+                practiceZoom = 1;
+                menuZoom = 1;
+            }
+
             // Store both original key and lowercase for compatibility
             menuKeys[e.key] = true;
             menuKeys[e.key.toLowerCase()] = true;
