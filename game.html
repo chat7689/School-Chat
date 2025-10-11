@@ -1115,6 +1115,11 @@
             const spawnY = bottomPortal.y + 40 + 80 - 40; // Bottom of platform (40px) + 2 blocks (80px) - player height (40px)
             menuPlayer = new Player(spawnX, spawnY, equippedCosmetics);
 
+            // Center camera on player spawn position
+            const canvas = document.getElementById('menuCanvas');
+            menuCameraX = spawnX + 20 - canvas.width / 2; // Player center X - half canvas width
+            menuCameraY = spawnY + 20 - canvas.height / 2; // Player center Y - half canvas height
+
             // Populate and show credit panel with player preview
             const skinData = cosmeticsCatalog.skins.find(s => s.id === equippedCosmetics.skin);
             const playerColor = skinData ? skinData.color : '#FF8C42';
