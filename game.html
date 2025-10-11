@@ -529,6 +529,9 @@
         const auth = firebase.auth();
         const database = firebase.database();
 
+        // Set auth persistence to NONE - users must log in every time
+        auth.setPersistence(firebase.auth.Auth.Persistence.NONE);
+
         // Create favicon
         const faviconCanvas = document.createElement('canvas');
         faviconCanvas.width = 32;
