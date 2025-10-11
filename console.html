@@ -276,7 +276,6 @@
                     addOutput('  /purge [mapid] - Delete all times for specific map from all users', 'error');
                     addOutput('  /list - List all YOUR times', 'info');
                     addOutput('  /clear - Clear console output', 'info');
-                    addOutput('  /whoami - Show current admin info', 'info');
                     break;
 
                 case '/delete':
@@ -308,12 +307,6 @@
 
                 case '/clear':
                     outputContainer.innerHTML = '<div class="output-line info">Console cleared.</div>';
-                    break;
-
-                case '/whoami':
-                    addOutput(`User: ${currentUsername}`, 'success');
-                    addOutput(`UID: ${currentUser.uid}`, 'success');
-                    addOutput(`Email: ${currentUser.email}`, 'success');
                     break;
 
                 case '/all':
