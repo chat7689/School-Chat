@@ -161,8 +161,9 @@
         const auth = firebase.auth();
         const database = firebase.database();
 
-        // Set auth persistence to NONE - users must log in every time
-        auth.setPersistence(firebase.auth.Auth.Persistence.NONE);
+        // Set auth persistence to SESSION - lasts until browser closes
+        // Login page uses NONE to require re-login when visiting site
+        auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
 
         // Create favicon with orange square character
         const faviconCanvas = document.createElement('canvas');
