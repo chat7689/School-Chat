@@ -268,7 +268,7 @@
                     addOutput('  /user (username) - Show user info (email/password, credits, secure credits)', 'info');
                     addOutput('  /user (username) secure delete - Delete user\'s BASE and set secure credits to 0', 'error');
                     addOutput('  /user (username) onhand delete - Set user\'s onhand credits to 0', 'error');
-                    addOutput('  /account (username) delete - PERMANENTLY DELETE user account and ALL data', 'error');
+                    addOutput('  /delete account (username) - PERMANENTLY DELETE user account and ALL data', 'error');
                     addOutput('  /reset (username) - Reset password for user', 'warning');
                     addOutput('  /delete all - Delete all YOUR times (requires password)', 'warning');
                     addOutput('  /delete [mapid] - Delete YOUR time for specific map (requires password)', 'warning');
@@ -280,12 +280,15 @@
                     break;
 
                 case '/delete':
-                    if (parts[1] === 'all') {
+                    if (parts[1] === 'account' && parts[2]) {
+                        // /delete account (username) - alias for /account (username) delete
+                        await deleteUserAccount(parts[2]);
+                    } else if (parts[1] === 'all') {
                         await deleteAllTimes();
                     } else if (parts[1]) {
                         await deleteMapTime(parts[1]);
                     } else {
-                        addOutput('Usage: /delete all OR /delete [mapid]', 'error');
+                        addOutput('Usage: /delete all OR /delete [mapid] OR /delete account (username)', 'error');
                     }
                     break;
 

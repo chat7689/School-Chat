@@ -2967,6 +2967,7 @@
             });
 
             // Start position sync (use party path, not lobby path)
+            // Update every 33ms (~30fps) for smoother multiplayer movement
             const positionSyncInterval = setInterval(() => {
                 if (!raceState.active || raceState.finished) {
                     clearInterval(positionSyncInterval);
@@ -2978,7 +2979,7 @@
                     velocity: { x: raceState.player.velocityX, y: raceState.player.velocityY },
                     equippedCosmetics: equippedCosmetics
                 });
-            }, 100);
+            }, 33);
 
             let lastRaceFrameTime = performance.now();
             function raceLoop(currentTime) {
