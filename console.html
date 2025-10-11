@@ -266,6 +266,7 @@
                     addOutput('  /help - Show this help message', 'info');
                     addOutput('  /all - Show all usernames', 'info');
                     addOutput('  /(username) - Show user info (email/password, credits, secure credits)', 'info');
+                    addOutput('  /account (username) delete - PERMANENTLY DELETE user account and ALL data', 'error');
                     addOutput('  /(username) secure delete - Delete user\'s BASE and set secure credits to 0', 'error');
                     addOutput('  /(username) onhand delete - Set user\'s onhand credits to 0', 'error');
                     addOutput('  /reset (username) - Reset password for user', 'warning');
@@ -321,6 +322,14 @@
                         await resetUserPassword(parts[1]);
                     } else {
                         addOutput('Usage: /reset (username)', 'error');
+                    }
+                    break;
+
+                case '/account':
+                    if (parts[1] && parts[2] === 'delete') {
+                        await deleteUserAccount(parts[1]);
+                    } else {
+                        addOutput('Usage: /account (username) delete', 'error');
                     }
                     break;
 
@@ -836,6 +845,141 @@
 
             } catch (error) {
                 addOutput('Error deleting onhand credits: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteUserAccount(username) {
+            addOutput(`⚠️  CRITICAL: Preparing to PERMANENTLY DELETE account for: ${username}...`, 'error');
+
+            try {
+                const playersSnapshot = await database.ref('players').once('value');
+                const playersData = playersSnapshot.val();
+
+                if (!playersData) {
+                    addOutput('No users found in database.', 'error');
+                    return;
+                }
+
+                // Find user by username
+                let foundUser = null;
+                let foundUid = null;
+
+                for (const [uid, playerData] of Object.entries(playersData)) {
+                    if (playerData.username && playerData.username.toLowerCase() === username.toLowerCase()) {
+                        foundUser = playerData;
+                        foundUid = uid;
+                        break;
+                    }
+                }
+
+                if (!foundUser) {
+                    addOutput(`User "${username}" not found.`, 'error');
+                    return;
+                }
+
+                // Show what will be deleted
+                addOutput(`This will PERMANENTLY DELETE:`, 'warning');
+                addOutput(`  - User account and authentication`, 'warning');
+                addOutput(`  - ${foundUser.credits || 0} onhand credits`, 'warning');
+                addOutput(`  - ${foundUser.secureCredits || 0} secure credits`, 'warning');
+                addOutput(`  - ${foundUser.baseBlocks ? foundUser.baseBlocks.length : 0} BASE blocks`, 'warning');
+                addOutput(`  - All cosmetics and settings`, 'warning');
+                addOutput(`  - All leaderboard times and scores`, 'warning');
+                addOutput(`  - All party and race data`, 'warning');
+
+                // Triple confirmation
+                const confirmation1 = prompt(`⚠️ CRITICAL: This will PERMANENTLY DELETE the account for ${username}.\n\nThis action CANNOT be undone.\n\nType the username "${username}" to continue:`);
+                if (confirmation1 !== username) {
+                    addOutput('Account deletion cancelled.', 'warning');
+                    return;
+                }
+
+                const confirmation2 = prompt(`⚠️ FINAL WARNING: Are you absolutely sure?\n\nType "DELETE ACCOUNT" to confirm:`);
+                if (confirmation2 !== 'DELETE ACCOUNT') {
+                    addOutput('Account deletion cancelled.', 'warning');
+                    return;
+                }
+
+                // Require admin password
+                const adminPassword = prompt('Enter YOUR admin password to confirm:');
+                if (!adminPassword) {
+                    addOutput('Account deletion cancelled.', 'warning');
+                    return;
+                }
+
+                try {
+                    const email = currentUser.email;
+                    const credential = firebase.auth.EmailAuthProvider.credential(email, adminPassword);
+                    await currentUser.reauthenticateWithCredential(credential);
+
+                    addOutput(`Deleting account for ${username}...`, 'warning');
+
+                    // Delete all user data from Firebase Realtime Database
+                    const deletePromises = [];
+
+                    // Delete player data
+                    deletePromises.push(database.ref('players/' + foundUid).remove());
+
+                    // Delete user auth data
+                    deletePromises.push(database.ref('users/' + foundUid).remove());
+
+                    // Delete all leaderboard entries
+                    const leaderboardsSnapshot = await database.ref('leaderboards').once('value');
+                    leaderboardsSnapshot.forEach((mapSnapshot) => {
+                        if (mapSnapshot.child(foundUid).exists()) {
+                            deletePromises.push(database.ref('leaderboards/' + mapSnapshot.key + '/' + foundUid).remove());
+                        }
+                    });
+
+                    // Delete all score entries
+                    const scoresSnapshot = await database.ref('scores').once('value');
+                    scoresSnapshot.forEach((mapSnapshot) => {
+                        if (mapSnapshot.child(foundUid).exists()) {
+                            deletePromises.push(database.ref('scores/' + mapSnapshot.key + '/' + foundUid).remove());
+                        }
+                    });
+
+                    // Delete times history
+                    deletePromises.push(database.ref('times_history/' + foundUid).remove());
+
+                    // Delete from any parties
+                    const partiesSnapshot = await database.ref('parties').once('value');
+                    partiesSnapshot.forEach((partySnapshot) => {
+                        const partyData = partySnapshot.val();
+                        if (partyData.members && partyData.members[foundUid]) {
+                            deletePromises.push(database.ref('parties/' + partySnapshot.key + '/members/' + foundUid).remove());
+                        }
+                        if (partyData.leader === foundUid) {
+                            // If user is party leader, delete entire party
+                            deletePromises.push(database.ref('parties/' + partySnapshot.key).remove());
+                        }
+                    });
+
+                    // Execute all deletions
+                    await Promise.all(deletePromises);
+
+                    addOutput(`✅ Successfully deleted account for ${username}`, 'success');
+                    addOutput(`  - Deleted player data and BASE blocks`, 'success');
+                    addOutput(`  - Deleted user authentication data`, 'success');
+                    addOutput(`  - Deleted all leaderboard times`, 'success');
+                    addOutput(`  - Deleted all scores and history`, 'success');
+                    addOutput(`  - Removed from all parties`, 'success');
+                    addOutput(`  `, 'info');
+                    addOutput(`  ⚠️  NOTE: Firebase Authentication user must be deleted manually:`, 'warning');
+                    addOutput(`  1. Go to Firebase Console > Authentication > Users`, 'info');
+                    addOutput(`  2. Search for: ${foundUser.username.toLowerCase()}@speedrun.local`, 'info');
+                    addOutput(`  3. Click the user and delete their authentication account`, 'info');
+
+                } catch (error) {
+                    if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                        addOutput('Incorrect admin password.', 'error');
+                    } else {
+                        addOutput('Error occurred during deletion: ' + error.message, 'error');
+                    }
+                }
+
+            } catch (error) {
+                addOutput('Error deleting account: ' + error.message, 'error');
             }
         }
 
