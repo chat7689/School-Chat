@@ -2292,7 +2292,10 @@
 
         // Party system
         async function createParty() {
-            const partyId = 'party_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            // Generate 4-letter party code
+            const partyId = Array.from({length: 4}, () =>
+                'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)]
+            ).join('');
             currentPartyId = partyId;
 
             await database.ref('parties/' + partyId).set({
@@ -2446,13 +2449,13 @@
                 lobbyPlayers[uid] = {
                     username: member.username,
                     ready: false,
+                    betAmount: 1, // Each player sets their own bet
                     credits: 0 // Will be fetched
                 };
             }
 
             await database.ref('lobbies/' + lobbyId).set({
                 mapId: maps[0].id,
-                betAmount: 0,
                 players: lobbyPlayers,
                 raceStarted: false,
                 leaderId: currentParty.leaderId
@@ -2497,6 +2500,11 @@
                 mapOptions += `<option value="${map.id}" ${currentLobby.mapId === map.id ? 'selected' : ''}>${map.name}</option>`;
             }
 
+            // Check if all bets match
+            const allBets = Object.values(currentLobby.players || {}).map(p => p.betAmount);
+            const allBetsMatch = allBets.every(bet => bet === allBets[0]);
+            const agreedBet = allBetsMatch ? allBets[0] : null;
+
             document.getElementById('lobbyInfo').innerHTML = `
                 <div>
                     <label>Map:</label>
@@ -2504,26 +2512,33 @@
                         ${mapOptions}
                     </select>
                 </div>
-                <div>
-                    <label>Bet Amount:</label>
-                    <input type="number" id="lobbyBetAmount" value="${currentLobby.betAmount}" min="0" max="1000" onchange="updateLobbyBet()" ${isLeader ? '' : 'readonly'}>
+                <div style="margin-top: 15px;">
+                    <label>Your Bet Amount (credits):</label>
+                    <input type="number" id="lobbyBetAmount" value="${currentLobby.players[currentUser.uid].betAmount}" min="1" max="1000" onchange="updateLobbyBet()">
+                    <div style="font-size: 14px; color: ${allBetsMatch ? '#4CAF50' : '#ff4444'}; margin-top: 5px;">
+                        ${allBetsMatch ? `✓ All players agree: ${agreedBet} credit(s)` : '⚠ Players must agree on bet amount!'}
+                    </div>
                 </div>
             `;
 
-            // Players
+            // Players with their bet amounts
             let playersHTML = '<h3>Players:</h3>';
             for (const [uid, player] of Object.entries(currentLobby.players || {})) {
-                const readyBadge = player.ready ? ' [READY]' : '';
-                playersHTML += `<div class="party-member ${player.ready ? 'ready' : ''}">${player.username}${readyBadge}</div>`;
+                const readyBadge = player.ready ? ' ✓' : '';
+                const betInfo = `[Bet: ${player.betAmount}]`;
+                const isMe = uid === currentUser.uid ? ' (You)' : '';
+                playersHTML += `<div class="party-member ${player.ready ? 'ready' : ''}">${player.username}${isMe} ${betInfo}${readyBadge}</div>`;
             }
             document.getElementById('lobbyPlayers').innerHTML = playersHTML;
 
             // Controls
             const allReady = Object.values(currentLobby.players).every(p => p.ready);
+            const canStart = allReady && allBetsMatch;
             if (isLeader) {
                 document.getElementById('lobbyControls').innerHTML = `
                     <button onclick="toggleLobbyReady()">Toggle Ready</button>
-                    <button onclick="startRace()" ${allReady ? '' : 'disabled'}>Start Race</button>
+                    <button onclick="startRace()" ${canStart ? '' : 'disabled'}>Start Race</button>
+                    ${!canStart && allReady ? '<div style="color: #ff4444; font-size: 12px; margin-top: 5px;">All players must agree on bet!</div>' : ''}
                 `;
             } else {
                 document.getElementById('lobbyControls').innerHTML = `
@@ -2538,8 +2553,8 @@
         }
 
         async function updateLobbyBet() {
-            const betAmount = parseInt(document.getElementById('lobbyBetAmount').value) || 0;
-            await database.ref('lobbies/' + currentLobbyId + '/betAmount').set(betAmount);
+            const betAmount = Math.max(1, parseInt(document.getElementById('lobbyBetAmount').value) || 1);
+            await database.ref('lobbies/' + currentLobbyId + '/players/' + currentUser.uid + '/betAmount').set(betAmount);
         }
 
         async function toggleLobbyReady() {
@@ -2549,6 +2564,10 @@
         }
 
         async function startRace() {
+            // Deduct bet from player's credits
+            const myBet = currentLobby.players[currentUser.uid].betAmount;
+            await updateCredits(-myBet, 'onhand');
+
             await database.ref('lobbies/' + currentLobbyId).update({
                 raceStarted: true,
                 raceStartTime: firebase.database.ServerValue.TIMESTAMP
@@ -2862,22 +2881,26 @@
 
                 results.sort((a, b) => a.time - b.time);
 
+                // Calculate pot from all players' bets
+                const pot = Object.values(players).reduce((sum, p) => sum + (p.betAmount || 0), 0);
+
                 // Award credits to winner
                 if (results[0].uid === currentUser.uid) {
-                    const pot = currentLobby.betAmount * Object.keys(players).length;
-                    await updateCredits(pot);
+                    await updateCredits(pot, 'onhand');
                     userStats.racesWon++;
+                } else {
+                    // Lost - already deducted at race start
                 }
 
                 userStats.racesPlayed++;
                 await database.ref('players/' + currentUser.uid + '/stats').set(userStats);
 
                 // Show results
-                showRaceResults(results);
+                showRaceResults(results, pot);
             }
         }
 
-        function showRaceResults(results) {
+        function showRaceResults(results, pot) {
             let html = '';
             for (let i = 0; i < results.length; i++) {
                 const isMe = results[i].uid === currentUser.uid;
@@ -2888,8 +2911,9 @@
             }
 
             if (results[0].uid === currentUser.uid) {
-                const pot = currentLobby.betAmount * results.length;
                 html = `<div style="color: #FFD700; font-size: 24px; margin-bottom: 20px;">YOU WIN! +${pot} credits</div>` + html;
+            } else {
+                html = `<div style="color: #ff4444; font-size: 18px; margin-bottom: 20px;">You lost ${currentLobby.players[currentUser.uid].betAmount} credits</div>` + html;
             }
 
             document.getElementById('resultsContent').innerHTML = html;
