@@ -1067,11 +1067,11 @@
             const groundY = middleBottomY + 120; // Ground 120px below EARN MODE
 
             menuPlatforms = [
-                // Boundary walls from JSON
-                { x: 600, y: -560, width: 40, height: 560, label: '', action: 'none' },
-                { x: -600, y: -560, width: 40, height: 560, label: '', action: 'none' },
-                { x: -600, y: -600, width: 1240, height: 40, label: '', action: 'none' },
-                { x: -600, y: 0, width: 1240, height: 40, label: '', action: 'none' },
+                // Boundary walls - symmetrical around center
+                { x: -640, y: -640, width: 40, height: 1400, label: '', action: 'none' }, // Left wall
+                { x: 1200, y: -640, width: 40, height: 1400, label: '', action: 'none' }, // Right wall
+                { x: -640, y: -640, width: 1880, height: 40, label: '', action: 'none' }, // Ceiling
+                { x: -640, y: 720, width: 1880, height: 40, label: '', action: 'none' },  // Ground (moved to boundaries)
 
                 // Interior platforms from JSON
                 { x: -40, y: -120, width: 120, height: 40, label: '', action: 'none' },
@@ -1098,9 +1098,6 @@
                 { x: 480, y: -320, width: 40, height: 320, label: '', action: 'none' },
                 { x: 520, y: -400, width: 40, height: 400, label: '', action: 'none' },
                 { x: 560, y: -480, width: 40, height: 480, label: '', action: 'none' },
-
-                // Ground platform - 40px thick, from left wall to right wall, 120px below EARN MODE
-                { x: -600, y: groundY, width: 1240, height: 40, label: '', action: 'none' },
 
                 // LEFT STACK (3 portals) - 40px higher than middle
                 { x: leftX, y: sideBottomY, width: 120, height: 40, label: 'BASE', action: 'base' },
@@ -1172,6 +1169,30 @@
                 // Render
                 ctx.fillStyle = '#87CEEB';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                // Draw background 40x40px gridlines
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.lineWidth = 1;
+
+                // Vertical lines
+                const startX = Math.floor(menuCameraX / 40) * 40;
+                for (let x = startX; x < menuCameraX + canvas.width; x += 40) {
+                    const screenX = x - menuCameraX;
+                    ctx.beginPath();
+                    ctx.moveTo(screenX, 0);
+                    ctx.lineTo(screenX, canvas.height);
+                    ctx.stroke();
+                }
+
+                // Horizontal lines
+                const startY = Math.floor(menuCameraY / 40) * 40;
+                for (let y = startY; y < menuCameraY + canvas.height; y += 40) {
+                    const screenY = y - menuCameraY;
+                    ctx.beginPath();
+                    ctx.moveTo(0, screenY);
+                    ctx.lineTo(canvas.width, screenY);
+                    ctx.stroke();
+                }
 
                 // Draw platforms
                 for (const platform of menuPlatforms) {
