@@ -3781,14 +3781,14 @@
             // Draw grid (40x40px blocks)
             baseCtx.strokeStyle = '#ccc';
             baseCtx.lineWidth = 0.5;
-            for (let x = 0; x <= 4000; x += 20) {
+            for (let x = 0; x <= 4000; x += 40) {
                 const screenX = x - cameraX;
                 baseCtx.beginPath();
                 baseCtx.moveTo(screenX, -cameraY);
                 baseCtx.lineTo(screenX, 4080 - cameraY);
                 baseCtx.stroke();
             }
-            for (let y = 0; y <= 4080; y += 20) {
+            for (let y = 0; y <= 4080; y += 40) {
                 const screenY = y - cameraY;
                 baseCtx.beginPath();
                 baseCtx.moveTo(-cameraX, screenY);
