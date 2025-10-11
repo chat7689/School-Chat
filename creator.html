@@ -253,6 +253,57 @@
         .modal-buttons button {
             flex: 1;
         }
+        .comment-box {
+            position: absolute;
+            background: rgba(255, 255, 150, 0.95);
+            border: 2px solid #FFD700;
+            border-radius: 8px;
+            padding: 8px;
+            min-width: 200px;
+            max-width: 300px;
+            cursor: move;
+            z-index: 500;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .comment-box textarea {
+            width: 100%;
+            min-height: 60px;
+            background: rgba(255,255,255,0.9);
+            border: 1px solid #DAA520;
+            border-radius: 4px;
+            padding: 5px;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            resize: vertical;
+            color: #333;
+        }
+
+        .comment-box textarea:focus {
+            outline: none;
+            border-color: #FFD700;
+        }
+
+        .comment-delete {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 20px;
+            height: 20px;
+            background: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            line-height: 20px;
+            text-align: center;
+            padding: 0;
+        }
+
+        .comment-delete:hover {
+            background: #cc0000;
+        }
     </style>
 </head>
 <body>
@@ -284,6 +335,7 @@
             <button class="tool-button" onclick="setTool('start')">🟢 Start Position</button>
             <button class="tool-button" onclick="setTool('finish')">🏁 Finish Line</button>
             <button class="tool-button" onclick="setTool('player')">👤 Preview Player</button>
+            <button class="tool-button" onclick="setTool('comment')">💬 Add Comment</button>
             <button class="tool-button" onclick="setTool('select')">✋ Select/Move <span style="float:right;color:#999;">5</span></button>
             <button class="tool-button" onclick="setTool('resize')">↔️ Resize <span style="float:right;color:#999;">6</span></button>
             <button class="tool-button delete" onclick="setTool('delete')">🗑 Delete <span style="float:right;color:#999;">7</span></button>
@@ -455,6 +507,7 @@
         let foregroundBlocks = [];  // Visual only, rendered on top
         let triggers = [];  // Invisible trigger blocks with IDs
         let nextTriggerId = 1;  // Auto-increment trigger IDs
+        let comments = [];  // Comments for level understanding (not shown in gameplay)
         let startPos = { x: 40, y: 520, width: 40, height: 40 };  // 40x40 grid
         let finishPos = { x: 700, y: 480, width: 40, height: 40 };  // Drag-able finish (40x40)
 
@@ -526,6 +579,7 @@
                 backgroundBlocks: JSON.parse(JSON.stringify(backgroundBlocks)),
                 foregroundBlocks: JSON.parse(JSON.stringify(foregroundBlocks)),
                 triggers: JSON.parse(JSON.stringify(triggers)),
+                comments: JSON.parse(JSON.stringify(comments)),
                 startPos: JSON.parse(JSON.stringify(startPos)),
                 finishPos: JSON.parse(JSON.stringify(finishPos))
             };
@@ -547,6 +601,7 @@
                     backgroundBlocks: JSON.parse(JSON.stringify(backgroundBlocks)),
                     foregroundBlocks: JSON.parse(JSON.stringify(foregroundBlocks)),
                     triggers: JSON.parse(JSON.stringify(triggers)),
+                    comments: JSON.parse(JSON.stringify(comments)),
                     startPos: JSON.parse(JSON.stringify(startPos)),
                     finishPos: JSON.parse(JSON.stringify(finishPos))
                 };
@@ -561,9 +616,11 @@
                 backgroundBlocks = state.backgroundBlocks;
                 foregroundBlocks = state.foregroundBlocks;
                 triggers = state.triggers || [];
+                comments = state.comments || [];
                 startPos = state.startPos;
                 finishPos = state.finishPos;
 
+                loadComments();  // Reload comment DOM elements
                 updateStats();
                 updateLevelData();
                 draw();
@@ -581,6 +638,7 @@
                     backgroundBlocks: JSON.parse(JSON.stringify(backgroundBlocks)),
                     foregroundBlocks: JSON.parse(JSON.stringify(foregroundBlocks)),
                     triggers: JSON.parse(JSON.stringify(triggers)),
+                    comments: JSON.parse(JSON.stringify(comments)),
                     startPos: JSON.parse(JSON.stringify(startPos)),
                     finishPos: JSON.parse(JSON.stringify(finishPos))
                 };
@@ -595,9 +653,11 @@
                 backgroundBlocks = state.backgroundBlocks;
                 foregroundBlocks = state.foregroundBlocks;
                 triggers = state.triggers || [];
+                comments = state.comments || [];
                 startPos = state.startPos;
                 finishPos = state.finishPos;
 
+                loadComments();  // Reload comment DOM elements
                 updateStats();
                 updateLevelData();
                 draw();
@@ -1242,6 +1302,9 @@
                 playerPreview.y = snapToGrid(worldPos.y);
                 playerPreview.visible = true;
                 draw();
+            } else if (currentTool === 'comment') {
+                // Create a new comment at the clicked position
+                createComment(e.clientX - rect.left, e.clientY - rect.top);
             } else {
                 // For drawing tools, allow both click-to-place and drag-to-draw
                 isDrawing = true;
@@ -1651,6 +1714,172 @@
             }
         }
 
+        // Comment system functions
+        function createComment(screenX, screenY) {
+            const commentId = 'comment-' + Date.now();
+            const commentData = {
+                id: commentId,
+                x: screenX,
+                y: screenY,
+                text: ''
+            };
+            comments.push(commentData);
+
+            // Create DOM element for comment
+            const commentBox = document.createElement('div');
+            commentBox.className = 'comment-box';
+            commentBox.id = commentId;
+            commentBox.style.left = screenX + 'px';
+            commentBox.style.top = screenY + 'px';
+
+            const textarea = document.createElement('textarea');
+            textarea.placeholder = 'Add your comment here...';
+            textarea.value = commentData.text;
+            textarea.addEventListener('input', (e) => {
+                const comment = comments.find(c => c.id === commentId);
+                if (comment) comment.text = e.target.value;
+                updateLevelData();
+            });
+            textarea.addEventListener('mousedown', (e) => e.stopPropagation());
+            textarea.addEventListener('click', (e) => e.stopPropagation());
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'comment-delete';
+            deleteBtn.textContent = '×';
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                deleteComment(commentId);
+            });
+
+            commentBox.appendChild(deleteBtn);
+            commentBox.appendChild(textarea);
+
+            // Make draggable
+            let isDragging = false;
+            let dragOffsetX = 0;
+            let dragOffsetY = 0;
+
+            commentBox.addEventListener('mousedown', (e) => {
+                if (e.target === textarea || e.target === deleteBtn) return;
+                isDragging = true;
+                dragOffsetX = e.clientX - commentBox.offsetLeft;
+                dragOffsetY = e.clientY - commentBox.offsetTop;
+                commentBox.style.cursor = 'grabbing';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                const newX = e.clientX - dragOffsetX;
+                const newY = e.clientY - dragOffsetY;
+                commentBox.style.left = newX + 'px';
+                commentBox.style.top = newY + 'px';
+
+                const comment = comments.find(c => c.id === commentId);
+                if (comment) {
+                    comment.x = newX;
+                    comment.y = newY;
+                    updateLevelData();
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    commentBox.style.cursor = 'move';
+                }
+            });
+
+            document.body.appendChild(commentBox);
+            textarea.focus();
+            updateLevelData();
+        }
+
+        function deleteComment(commentId) {
+            const index = comments.findIndex(c => c.id === commentId);
+            if (index !== -1) {
+                comments.splice(index, 1);
+                const element = document.getElementById(commentId);
+                if (element) element.remove();
+                updateLevelData();
+            }
+        }
+
+        function loadComments() {
+            // Remove all existing comment DOM elements
+            document.querySelectorAll('.comment-box').forEach(el => el.remove());
+
+            // Recreate comment boxes from data
+            for (const commentData of comments) {
+                const commentId = commentData.id;
+
+                const commentBox = document.createElement('div');
+                commentBox.className = 'comment-box';
+                commentBox.id = commentId;
+                commentBox.style.left = commentData.x + 'px';
+                commentBox.style.top = commentData.y + 'px';
+
+                const textarea = document.createElement('textarea');
+                textarea.value = commentData.text;
+                textarea.addEventListener('input', (e) => {
+                    const comment = comments.find(c => c.id === commentId);
+                    if (comment) comment.text = e.target.value;
+                    updateLevelData();
+                });
+                textarea.addEventListener('mousedown', (e) => e.stopPropagation());
+                textarea.addEventListener('click', (e) => e.stopPropagation());
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'comment-delete';
+                deleteBtn.textContent = '×';
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteComment(commentId);
+                });
+
+                commentBox.appendChild(deleteBtn);
+                commentBox.appendChild(textarea);
+
+                // Make draggable
+                let isDragging = false;
+                let dragOffsetX = 0;
+                let dragOffsetY = 0;
+
+                commentBox.addEventListener('mousedown', (e) => {
+                    if (e.target === textarea || e.target === deleteBtn) return;
+                    isDragging = true;
+                    dragOffsetX = e.clientX - commentBox.offsetLeft;
+                    dragOffsetY = e.clientY - commentBox.offsetTop;
+                    commentBox.style.cursor = 'grabbing';
+                    e.preventDefault();
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (!isDragging) return;
+                    const newX = e.clientX - dragOffsetX;
+                    const newY = e.clientY - dragOffsetY;
+                    commentBox.style.left = newX + 'px';
+                    commentBox.style.top = newY + 'px';
+
+                    const comment = comments.find(c => c.id === commentId);
+                    if (comment) {
+                        comment.x = newX;
+                        comment.y = newY;
+                        updateLevelData();
+                    }
+                });
+
+                document.addEventListener('mouseup', () => {
+                    if (isDragging) {
+                        isDragging = false;
+                        commentBox.style.cursor = 'move';
+                    }
+                });
+
+                document.body.appendChild(commentBox);
+            }
+        }
+
         function updateStats() {
             document.getElementById('blockCount').textContent = platforms.length;
             document.getElementById('hazardCount').textContent = hazards.length;
@@ -1783,6 +2012,7 @@
                 backgroundBlocks: backgroundBlocks,
                 foregroundBlocks: foregroundBlocks,
                 triggers: triggers,
+                comments: comments,  // Include comments in level data
                 start: startPos,
                 finish: finishPos,
                 physics: physics
@@ -1803,6 +2033,7 @@
                 backgroundBlocks: backgroundBlocks,
                 foregroundBlocks: foregroundBlocks,
                 triggers: triggers,
+                comments: comments,  // Save comments in auto-save
                 start: startPos,
                 finish: finishPos,
                 physics: physics,
@@ -1940,6 +2171,7 @@
                 defaultSizeBlocks = data.defaultSizeBlocks || [];
                 backgroundBlocks = data.backgroundBlocks || [];
                 foregroundBlocks = data.foregroundBlocks || [];
+                comments = data.comments || [];  // Import comments
                 startPos = data.start || { x: 40, y: 520, width: 40, height: 40 };
                 finishPos = data.finish || { x: 700, y: 480, width: 40, height: 40 };
 
@@ -1948,6 +2180,9 @@
                 if (!startPos.height) startPos.height = 40;
                 if (!finishPos.width) finishPos.width = 40;
                 if (!finishPos.height) finishPos.height = 40;
+
+                // Load comments into DOM
+                loadComments();
 
                 // Update UI
                 updateStats();
