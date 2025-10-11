@@ -1109,8 +1109,11 @@
                 }))
             ];
 
-            // Spawn player at start position from JSON (0, -40)
-            menuPlayer = new Player(0, -40, equippedCosmetics);
+            // Find bottom portal (highest Y value) and spawn 2 blocks (80px) below its center
+            const bottomPortal = menuPortals.reduce((prev, curr) => curr.y > prev.y ? curr : prev);
+            const spawnX = bottomPortal.x + 60 - 20; // Center of 120px platform (60px) minus half player width (20px)
+            const spawnY = bottomPortal.y + 40 + 80 - 40; // Bottom of platform (40px) + 2 blocks (80px) - player height (40px)
+            menuPlayer = new Player(spawnX, spawnY, equippedCosmetics);
 
             // Populate and show credit panel with player preview
             const skinData = cosmeticsCatalog.skins.find(s => s.id === equippedCosmetics.skin);
