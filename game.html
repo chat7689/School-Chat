@@ -1334,7 +1334,7 @@
                 menuPlayer.velocityY = -JUMP_POWER * sizeScale;
                 menuIsJumping = true;
                 // Jump particles (white)
-                spawnParticles(menuPlayer.x + menuPlayer.width / 2, menuPlayer.y + menuPlayer.height, 12, 'rgb(255, 255, 255)');
+                spawnParticles(menuPlayer.x + menuPlayer.width / 2, menuPlayer.y + menuPlayer.height, 12, 'rgb(255, 255, 255)', menuPlayer.currentSize);
             }
 
             // Cut jump short if button released (variable jump height)
@@ -1354,7 +1354,7 @@
             if ((menuKeys['s'] || menuKeys['ArrowDown']) && !isGrounded && menuPlayer.velocityY > 0) {
                 // Spawn particles continuously during fast fall
                 if (Math.random() < 0.3) { // 30% chance each frame for smooth particle trail
-                    spawnParticles(menuPlayer.x + menuPlayer.width / 2, menuPlayer.y, 3, 'rgb(255, 255, 255)');
+                    spawnParticles(menuPlayer.x + menuPlayer.width / 2, menuPlayer.y, 3, 'rgb(255, 255, 255)', menuPlayer.currentSize);
                 }
             }
 
@@ -3259,7 +3259,7 @@
                 player.velocityY = -JUMP_POWER * sizeScale;
                 raceIsJumping = true;
                 // Jump particles (white)
-                spawnParticles(player.x + player.width / 2, player.y + player.height, 12, 'rgb(255, 255, 255)');
+                spawnParticles(player.x + player.width / 2, player.y + player.height, 12, 'rgb(255, 255, 255)', player.currentSize);
             }
 
             // Cut jump short if button released (variable jump height)
