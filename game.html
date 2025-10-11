@@ -2321,10 +2321,10 @@
 
         function updatePracticePlayer(deltaTime = 1) {
             const player = practiceMode.player;
+            const sizeScale = player.currentSize / 40;
 
             // Scale factors based on player size (from level creator) - freeze movement during transition
             if (!player.sizeTransitioning) {
-                const sizeScale = player.currentSize / 40;
 
                 // Handle input - scaled by size like level creator
                 const scaledMoveSpeed = MOVE_SPEED * sizeScale;
@@ -2373,7 +2373,6 @@
             // Jump with coyote time and jump buffering
             if (player.jumpBufferTimer > 0 && player.coyoteTimer > 0 && !practiceIsJumping) {
                 // Scale jump power by size so all sizes can jump 4x their height + 1px
-                const sizeScale = player.currentSize / 40;
                 player.velocityY = -JUMP_POWER * sizeScale;
                 practiceIsJumping = true;
                 player.coyoteTimer = 0;
@@ -2391,7 +2390,6 @@
             }
 
             // Apply gravity scaled by size (from level creator)
-            const sizeScale = player.currentSize / 40;
             if ((practiceMode.keys['s'] || practiceMode.keys['ArrowDown']) && !player.wasGrounded && player.velocityY > 0) {
                 player.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
                 // White fast-fall particles - only when actually falling down
@@ -3154,6 +3152,7 @@
 
         function updateRacePlayer(deltaTime = 1) {
             const player = raceState.player;
+            const sizeScale = player.currentSize / 40;
 
             // Check hazards first (before position update)
             for (const hazard of raceState.hazards) {
@@ -3170,7 +3169,6 @@
             }
 
             // Apply gravity with fast fall (scaled by size)
-            const sizeScale = player.currentSize / 40;
             if ((raceState.keys['s'] || raceState.keys['ArrowDown']) && !player.wasGrounded) {
                 player.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
                 // Fast-fall particles (white)
@@ -3258,7 +3256,6 @@
             // Jump with variable height (W or Up only, NOT space)
             if ((raceState.keys['w'] || raceState.keys['ArrowUp']) && isGrounded) {
                 // Scale jump power by size
-                const sizeScale = player.currentSize / 40;
                 player.velocityY = -JUMP_POWER * sizeScale;
                 raceIsJumping = true;
                 // Jump particles (white)
@@ -3671,7 +3668,7 @@
             if (!basePlayer) return;
 
             // Combine user-placed blocks with boundary platforms for collision
-            const allPlatforms = [...basePlatforms, ...baseBlocks.map(b => ({ x: b.x, y: b.y, width: 20, height: 20 }))];
+            const allPlatforms = [...basePlatforms, ...baseBlocks.map(b => ({ x: b.x, y: b.y, width: 40, height: 40 }))];
 
             // Check grounded state
             let isGrounded = false;
