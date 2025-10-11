@@ -585,7 +585,7 @@
 
         // Particle system
         class Particle {
-            constructor(x, y, vx, vy, color, life) {
+            constructor(x, y, vx, vy, color, life, size = 4) {
                 this.x = x;
                 this.y = y;
                 this.vx = vx;
@@ -593,6 +593,7 @@
                 this.color = color;
                 this.life = life;
                 this.maxLife = life;
+                this.size = size;
             }
 
             update(deltaTime) {
@@ -607,13 +608,16 @@
                 const screenX = this.x - cameraX;
                 const screenY = this.y - cameraY;
                 ctx.fillStyle = this.color.replace(')', `, ${alpha})`).replace('rgb', 'rgba');
-                ctx.fillRect(screenX, screenY, 4, 4);
+                ctx.fillRect(screenX, screenY, this.size, this.size);
             }
         }
 
         let particles = [];
 
-        function spawnParticles(x, y, count, color) {
+        function spawnParticles(x, y, count, color, playerSize = 40) {
+            // Scale particle size based on player size (default 40px)
+            const particleSize = Math.max(2, Math.floor(playerSize / 10));
+
             for (let i = 0; i < count; i++) {
                 const angle = Math.random() * Math.PI * 2;
                 const speed = Math.random() * 2 + 1;
@@ -623,7 +627,8 @@
                     Math.cos(angle) * speed,
                     Math.sin(angle) * speed - 1,
                     color,
-                    30 + Math.random() * 20
+                    30 + Math.random() * 20,
+                    particleSize
                 ));
             }
         }
@@ -1280,7 +1285,7 @@
 
             // Landing particles (gray)
             if (isGrounded && !menuPlayer.wasGrounded) {
-                spawnParticles(menuPlayer.x + menuPlayer.width / 2, menuPlayer.y + menuPlayer.height, 8, 'rgb(200, 200, 200)');
+                spawnParticles(menuPlayer.x + menuPlayer.width / 2, menuPlayer.y + menuPlayer.height, 8, 'rgb(200, 200, 200)', menuPlayer.currentSize);
             }
             menuPlayer.wasGrounded = isGrounded;
 
@@ -1779,6 +1784,11 @@
                 practiceMode.active = true;
                 practiceMode.isLevelMode = true; // Flag to indicate we're playing a level, not infinite mode
                 practiceMode.levelData = levelData;
+                practiceMode.levelId = levelId;
+                practiceMode.levelName = levelInfo.name;
+                practiceMode.startTime = null; // Will be set when player moves
+                practiceMode.finishTime = null;
+                practiceMode.finished = false;
 
                 // Find the leftmost platform to spawn player
                 let startX = 100;
@@ -1818,14 +1828,60 @@
                     if (deltaTime <= 0 || deltaTime > 10) deltaTime = 1;
                     lastPracticeFrameTime = currentTime;
 
+                    // Start timer when player first moves
+                    if (!practiceMode.startTime && !practiceMode.finished) {
+                        const isMoving = practiceMode.keys['a'] || practiceMode.keys['d'] ||
+                                       practiceMode.keys['w'] || practiceMode.keys['s'] ||
+                                       practiceMode.keys['ArrowLeft'] || practiceMode.keys['ArrowRight'] ||
+                                       practiceMode.keys['ArrowUp'] || practiceMode.keys['ArrowDown'];
+                        if (isMoving) {
+                            practiceMode.startTime = Date.now();
+                        }
+                    }
+
                     // Update player
                     updatePracticePlayer(deltaTime);
 
-                    // Update HUD
+                    // Check finish zone
+                    if (levelData.finish && !practiceMode.finished) {
+                        const finish = levelData.finish;
+                        if (practiceMode.player.x + practiceMode.player.width > finish.x &&
+                            practiceMode.player.x < finish.x + finish.width &&
+                            practiceMode.player.y + practiceMode.player.height > finish.y &&
+                            practiceMode.player.y < finish.y + finish.height) {
+                            practiceMode.finished = true;
+                            practiceMode.finishTime = Date.now() - practiceMode.startTime;
+
+                            // Save time to Firebase
+                            await database.ref('times_history/' + currentUser.uid + '/' + levelId).push({
+                                time: practiceMode.finishTime,
+                                timestamp: firebase.database.ServerValue.TIMESTAMP
+                            });
+                        }
+                    }
+
+                    // Update HUD with timer
+                    let timerText = '';
+                    if (practiceMode.finished) {
+                        const totalMs = practiceMode.finishTime;
+                        const minutes = Math.floor(totalMs / 60000);
+                        const seconds = Math.floor((totalMs % 60000) / 1000);
+                        const ms = totalMs % 1000;
+                        timerText = `<div style="font-size: 20px; color: #00FF00; margin-top: 5px;">FINISHED: ${minutes}:${seconds.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}</div>`;
+                    } else if (practiceMode.startTime) {
+                        const elapsed = Date.now() - practiceMode.startTime;
+                        const minutes = Math.floor(elapsed / 60000);
+                        const seconds = Math.floor((elapsed % 60000) / 1000);
+                        const ms = elapsed % 1000;
+                        timerText = `<div style="font-size: 20px; color: #FFD700; margin-top: 5px;">Time: ${minutes}:${seconds.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}</div>`;
+                    } else {
+                        timerText = `<div style="font-size: 16px; color: #aaa; margin-top: 5px;">Move to start timer!</div>`;
+                    }
+
                     document.getElementById('hud').innerHTML = `
                         <div style="font-size: 24px; font-weight: bold;">${levelInfo.name}</div>
                         <div style="font-size: 14px; margin-top: 3px; color: #aaa;">By ${levelInfo.creator}</div>
-                        <div style="font-size: 16px; color: #FFD700; margin-top: 5px;">WASD/Arrows to move!</div>
+                        ${timerText}
                     `;
 
                     // Render
@@ -1885,6 +1941,24 @@
                         const screenY = block.y - practiceMode.cameraY;
                         ctx.fillRect(screenX, screenY, block.width, block.height);
                         ctx.strokeRect(screenX, screenY, block.width, block.height);
+                    }
+
+                    // Draw finish zone
+                    if (levelData.finish) {
+                        const finish = levelData.finish;
+                        const finishScreenX = finish.x - practiceMode.cameraX;
+                        const finishScreenY = finish.y - practiceMode.cameraY;
+                        ctx.fillStyle = practiceMode.finished ? '#00FF00' : '#FFD700';
+                        ctx.fillRect(finishScreenX, finishScreenY, finish.width, finish.height);
+                        ctx.strokeStyle = '#333';
+                        ctx.lineWidth = 3;
+                        ctx.strokeRect(finishScreenX, finishScreenY, finish.width, finish.height);
+
+                        // Draw "FINISH" text
+                        ctx.fillStyle = '#000';
+                        ctx.font = 'bold 16px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('FINISH', finishScreenX + finish.width / 2, finishScreenY + finish.height / 2 + 6);
                     }
 
                     // Draw particles
@@ -2253,18 +2327,28 @@
 
                 // Handle input - scaled by size like level creator
                 const scaledMoveSpeed = MOVE_SPEED * sizeScale;
+                const wasMovingLeft = player.velocityX < -0.5;
+                const wasMovingRight = player.velocityX > 0.5;
+
                 if (practiceMode.keys['a'] || practiceMode.keys['ArrowLeft']) {
                     player.velocityX -= scaledMoveSpeed * deltaTime;
+                    // White particles when starting left movement or changing direction
+                    if (!wasMovingLeft && Math.random() < 0.3) {
+                        spawnParticles(player.x + player.width / 2, player.y + player.height / 2, 2, 'rgb(255, 255, 255)', player.currentSize);
+                    }
                 }
                 if (practiceMode.keys['d'] || practiceMode.keys['ArrowRight']) {
                     player.velocityX += scaledMoveSpeed * deltaTime;
+                    // White particles when starting right movement or changing direction
+                    if (!wasMovingRight && Math.random() < 0.3) {
+                        spawnParticles(player.x + player.width / 2, player.y + player.height / 2, 2, 'rgb(255, 255, 255)', player.currentSize);
+                    }
                 }
             }
 
-            // Speed-based movement particles
+            // Orange speed-based movement particles (more = faster)
             const speed = Math.abs(player.velocityX);
             if (speed > 0.5) {
-                // More particles = faster movement
                 const particleChance = Math.min(speed / 10, 0.8); // Max 80% chance
                 if (Math.random() < particleChance) {
                     const particleCount = Math.floor(speed / 2);
@@ -2272,7 +2356,8 @@
                         player.x + player.width / 2 + (Math.random() - 0.5) * player.width,
                         player.y + player.height,
                         Math.max(1, particleCount),
-                        player.getSkinColor()
+                        'rgb(255, 140, 66)', // Orange
+                        player.currentSize
                     );
                 }
             }
@@ -2292,8 +2377,8 @@
                 practiceIsJumping = true;
                 player.coyoteTimer = 0;
                 player.jumpBufferTimer = 0;
-                // Jump particles
-                spawnParticles(player.x + player.width / 2, player.y + player.height, 12, 'rgb(255, 255, 255)');
+                // White jump particles
+                spawnParticles(player.x + player.width / 2, player.y + player.height, 12, 'rgb(255, 255, 255)', player.currentSize);
             }
 
             // Cut jump short if button released (variable jump height)
@@ -2306,11 +2391,11 @@
 
             // Apply gravity scaled by size (from level creator)
             const sizeScale = player.currentSize / 40;
-            if ((practiceMode.keys['s'] || practiceMode.keys['ArrowDown']) && !player.wasGrounded) {
+            if ((practiceMode.keys['s'] || practiceMode.keys['ArrowDown']) && !player.wasGrounded && player.velocityY > 0) {
                 player.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
-                // Fast fall particles (white) - match jump particles
+                // White fast-fall particles - only when actually falling down
                 if (Math.random() < 0.3) {
-                    spawnParticles(player.x + player.width / 2, player.y, 3, 'rgb(255, 255, 255)');
+                    spawnParticles(player.x + player.width / 2, player.y, 3, 'rgb(255, 255, 255)', player.currentSize);
                 }
             } else {
                 player.velocityY += GRAVITY * sizeScale * deltaTime;
@@ -2381,7 +2466,7 @@
                 player.coyoteTimer = COYOTE_TIME;
                 // Landing particles
                 if (!player.wasGrounded) {
-                    spawnParticles(player.x + player.width / 2, player.y + player.height, 8, 'rgb(200, 200, 200)');
+                    spawnParticles(player.x + player.width / 2, player.y + player.height, 8, 'rgb(200, 200, 200)', player.currentSize);
                 }
             } else {
                 player.coyoteTimer = Math.max(0, player.coyoteTimer - deltaTime);
@@ -3163,7 +3248,7 @@
 
             // Landing particles (gray)
             if (isGrounded && !player.wasGrounded) {
-                spawnParticles(player.x + player.width / 2, player.y + player.height, 8, 'rgb(200, 200, 200)');
+                spawnParticles(player.x + player.width / 2, player.y + player.height, 8, 'rgb(200, 200, 200)', player.currentSize);
             }
             player.wasGrounded = isGrounded;
 
