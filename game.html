@@ -2061,11 +2061,11 @@
                         {"x": 1400, "y": -3200, "width": 40, "height": 440},
                         {"x": 1440, "y": -3680, "width": 40, "height": 440},
                         {"x": 1360, "y": -3040, "width": 40, "height": 40},
-                        {"x": 1320, "y": -3960, "width": 280, "height": 40},
                         {"x": -1600, "y": 160, "width": 440, "height": 40},
                         {"x": -2120, "y": 200, "width": 480, "height": 40},
                         {"x": 1400, "y": -3480, "width": 40, "height": 40},
-                        {"x": 1400, "y": -3720, "width": 120, "height": 40}
+                        {"x": 1400, "y": -3720, "width": 120, "height": 40},
+                        {"x": 1360, "y": -3960, "width": 200, "height": 40}
                     ],
                     "hazards": [],
                     "growers": [
@@ -2079,16 +2079,17 @@
                     ],
                     "defaultSizeBlocks": [
                         {"x": 1160, "y": -930, "width": 40, "height": 10},
-                        {"x": 1560, "y": -4160, "width": 40, "height": 200},
-                        {"x": 1360, "y": -4160, "width": 200, "height": 40},
-                        {"x": 1320, "y": -4160, "width": 40, "height": 200},
-                        {"x": -680, "y": -280, "width": 20, "height": 360}
+                        {"x": -680, "y": -280, "width": 20, "height": 360},
+                        {"x": 1360, "y": -4080, "width": 40, "height": 120},
+                        {"x": 1400, "y": -4080, "width": 120, "height": 40},
+                        {"x": 1520, "y": -4080, "width": 40, "height": 120}
                     ],
                     "backgroundBlocks": [],
                     "foregroundBlocks": [],
                     "triggers": [],
+                    "comments": [],
                     "start": {"x": -2080, "y": 160, "width": 40, "height": 40},
-                    "finish": {"x": 1400, "y": -4080, "width": 120, "height": 120},
+                    "finish": {"x": 1440, "y": -4000, "width": 40, "height": 40},
                     "physics": {
                         "gravity": 0.042,
                         "moveSpeed": 0.28,
@@ -3163,6 +3164,8 @@
                     player.velocityX = 0;
                     player.velocityY = 0;
                     raceIsJumping = false;
+                    // Skip physics this frame to prevent wall phasing
+                    return;
                 }
             }
 
