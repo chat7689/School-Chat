@@ -1055,11 +1055,18 @@
         }
 
         function initMainMenu() {
-            const canvas = document.getElementById('menuCanvas');
-            const ctx = canvas.getContext('2d');
+            try {
+                console.log('initMainMenu: Starting initialization...');
+                const canvas = document.getElementById('menuCanvas');
+                const ctx = canvas.getContext('2d');
 
-            canvas.style.display = 'block';
-            document.getElementById('menuHUD').style.display = 'block';
+                if (!canvas) {
+                    throw new Error('menuCanvas element not found!');
+                }
+
+                console.log('initMainMenu: Setting canvas display...');
+                canvas.style.display = 'block';
+                document.getElementById('menuHUD').style.display = 'block';
 
             // Portal platforms: 3 stacks (left: 3, middle: 4, right: 3) with 80px spacing
             // All platforms are 120px wide, 40px tall, stacked with 80px gap between them
@@ -1262,7 +1269,14 @@
                 requestAnimationFrame(menuLoop);
             }
 
+            console.log('initMainMenu: Starting menu loop...');
             menuLoop();
+            console.log('initMainMenu: Initialization complete!');
+            } catch (error) {
+                console.error('ERROR in initMainMenu:', error);
+                console.error('Error stack:', error.stack);
+                alert('Error initializing main menu: ' + error.message);
+            }
         }
 
         function updateMenuPlayer(deltaTime = 1) {
@@ -4171,28 +4185,49 @@
 
         // Initialize on auth
         auth.onAuthStateChanged(async (user) => {
-            if (!user) {
-                window.location.href = 'index.html';
-            } else {
+            try {
+                console.log('Auth state changed, user:', user ? user.email : 'null');
+
+                if (!user) {
+                    console.log('No user, redirecting to index.html');
+                    window.location.href = 'index.html';
+                    return;
+                }
+
                 currentUser = user;
+                console.log('User authenticated:', currentUser.email);
 
                 // Get username
+                console.log('Fetching username from database...');
                 const userSnapshot = await database.ref('users/' + user.uid).once('value');
                 const userData = userSnapshot.val();
 
                 if (userData && userData.username) {
                     currentUsername = userData.username;
+                    console.log('Username loaded:', currentUsername);
                 } else {
                     currentUsername = user.email.split('@')[0];
+                    console.log('Creating new user with username:', currentUsername);
                     await database.ref('users/' + user.uid).set({
                         username: currentUsername,
                         createdAt: firebase.database.ServerValue.TIMESTAMP
                     });
                 }
 
+                console.log('Initializing user data...');
                 await initUserData();
+
+                console.log('Initializing default levels...');
                 await initializeDefaultLevels();
+
+                console.log('Initializing main menu...');
                 initMainMenu();
+
+                console.log('Game initialization complete!');
+            } catch (error) {
+                console.error('ERROR during initialization:', error);
+                console.error('Error stack:', error.stack);
+                alert('Error loading game: ' + error.message + '\n\nCheck console for details.');
             }
         });
     </script>
