@@ -1251,12 +1251,12 @@
                         ctx.fillStyle = gradient;
                         ctx.fillRect(screenX, screenY, platform.width, platform.height);
 
-                        // Glowing border
+                        // Glowing border (inside edge)
                         ctx.shadowColor = '#4facfe';
                         ctx.shadowBlur = 15;
                         ctx.strokeStyle = '#4facfe';
                         ctx.lineWidth = 4;
-                        ctx.strokeRect(screenX, screenY, platform.width, platform.height);
+                        ctx.strokeRect(screenX + 2, screenY + 2, platform.width - 4, platform.height - 4);
                         ctx.shadowBlur = 0;
 
                         // Text with shadow
@@ -1272,10 +1272,10 @@
                         ctx.fillStyle = '#4CAF50';
                         ctx.fillRect(screenX, screenY, platform.width, platform.height);
 
-                        // Thicker dark border
+                        // Thicker dark border (inside edge)
                         ctx.strokeStyle = '#333';
                         ctx.lineWidth = 4;
-                        ctx.strokeRect(screenX, screenY, platform.width, platform.height);
+                        ctx.strokeRect(screenX + 2, screenY + 2, platform.width - 4, platform.height - 4);
 
                         // Inner 40x40 grid lines
                         ctx.strokeStyle = '#388E3C';
@@ -1834,12 +1834,12 @@
                     ctx.fillStyle = gradient;
                     ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
 
-                    // Glowing border - darker blue
+                    // Glowing border - darker blue (inside edge)
                     ctx.shadowColor = '#19529a';
                     ctx.shadowBlur = 15;
                     ctx.strokeStyle = '#19529a';
                     ctx.lineWidth = 4;
-                    ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+                    ctx.strokeRect(platform.x + 2, platform.y + 2, platform.width - 4, platform.height - 4);
                     ctx.shadowBlur = 0;
 
                     // Label with shadow
@@ -1858,12 +1858,12 @@
                     ctx.fillStyle = gradient;
                     ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
 
-                    // Glowing border
+                    // Glowing border (inside edge)
                     ctx.shadowColor = '#4facfe';
                     ctx.shadowBlur = 15;
                     ctx.strokeStyle = '#4facfe';
                     ctx.lineWidth = 4;
-                    ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+                    ctx.strokeRect(platform.x + 2, platform.y + 2, platform.width - 4, platform.height - 4);
                     ctx.shadowBlur = 0;
 
                     // Level name with shadow for readability
@@ -1892,10 +1892,10 @@
                     ctx.fillStyle = '#4CAF50';
                     ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
 
-                    // Thicker dark border
+                    // Thicker dark border (inside edge)
                     ctx.strokeStyle = '#333';
                     ctx.lineWidth = 4;
-                    ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+                    ctx.strokeRect(platform.x + 2, platform.y + 2, platform.width - 4, platform.height - 4);
 
                     // Inner 40x40 grid lines
                     ctx.strokeStyle = '#388E3C';
@@ -2097,10 +2097,10 @@
                         ctx.fillStyle = '#4CAF50';
                         ctx.fillRect(screenX, screenY, platform.width, platform.height);
 
-                        // Thicker dark border
+                        // Thicker dark border (inside edge)
                         ctx.strokeStyle = '#333';
                         ctx.lineWidth = 4;
-                        ctx.strokeRect(screenX, screenY, platform.width, platform.height);
+                        ctx.strokeRect(screenX + 2, screenY + 2, platform.width - 4, platform.height - 4);
 
                         // Inner 40x40 grid lines
                         ctx.strokeStyle = '#388E3C';
@@ -2824,10 +2824,10 @@
                         ctx.fillStyle = '#4CAF50';
                         ctx.fillRect(screenX, screenY, platform.width, platform.height);
 
-                        // Thicker dark border
+                        // Thicker dark border (inside edge)
                         ctx.strokeStyle = '#333';
                         ctx.lineWidth = 4;
-                        ctx.strokeRect(screenX, screenY, platform.width, platform.height);
+                        ctx.strokeRect(screenX + 2, screenY + 2, platform.width - 4, platform.height - 4);
 
                         // Inner 40x40 grid lines
                         ctx.strokeStyle = '#388E3C';
@@ -3771,10 +3771,10 @@
                     ctx.fillStyle = '#4CAF50';
                     ctx.fillRect(screenX, screenY, platform.width, platform.height);
 
-                    // Thicker dark border
+                    // Thicker dark border (inside edge)
                     ctx.strokeStyle = '#333';
                     ctx.lineWidth = 4;
-                    ctx.strokeRect(screenX, screenY, platform.width, platform.height);
+                    ctx.strokeRect(screenX + 2, screenY + 2, platform.width - 4, platform.height - 4);
 
                     // Inner 40x40 grid lines
                     ctx.strokeStyle = '#388E3C';
@@ -4542,10 +4542,10 @@
                 baseCtx.fillStyle = '#4CAF50';
                 baseCtx.fillRect(screenX, screenY, platform.width, platform.height);
 
-                // Thicker dark border
+                // Thicker dark border (inside edge)
                 baseCtx.strokeStyle = '#333';
                 baseCtx.lineWidth = 4;
-                baseCtx.strokeRect(screenX, screenY, platform.width, platform.height);
+                baseCtx.strokeRect(screenX + 2, screenY + 2, platform.width - 4, platform.height - 4);
 
                 // Inner 40x40 grid lines
                 baseCtx.strokeStyle = '#388E3C';
@@ -4985,7 +4985,7 @@
                     ctx.shadowBlur = 15;
                     ctx.strokeStyle = '#19529a';
                     ctx.lineWidth = 4;
-                    ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+                    ctx.strokeRect(platform.x + 2, platform.y + 2, platform.width - 4, platform.height - 4);
                     ctx.shadowBlur = 0;
 
                     ctx.fillStyle = '#ffffff';
@@ -5007,7 +5007,7 @@
                     ctx.shadowBlur = 15;
                     ctx.strokeStyle = '#4facfe';
                     ctx.lineWidth = 4;
-                    ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+                    ctx.strokeRect(platform.x + 2, platform.y + 2, platform.width - 4, platform.height - 4);
                     ctx.shadowBlur = 0;
 
                     ctx.fillStyle = '#000000';
@@ -5021,10 +5021,10 @@
                     ctx.fillStyle = '#4CAF50';
                     ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
 
-                    // Thicker dark border
+                    // Thicker dark border (inside edge)
                     ctx.strokeStyle = '#333';
                     ctx.lineWidth = 4;
-                    ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+                    ctx.strokeRect(platform.x + 2, platform.y + 2, platform.width - 4, platform.height - 4);
 
                     // Inner 40x40 grid lines
                     ctx.strokeStyle = '#388E3C';
