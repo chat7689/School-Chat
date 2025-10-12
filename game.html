@@ -580,8 +580,10 @@
         const AIR_RESISTANCE = 0.88;
         const GROUND_FRICTION = 0.94;
         const GROUND_ACCELERATION = 0.15; // Gradual acceleration when grounded
-        const JUMP_POWER = 3.70;
+        const JUMP_POWER = 3.70; // Max jump: 4x player height + 1px
+        const MIN_JUMP_VELOCITY = 1.833; // Min jump: 1x player height (when tapped)
         const FAST_FALL_MULTIPLIER = 2.0;
+        const MIN_JUMP_HOLD_TIME = 8; // Frames to guarantee minimum jump height
 
         // Game feel constants
         const COYOTE_TIME = 6; // Frames you can still jump after leaving platform
@@ -1366,17 +1368,31 @@
                 const sizeScale = menuPlayer.currentSize / 40;
                 menuPlayer.velocityY = -JUMP_POWER * sizeScale;
                 menuIsJumping = true;
+                menuPlayer.jumpHoldTime = 0; // Start tracking hold time
 
                 // White jump particles
                 spawnParticles(menuPlayer.x + menuPlayer.width / 2, menuPlayer.y + menuPlayer.height, 12, 'rgb(255, 255, 255)', menuPlayer.currentSize);
             }
 
+            // Track jump hold time
+            if (menuIsJumping && (menuKeys['w'] || menuKeys['ArrowUp'])) {
+                menuPlayer.jumpHoldTime = (menuPlayer.jumpHoldTime || 0) + deltaTime;
+            }
+
             // Cut jump short if button released (variable jump height)
+            // Only cut short if held less than minimum time, otherwise allow full jump
             if (menuIsJumping && !menuKeys['w'] && !menuKeys['ArrowUp']) {
-                if (menuPlayer.velocityY < 0) {
-                    menuPlayer.velocityY *= 0.5;
+                if (menuPlayer.velocityY < 0 && (menuPlayer.jumpHoldTime || 0) < MIN_JUMP_HOLD_TIME) {
+                    // Calculate velocity to reach exactly 1x player height
+                    const sizeScale = menuPlayer.currentSize / 40;
+                    const targetVelocity = MIN_JUMP_VELOCITY * sizeScale;
+                    // Only reduce if current velocity would go higher
+                    if (Math.abs(menuPlayer.velocityY) > targetVelocity) {
+                        menuPlayer.velocityY = -targetVelocity;
+                    }
                 }
                 menuIsJumping = false;
+                menuPlayer.jumpHoldTime = 0;
             }
 
             // Reset jump state when grounded
@@ -1783,16 +1799,30 @@
             if ((levelSelectKeys['w'] || levelSelectKeys['ArrowUp']) && isGrounded) {
                 levelSelectPlayer.velocityY = -JUMP_POWER;
                 levelSelectIsJumping = true;
+                levelSelectPlayer.jumpHoldTime = 0; // Start tracking hold time
                 // White jump particles
                 spawnParticles(levelSelectPlayer.x + levelSelectPlayer.width / 2, levelSelectPlayer.y + levelSelectPlayer.height, 12, 'rgb(255, 255, 255)', levelSelectPlayer.currentSize);
             }
 
+            // Track jump hold time
+            if (levelSelectIsJumping && (levelSelectKeys['w'] || levelSelectKeys['ArrowUp'])) {
+                levelSelectPlayer.jumpHoldTime = (levelSelectPlayer.jumpHoldTime || 0) + deltaTime;
+            }
+
             // Cut jump short if button released (variable jump height)
+            // Only cut short if held less than minimum time, otherwise allow full jump
             if (levelSelectIsJumping && !levelSelectKeys['w'] && !levelSelectKeys['ArrowUp']) {
-                if (levelSelectPlayer.velocityY < 0) {
-                    levelSelectPlayer.velocityY *= 0.5;
+                if (levelSelectPlayer.velocityY < 0 && (levelSelectPlayer.jumpHoldTime || 0) < MIN_JUMP_HOLD_TIME) {
+                    // Calculate velocity to reach exactly 1x player height
+                    const sizeScale = levelSelectPlayer.currentSize / 40;
+                    const targetVelocity = MIN_JUMP_VELOCITY * sizeScale;
+                    // Only reduce if current velocity would go higher
+                    if (Math.abs(levelSelectPlayer.velocityY) > targetVelocity) {
+                        levelSelectPlayer.velocityY = -targetVelocity;
+                    }
                 }
                 levelSelectIsJumping = false;
+                levelSelectPlayer.jumpHoldTime = 0;
             }
 
             // Reset jump state when grounded
@@ -2984,16 +3014,29 @@
                 practiceIsJumping = true;
                 player.coyoteTimer = 0;
                 player.jumpBufferTimer = 0;
+                player.jumpHoldTime = 0; // Start tracking hold time
                 // White jump particles
                 spawnParticles(player.x + player.width / 2, player.y + player.height, 12, 'rgb(255, 255, 255)', player.currentSize);
             }
 
+            // Track jump hold time
+            if (practiceIsJumping && (practiceMode.keys['w'] || practiceMode.keys['ArrowUp'])) {
+                player.jumpHoldTime = (player.jumpHoldTime || 0) + deltaTime;
+            }
+
             // Cut jump short if button released (variable jump height)
+            // Only cut short if held less than minimum time, otherwise allow full jump
             if (practiceIsJumping && !practiceMode.keys['w'] && !practiceMode.keys['ArrowUp']) {
-                if (player.velocityY < 0) {
-                    player.velocityY *= 0.5;
+                if (player.velocityY < 0 && (player.jumpHoldTime || 0) < MIN_JUMP_HOLD_TIME) {
+                    // Calculate velocity to reach exactly 1x player height
+                    const targetVelocity = MIN_JUMP_VELOCITY * sizeScale;
+                    // Only reduce if current velocity would go higher
+                    if (Math.abs(player.velocityY) > targetVelocity) {
+                        player.velocityY = -targetVelocity;
+                    }
                 }
                 practiceIsJumping = false;
+                player.jumpHoldTime = 0;
             }
 
             // Apply gravity scaled by size (from level creator)
@@ -3957,16 +4000,29 @@
                 // Scale jump power by size
                 player.velocityY = -JUMP_POWER * sizeScale;
                 raceIsJumping = true;
+                player.jumpHoldTime = 0; // Start tracking hold time
                 // Jump particles (white)
                 spawnParticles(player.x + player.width / 2, player.y + player.height, 12, 'rgb(255, 255, 255)', player.currentSize);
             }
 
+            // Track jump hold time
+            if (raceIsJumping && (raceState.keys['w'] || raceState.keys['ArrowUp'])) {
+                player.jumpHoldTime = (player.jumpHoldTime || 0) + deltaTime;
+            }
+
             // Cut jump short if button released (variable jump height)
+            // Only cut short if held less than minimum time, otherwise allow full jump
             if (raceIsJumping && !raceState.keys['w'] && !raceState.keys['ArrowUp']) {
-                if (player.velocityY < 0) {
-                    player.velocityY *= 0.5;
+                if (player.velocityY < 0 && (player.jumpHoldTime || 0) < MIN_JUMP_HOLD_TIME) {
+                    // Calculate velocity to reach exactly 1x player height
+                    const targetVelocity = MIN_JUMP_VELOCITY * sizeScale;
+                    // Only reduce if current velocity would go higher
+                    if (Math.abs(player.velocityY) > targetVelocity) {
+                        player.velocityY = -targetVelocity;
+                    }
                 }
                 raceIsJumping = false;
+                player.jumpHoldTime = 0;
             }
 
             // Reset jump state when grounded
@@ -4435,16 +4491,30 @@
                 const sizeScale = basePlayer.currentSize / 40;
                 basePlayer.velocityY = -JUMP_POWER * sizeScale;
                 baseIsJumping = true;
+                basePlayer.jumpHoldTime = 0; // Start tracking hold time
                 // White jump particles
                 spawnParticles(basePlayer.x + basePlayer.width / 2, basePlayer.y + basePlayer.height, 12, 'rgb(255, 255, 255)', basePlayer.currentSize);
             }
 
+            // Track jump hold time
+            if (baseIsJumping && (baseKeys['w'] || baseKeys['ArrowUp'])) {
+                basePlayer.jumpHoldTime = (basePlayer.jumpHoldTime || 0) + deltaTime;
+            }
+
             // Variable jump height
+            // Only cut short if held less than minimum time, otherwise allow full jump
             if (baseIsJumping && !baseKeys['w'] && !baseKeys['ArrowUp']) {
-                if (basePlayer.velocityY < 0) {
-                    basePlayer.velocityY *= 0.5;
+                if (basePlayer.velocityY < 0 && (basePlayer.jumpHoldTime || 0) < MIN_JUMP_HOLD_TIME) {
+                    // Calculate velocity to reach exactly 1x player height
+                    const sizeScale = basePlayer.currentSize / 40;
+                    const targetVelocity = MIN_JUMP_VELOCITY * sizeScale;
+                    // Only reduce if current velocity would go higher
+                    if (Math.abs(basePlayer.velocityY) > targetVelocity) {
+                        basePlayer.velocityY = -targetVelocity;
+                    }
                 }
                 baseIsJumping = false;
+                basePlayer.jumpHoldTime = 0;
             }
 
             // Friction
@@ -4701,6 +4771,7 @@
         let leaderboardPlatforms = [];
         let leaderboardKeys = {};
         let availableLeaderboards = [];
+        let leaderboardIsJumping = false;
 
         async function showLeaderboard() {
             try {
@@ -4937,8 +5008,36 @@
             // Jump
             if ((leaderboardKeys['w'] || leaderboardKeys['ArrowUp']) && isGrounded) {
                 leaderboardPlayer.velocityY = -JUMP_POWER;
+                leaderboardIsJumping = true;
+                leaderboardPlayer.jumpHoldTime = 0; // Start tracking hold time
                 // White jump particles
                 spawnParticles(leaderboardPlayer.x + leaderboardPlayer.width / 2, leaderboardPlayer.y + leaderboardPlayer.height, 12, 'rgb(255, 255, 255)', leaderboardPlayer.currentSize);
+            }
+
+            // Track jump hold time
+            if (leaderboardIsJumping && (leaderboardKeys['w'] || leaderboardKeys['ArrowUp'])) {
+                leaderboardPlayer.jumpHoldTime = (leaderboardPlayer.jumpHoldTime || 0) + deltaTime;
+            }
+
+            // Variable jump height
+            // Only cut short if held less than minimum time, otherwise allow full jump
+            if (leaderboardIsJumping && !leaderboardKeys['w'] && !leaderboardKeys['ArrowUp']) {
+                if (leaderboardPlayer.velocityY < 0 && (leaderboardPlayer.jumpHoldTime || 0) < MIN_JUMP_HOLD_TIME) {
+                    // Calculate velocity to reach exactly 1x player height
+                    const sizeScale = leaderboardPlayer.currentSize / 40;
+                    const targetVelocity = MIN_JUMP_VELOCITY * sizeScale;
+                    // Only reduce if current velocity would go higher
+                    if (Math.abs(leaderboardPlayer.velocityY) > targetVelocity) {
+                        leaderboardPlayer.velocityY = -targetVelocity;
+                    }
+                }
+                leaderboardIsJumping = false;
+                leaderboardPlayer.jumpHoldTime = 0;
+            }
+
+            // Reset jump state when grounded
+            if (isGrounded && leaderboardPlayer.velocityY >= 0) {
+                leaderboardIsJumping = false;
             }
         }
 
