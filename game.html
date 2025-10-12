@@ -1737,6 +1737,14 @@
             // Store current velocity for next frame
             levelSelectPlayer.prevVelocityX = levelSelectPlayer.velocityX;
 
+            // Fast-fall particles (white) - spawn when holding down/S in air
+            if ((levelSelectKeys['s'] || levelSelectKeys['ArrowDown']) && !isGrounded && levelSelectPlayer.velocityY > 0) {
+                // Spawn particles continuously during fast fall
+                if (Math.random() < 0.3) { // 30% chance each frame for smooth particle trail
+                    spawnParticles(levelSelectPlayer.x + levelSelectPlayer.width / 2, levelSelectPlayer.y, 3, 'rgb(255, 255, 255)', levelSelectPlayer.currentSize);
+                }
+            }
+
             // Update position
             levelSelectPlayer.x += levelSelectPlayer.velocityX * deltaTime;
             levelSelectPlayer.y += levelSelectPlayer.velocityY * deltaTime;
