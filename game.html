@@ -1513,6 +1513,7 @@
         let levelSelectKeys = {};
         let availableLevels = [];
         let playerBestTimes = {};
+        let levelSelectIsJumping = false;
 
         async function showPracticeLevels() {
             try {
@@ -1641,9 +1642,26 @@
         function updateLevelSelect(deltaTime) {
             if (!levelSelectPlayer) return;
 
-            // White particles when starting movement
-            // Apply gravity
-            levelSelectPlayer.velocityY += GRAVITY * deltaTime;
+            // Check grounded state first
+            let isGrounded = false;
+            for (const platform of levelSelectPlatforms) {
+                const onTop = levelSelectPlayer.y + levelSelectPlayer.height >= platform.y &&
+                              levelSelectPlayer.y + levelSelectPlayer.height <= platform.y + 5;
+                const horizontalOverlap = levelSelectPlayer.x + levelSelectPlayer.width > platform.x &&
+                                         levelSelectPlayer.x < platform.x + platform.width;
+
+                if (onTop && horizontalOverlap) {
+                    isGrounded = true;
+                    break;
+                }
+            }
+
+            // Apply gravity with fast fall
+            if ((levelSelectKeys['s'] || levelSelectKeys['ArrowDown']) && !isGrounded) {
+                levelSelectPlayer.velocityY += GRAVITY * FAST_FALL_MULTIPLIER * deltaTime;
+            } else {
+                levelSelectPlayer.velocityY += GRAVITY * deltaTime;
+            }
 
             // Apply friction (use previous frame's grounded state)
             if (levelSelectPlayer.wasGrounded) {
@@ -1701,7 +1719,6 @@
             levelSelectPlayer.y += levelSelectPlayer.velocityY * deltaTime;
 
             // Collision detection - matches main menu and level creator
-            let isGrounded = false;
             let standingOnPlatform = null;
 
             for (const platform of levelSelectPlatforms) {
@@ -1727,7 +1744,6 @@
                         }
                         levelSelectPlayer.y = platform.y - levelSelectPlayer.height;
                         levelSelectPlayer.velocityY = 0;
-                        isGrounded = true;
                         standingOnPlatform = platform;
                     }
                     // Ceiling collision (hitting from below)
@@ -1748,8 +1764,6 @@
                 }
             }
 
-            levelSelectPlayer.wasGrounded = isGrounded;
-
             // Check if player pressed space on a platform
             if (standingOnPlatform && (levelSelectKeys[' '] || levelSelectKeys['Space'])) {
                 if (standingOnPlatform.action === 'back') {
@@ -1768,9 +1782,25 @@
             // Jump with W or Up (no space)
             if ((levelSelectKeys['w'] || levelSelectKeys['ArrowUp']) && isGrounded) {
                 levelSelectPlayer.velocityY = -JUMP_POWER;
+                levelSelectIsJumping = true;
                 // White jump particles
                 spawnParticles(levelSelectPlayer.x + levelSelectPlayer.width / 2, levelSelectPlayer.y + levelSelectPlayer.height, 12, 'rgb(255, 255, 255)', levelSelectPlayer.currentSize);
             }
+
+            // Cut jump short if button released (variable jump height)
+            if (levelSelectIsJumping && !levelSelectKeys['w'] && !levelSelectKeys['ArrowUp']) {
+                if (levelSelectPlayer.velocityY < 0) {
+                    levelSelectPlayer.velocityY *= 0.5;
+                }
+                levelSelectIsJumping = false;
+            }
+
+            // Reset jump state when grounded
+            if (isGrounded && levelSelectPlayer.velocityY >= 0) {
+                levelSelectIsJumping = false;
+            }
+
+            levelSelectPlayer.wasGrounded = isGrounded;
         }
 
         function renderLevelSelect(ctx) {
