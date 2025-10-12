@@ -1816,13 +1816,13 @@
                     ctx.strokeRect(platform.x + 2, platform.y + 2, platform.width - 4, platform.height - 4);
                     ctx.shadowBlur = 0;
 
-                    // Label with shadow
+                    // Label with shadow - matching main menu style exactly
                     ctx.fillStyle = '#ffffff';
-                    ctx.font = 'bold 12px Arial';
+                    ctx.font = 'bold 14px Arial';
                     ctx.textAlign = 'center';
                     ctx.shadowColor = 'rgba(0,0,0,0.5)';
                     ctx.shadowBlur = 5;
-                    ctx.fillText(platform.label, platform.x + platform.width / 2, platform.y + platform.height / 2 + 4);
+                    ctx.fillText(platform.label, platform.x + platform.width / 2, platform.y + platform.height / 2 + 5);
                     ctx.shadowBlur = 0;
                 } else if (platform.levelId) {
                     // Level portal platform - light blue with glow (same as main menu)
@@ -1840,27 +1840,14 @@
                     ctx.strokeRect(platform.x + 2, platform.y + 2, platform.width - 4, platform.height - 4);
                     ctx.shadowBlur = 0;
 
-                    // Level name with shadow for readability
-                    ctx.fillStyle = '#000000';
-                    ctx.font = 'bold 11px Arial';
+                    // Text with shadow - matching main menu style exactly
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 14px Arial';
                     ctx.textAlign = 'center';
-                    ctx.fillText(platform.levelName, platform.x + platform.width / 2 + 1, platform.y + 18);
-                    ctx.fillStyle = '#FFFFFF';
-                    ctx.fillText(platform.levelName, platform.x + platform.width / 2, platform.y + 17);
-
-                    // Best time indicator with gold color
-                    const bestTime = playerBestTimes[platform.levelId];
-                    if (bestTime) {
-                        ctx.font = 'bold 9px Arial';
-                        ctx.fillStyle = '#000000';
-                        ctx.fillText(`${formatTime(bestTime)}`, platform.x + platform.width / 2 + 1, platform.y + 32);
-                        ctx.fillStyle = '#FFD700';
-                        ctx.fillText(`${formatTime(bestTime)}`, platform.x + platform.width / 2, platform.y + 31);
-                    } else {
-                        ctx.font = '8px Arial';
-                        ctx.fillStyle = '#999999';
-                        ctx.fillText('Not completed', platform.x + platform.width / 2, platform.y + 31);
-                    }
+                    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                    ctx.shadowBlur = 5;
+                    ctx.fillText(platform.levelName, platform.x + platform.width / 2, platform.y + platform.height / 2 + 5);
+                    ctx.shadowBlur = 0;
                 } else {
                     // Boundary platforms - standardized
                     ctx.fillStyle = '#4CAF50';
