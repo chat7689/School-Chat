@@ -487,10 +487,15 @@
 
     <!-- Leaderboard Screen -->
     <div id="leaderboardScreen" class="screen">
+        <canvas id="leaderboardCanvas" width="1200" height="800" style="display: block; margin: 0 auto; background: #87CEEB;"></canvas>
+    </div>
+
+    <!-- Leaderboard Detail Screen -->
+    <div id="leaderboardDetailScreen" class="screen">
         <div class="scroll-container" style="padding-top: 20px;">
             <div id="leaderboardContent" style="max-width: 1000px; margin: 0 auto;"></div>
         </div>
-        <button onclick="backToMainMenu()" style="margin-top: 20px;">Back to Menu</button>
+        <button onclick="showLeaderboard()" style="margin-top: 20px;">Back to Selection</button>
     </div>
 
     <!-- Settings Screen -->
@@ -1581,7 +1586,7 @@
                 { x: -40, y: -40, width: 40, height: 880 }, // Left wall
                 { x: 1200, y: -40, width: 40, height: 880 }, // Right wall
                 { x: -40, y: -40, width: 1280, height: 40 }, // Ceiling
-                { x: -40, y: groundY, width: 1280, height: 40 }, // Ground
+                { x: -40, y: groundY, width: 1280, height: 80 }, // Ground (80px tall = 2 blocks)
             ];
 
             // Add "Back to Menu" portal (dark blue) on the left
@@ -1833,25 +1838,14 @@
                         ctx.fillText('Not completed', platform.x + platform.width / 2, platform.y + 31);
                     }
                 } else {
-                    // Boundary platforms - same green as main menu
+                    // Boundary platforms - solid green without grid lines
                     ctx.fillStyle = '#4CAF50';
                     ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
 
-                    // Grid lines on boundaries too
-                    ctx.strokeStyle = '#388E3C';
-                    ctx.lineWidth = 1;
-                    for (let gx = 0; gx < platform.width; gx += 40) {
-                        ctx.beginPath();
-                        ctx.moveTo(platform.x + gx, platform.y);
-                        ctx.lineTo(platform.x + gx, platform.y + platform.height);
-                        ctx.stroke();
-                    }
-                    for (let gy = 0; gy < platform.height; gy += 40) {
-                        ctx.beginPath();
-                        ctx.moveTo(platform.x, platform.y + gy);
-                        ctx.lineTo(platform.x + platform.width, platform.y + gy);
-                        ctx.stroke();
-                    }
+                    // Subtle dark border for depth
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
                 }
             }
 
@@ -4426,57 +4420,329 @@
             return false;
         }
 
-        // Leaderboard screen - show per-level leaderboards
-        let selectedLevelForLeaderboard = null;
+        // Leaderboard screen variables - canvas-based like level select
+        let leaderboardActive = false;
+        let leaderboardPlayer = null;
+        let leaderboardPlatforms = [];
+        let leaderboardKeys = {};
+        let availableLeaderboards = [];
 
         async function showLeaderboard() {
-            showScreen('leaderboardScreen');
-            selectedLevelForLeaderboard = null;
+            try {
+                showScreen('leaderboardScreen');
+                leaderboardActive = true;
 
-            // Load all levels
-            const levelsSnapshot = await database.ref('levels').once('value');
-            const levelsData = levelsSnapshot.val();
+                const canvas = document.getElementById('leaderboardCanvas');
+                const ctx = canvas.getContext('2d');
 
-            if (!levelsData) {
-                document.getElementById('leaderboardContent').innerHTML = '<p>No levels found.</p>';
-                return;
-            }
+                // Load all levels
+                const levelsSnapshot = await database.ref('levels').once('value');
+                const levelsData = levelsSnapshot.val();
 
-            const levels = [];
-            Object.entries(levelsData).forEach(([levelId, levelInfo]) => {
-                levels.push({
-                    id: levelId,
-                    name: levelInfo.name || levelId,
-                    createdAt: levelInfo.createdAt || 0
+                availableLeaderboards = [];
+                if (levelsData) {
+                    Object.entries(levelsData).forEach(([levelId, levelInfo]) => {
+                        availableLeaderboards.push({
+                            id: levelId,
+                            name: levelInfo.name || levelId,
+                            createdAt: levelInfo.createdAt || 0
+                        });
+                    });
+                    availableLeaderboards.sort((a, b) => a.createdAt - b.createdAt);
+                }
+
+                // Setup platforms
+                const portalWidth = 150;
+                const portalHeight = 50;
+                const levelsPerColumn = 4;
+                const numColumns = Math.ceil(availableLeaderboards.length / levelsPerColumn);
+
+                const columnSpacing = 200;
+                const totalWidth = (numColumns - 1) * columnSpacing + portalWidth;
+                const startX = (1200 - totalWidth) / 2;
+
+                const groundY = 720;
+                const bottomPortalY = groundY - 120;
+
+                leaderboardPlatforms = [
+                    { x: -40, y: -40, width: 40, height: 880 },
+                    { x: 1200, y: -40, width: 40, height: 880 },
+                    { x: -40, y: -40, width: 1280, height: 40 },
+                    { x: -40, y: groundY, width: 1280, height: 80 }
+                ];
+
+                // Add "Back to Menu" portal
+                leaderboardPlatforms.push({
+                    x: 100,
+                    y: bottomPortalY,
+                    width: portalWidth,
+                    height: portalHeight,
+                    action: 'back',
+                    label: 'BACK TO MENU'
                 });
-            });
-            levels.sort((a, b) => a.createdAt - b.createdAt);
 
-            // Build level selection view
-            let html = '<div style="padding: 20px;">';
-            html += '<h2 style="color: #4facfe; text-align: center; margin-bottom: 30px; font-size: 32px; text-shadow: 0 0 10px rgba(79, 172, 254, 0.5);">Level Leaderboards</h2>';
-            html += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">';
+                // Create portals for each level
+                availableLeaderboards.forEach((level, index) => {
+                    const columnIndex = Math.floor(index / levelsPerColumn);
+                    const rowIndex = index % levelsPerColumn;
 
-            for (const level of levels) {
-                html += `<div onclick="showLevelLeaderboard('${level.id}', '${level.name.replace(/'/g, "\\'")}')" style="
-                    background: linear-gradient(135deg, rgba(79, 172, 254, 0.2), rgba(79, 172, 254, 0.05));
-                    border: 2px solid #4facfe;
-                    border-radius: 15px;
-                    padding: 20px;
-                    cursor: pointer;
-                    transition: transform 0.2s, box-shadow 0.2s;
-                " onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 8px 32px rgba(79, 172, 254, 0.4)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';">
-                    <h3 style="color: #fff; margin: 0 0 10px 0; font-size: 20px;">${level.name}</h3>
-                    <p style="color: #aaa; margin: 0; font-size: 14px;">Click to view leaderboard</p>
-                </div>`;
+                    const x = startX + columnIndex * columnSpacing;
+                    const y = bottomPortalY - rowIndex * 80;
+
+                    leaderboardPlatforms.push({
+                        x: x,
+                        y: y,
+                        width: portalWidth,
+                        height: portalHeight,
+                        levelId: level.id,
+                        levelName: level.name
+                    });
+                });
+
+                // Create player
+                leaderboardPlayer = new Player(600, groundY - 40, equippedCosmetics);
+
+                // Setup input
+                leaderboardKeys = {};
+                const leaderboardKeyHandler = (e) => {
+                    if (e.type === 'keydown') {
+                        leaderboardKeys[e.key] = true;
+                        if (e.key === 'Escape') {
+                            leaderboardActive = false;
+                            backToMainMenu();
+                        }
+                    } else {
+                        leaderboardKeys[e.key] = false;
+                    }
+                };
+
+                document.removeEventListener('keydown', leaderboardKeyHandler);
+                document.removeEventListener('keyup', leaderboardKeyHandler);
+                document.addEventListener('keydown', leaderboardKeyHandler);
+                document.addEventListener('keyup', leaderboardKeyHandler);
+
+                // Start loop
+                let lastLeaderboardFrameTime = performance.now();
+                function leaderboardLoop(currentTime) {
+                    if (!leaderboardActive) return;
+
+                    if (!currentTime) currentTime = performance.now();
+                    let deltaTime = (currentTime - lastLeaderboardFrameTime) / 16.67;
+                    if (deltaTime <= 0 || deltaTime > 10) deltaTime = 1;
+                    lastLeaderboardFrameTime = currentTime;
+
+                    updateLeaderboardPlayer(deltaTime);
+                    renderLeaderboard(ctx);
+
+                    requestAnimationFrame(leaderboardLoop);
+                }
+
+                leaderboardLoop();
+            } catch (error) {
+                console.error('Error loading leaderboards:', error);
+                alert('Error loading leaderboards. Please try again.');
+                backToMainMenu();
+            }
+        }
+
+        function updateLeaderboardPlayer(deltaTime) {
+            if (!leaderboardPlayer) return;
+
+            // Apply gravity
+            leaderboardPlayer.velocityY += GRAVITY * deltaTime;
+
+            // Apply friction
+            if (leaderboardPlayer.wasGrounded) {
+                leaderboardPlayer.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
+            } else {
+                leaderboardPlayer.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
             }
 
-            html += '</div></div>';
-            document.getElementById('leaderboardContent').innerHTML = html;
+            // Cap velocities
+            leaderboardPlayer.velocityY = Math.min(leaderboardPlayer.velocityY, 8);
+            leaderboardPlayer.velocityX = Math.max(-GROUND_MAX_SPEED, Math.min(GROUND_MAX_SPEED, leaderboardPlayer.velocityX));
+
+            // Handle movement
+            if (leaderboardKeys['a'] || leaderboardKeys['ArrowLeft']) {
+                leaderboardPlayer.velocityX -= MOVE_SPEED * deltaTime;
+            }
+            if (leaderboardKeys['d'] || leaderboardKeys['ArrowRight']) {
+                leaderboardPlayer.velocityX += MOVE_SPEED * deltaTime;
+            }
+
+            // Velocity particles
+            spawnVelocityParticles(leaderboardPlayer);
+
+            // Update position
+            leaderboardPlayer.x += leaderboardPlayer.velocityX * deltaTime;
+            leaderboardPlayer.y += leaderboardPlayer.velocityY * deltaTime;
+
+            // Collision detection
+            let isGrounded = false;
+            let standingOnPlatform = null;
+
+            for (const platform of leaderboardPlatforms) {
+                if (leaderboardPlayer.x + leaderboardPlayer.width > platform.x &&
+                    leaderboardPlayer.x < platform.x + platform.width &&
+                    leaderboardPlayer.y + leaderboardPlayer.height > platform.y &&
+                    leaderboardPlayer.y < platform.y + platform.height) {
+
+                    const overlapLeft = (leaderboardPlayer.x + leaderboardPlayer.width) - platform.x;
+                    const overlapRight = (platform.x + platform.width) - leaderboardPlayer.x;
+                    const overlapTop = (leaderboardPlayer.y + leaderboardPlayer.height) - platform.y;
+                    const overlapBottom = (platform.y + platform.height) - leaderboardPlayer.y;
+
+                    const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+
+                    if ((minOverlap === overlapTop && leaderboardPlayer.velocityY >= 0) ||
+                        (leaderboardPlayer.velocityY > 0 && overlapTop < overlapBottom &&
+                         overlapTop < overlapLeft * 0.5 && overlapTop < overlapRight * 0.5)) {
+                        leaderboardPlayer.y = platform.y - leaderboardPlayer.height;
+                        leaderboardPlayer.velocityY = 0;
+                        isGrounded = true;
+                        standingOnPlatform = platform;
+                    } else if (minOverlap === overlapBottom && leaderboardPlayer.velocityY < 0) {
+                        leaderboardPlayer.y = platform.y + platform.height;
+                        leaderboardPlayer.velocityY = 0;
+                    } else if (minOverlap === overlapLeft) {
+                        leaderboardPlayer.x = platform.x - leaderboardPlayer.width;
+                        leaderboardPlayer.velocityX = 0;
+                    } else if (minOverlap === overlapRight) {
+                        leaderboardPlayer.x = platform.x + platform.width;
+                        leaderboardPlayer.velocityX = 0;
+                    }
+                }
+            }
+
+            leaderboardPlayer.wasGrounded = isGrounded;
+
+            // Handle platform selection
+            if (standingOnPlatform && (leaderboardKeys[' '] || leaderboardKeys['Space'])) {
+                if (standingOnPlatform.action === 'back') {
+                    leaderboardActive = false;
+                    backToMainMenu();
+                } else if (standingOnPlatform.levelId) {
+                    leaderboardActive = false;
+                    showLevelLeaderboard(standingOnPlatform.levelId, standingOnPlatform.levelName);
+                }
+                leaderboardKeys[' '] = false;
+                leaderboardKeys['Space'] = false;
+            }
+
+            // Jump
+            if ((leaderboardKeys['w'] || leaderboardKeys['ArrowUp']) && isGrounded) {
+                leaderboardPlayer.velocityY = -JUMP_POWER;
+            }
+        }
+
+        function renderLeaderboard(ctx) {
+            // Sky blue background
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, 1200, 800);
+
+            // Grid lines
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < 1200; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, 800);
+                ctx.stroke();
+            }
+            for (let y = 0; y < 800; y += 40) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(1200, y);
+                ctx.stroke();
+            }
+
+            // Draw platforms
+            for (const platform of leaderboardPlatforms) {
+                if (platform.action === 'back') {
+                    // Back portal - dark blue
+                    const gradient = ctx.createLinearGradient(platform.x, platform.y, platform.x, platform.y + platform.height);
+                    gradient.addColorStop(0, 'rgba(25, 82, 154, 0.7)');
+                    gradient.addColorStop(1, 'rgba(25, 82, 154, 0.4)');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+
+                    ctx.shadowColor = '#19529a';
+                    ctx.shadowBlur = 15;
+                    ctx.strokeStyle = '#19529a';
+                    ctx.lineWidth = 4;
+                    ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+                    ctx.shadowBlur = 0;
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 12px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                    ctx.shadowBlur = 5;
+                    ctx.fillText(platform.label, platform.x + platform.width / 2, platform.y + platform.height / 2 + 4);
+                    ctx.shadowBlur = 0;
+                } else if (platform.levelId) {
+                    // Level leaderboard portal - light blue
+                    const gradient = ctx.createLinearGradient(platform.x, platform.y, platform.x, platform.y + platform.height);
+                    gradient.addColorStop(0, 'rgba(79, 172, 254, 0.5)');
+                    gradient.addColorStop(1, 'rgba(79, 172, 254, 0.2)');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+
+                    ctx.shadowColor = '#4facfe';
+                    ctx.shadowBlur = 15;
+                    ctx.strokeStyle = '#4facfe';
+                    ctx.lineWidth = 4;
+                    ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+                    ctx.shadowBlur = 0;
+
+                    ctx.fillStyle = '#000000';
+                    ctx.font = 'bold 11px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(platform.levelName, platform.x + platform.width / 2 + 1, platform.y + platform.height / 2 + 5);
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillText(platform.levelName, platform.x + platform.width / 2, platform.y + platform.height / 2 + 4);
+                } else {
+                    // Boundary platforms - solid green
+                    ctx.fillStyle = '#4CAF50';
+                    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+                }
+            }
+
+            // Draw particles
+            updateAndDrawParticles(ctx, 0, 0, 1);
+
+            // Draw player
+            leaderboardPlayer.draw(ctx, 0, 0);
+
+            // Title
+            ctx.textAlign = 'center';
+            ctx.font = 'bold 24px Arial';
+            ctx.fillStyle = '#000000';
+            ctx.fillText('LEADERBOARDS', 600, 32);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillText('LEADERBOARDS', 600, 30);
+
+            // Instructions
+            ctx.font = 'bold 14px Arial';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillText('Jump to a portal and press SPACE to view', 600, 57);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillText('Jump to a portal and press SPACE to view', 600, 55);
+
+            // Controls hint
+            ctx.font = '11px Arial';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillText('WASD/Arrows to move • ESC to return', 600, 77);
+            ctx.fillStyle = '#CCCCCC';
+            ctx.fillText('WASD/Arrows to move • ESC to return', 600, 75);
         }
 
         async function showLevelLeaderboard(levelId, levelName) {
-            selectedLevelForLeaderboard = levelId;
+            showScreen('leaderboardDetailScreen');
 
             // Fetch all times for this level
             const timesSnapshot = await database.ref('times_history').once('value');
