@@ -147,7 +147,6 @@
 
     <div class="nav-buttons">
         <button onclick="window.location.href='game.html'">Back to Game</button>
-        <button onclick="window.location.href='times.html'">My Times</button>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -386,10 +385,11 @@
 
                 addOutput(`Successfully deleted ${maps.length} time(s).`, 'success');
             } catch (error) {
-                if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-login-credentials') {
                     addOutput('Incorrect password.', 'error');
                 } else {
-                    addOutput('Error occurred. Please try again.', 'error');
+                    addOutput('Error occurred: ' + error.message, 'error');
+                    console.error('Delete all times error:', error);
                 }
             }
         }
@@ -417,10 +417,11 @@
 
                 addOutput(`Successfully deleted time for map: ${mapId}`, 'success');
             } catch (error) {
-                if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-login-credentials') {
                     addOutput('Incorrect password.', 'error');
                 } else {
-                    addOutput('Error occurred. Please try again.', 'error');
+                    addOutput('Error occurred: ' + error.message, 'error');
+                    console.error('Delete map time error:', error);
                 }
             }
         }
@@ -469,10 +470,11 @@
 
                 addOutput('✅ Successfully purged all times from all users', 'success');
             } catch (error) {
-                if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-login-credentials') {
                     addOutput('Incorrect password.', 'error');
                 } else {
-                    addOutput('Error occurred. Please try again.', 'error');
+                    addOutput('Error occurred: ' + error.message, 'error');
+                    console.error('Purge all times error:', error);
                 }
             }
         }
@@ -518,10 +520,11 @@
 
                 addOutput(`✅ Successfully deleted ${count} time(s) for map: ${mapId}`, 'success');
             } catch (error) {
-                if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-login-credentials') {
                     addOutput('Incorrect password.', 'error');
                 } else {
-                    addOutput('Error occurred. Please try again.', 'error');
+                    addOutput('Error occurred: ' + error.message, 'error');
+                    console.error('Purge map times error:', error);
                 }
             }
         }
@@ -688,15 +691,17 @@
                     addOutput(`  3. Firebase Console: Authentication > Users > Select User > Reset Password`, 'info');
 
                 } catch (error) {
-                    if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                    if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-login-credentials') {
                         addOutput('Incorrect admin password.', 'error');
                     } else {
-                        addOutput('Error occurred. Please try again.', 'error');
+                        addOutput('Error occurred: ' + error.message, 'error');
+                        console.error('Reset password error:', error);
                     }
                 }
 
             } catch (error) {
                 addOutput('Error resetting password: ' + error.message, 'error');
+                console.error('Outer error:', error);
             }
         }
 
@@ -763,15 +768,17 @@
                     addOutput(`  - Reset ${currentSecure} secure credits to 0`, 'success');
 
                 } catch (error) {
-                    if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                    if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-login-credentials') {
                         addOutput('Incorrect admin password.', 'error');
                     } else {
-                        addOutput('Error occurred. Please try again.', 'error');
+                        addOutput('Error occurred: ' + error.message, 'error');
+                        console.error('Delete secure credits error:', error);
                     }
                 }
 
             } catch (error) {
                 addOutput('Error deleting secure credits: ' + error.message, 'error');
+                console.error('Outer error:', error);
             }
         }
 
@@ -834,15 +841,17 @@
                     addOutput(`  - Reset ${currentOnhand} credits to 0`, 'success');
 
                 } catch (error) {
-                    if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                    if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-login-credentials') {
                         addOutput('Incorrect admin password.', 'error');
                     } else {
-                        addOutput('Error occurred. Please try again.', 'error');
+                        addOutput('Error occurred: ' + error.message, 'error');
+                        console.error('Delete onhand credits error:', error);
                     }
                 }
 
             } catch (error) {
                 addOutput('Error deleting onhand credits: ' + error.message, 'error');
+                console.error('Outer error:', error);
             }
         }
 
@@ -969,15 +978,17 @@
                     addOutput(`  3. Click the user and delete their authentication account`, 'info');
 
                 } catch (error) {
-                    if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                    if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential' || error.code === 'auth/invalid-login-credentials') {
                         addOutput('Incorrect admin password.', 'error');
                     } else {
                         addOutput('Error occurred during deletion: ' + error.message, 'error');
+                        console.error('Delete account error:', error);
                     }
                 }
 
             } catch (error) {
                 addOutput('Error deleting account: ' + error.message, 'error');
+                console.error('Outer error:', error);
             }
         }
 
@@ -998,6 +1009,16 @@
             } else if (e.key === 'Escape') {
                 commandInput.value = '';
             }
+        });
+
+        // Auto-focus input when typing anywhere on the page
+        document.addEventListener('keydown', (e) => {
+            // Don't auto-focus if already focused or if it's a special key
+            if (document.activeElement === commandInput) return;
+            if (e.key === 'Enter' || e.key === 'Escape' || e.key === 'Tab' || e.ctrlKey || e.altKey || e.metaKey) return;
+
+            // Focus the input and let the character through
+            commandInput.focus();
         });
     </script>
 </body>
