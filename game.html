@@ -646,6 +646,41 @@
             }
         }
 
+        // Unified velocity-based particle system
+        function spawnVelocityParticles(player) {
+            // White particles based on Y velocity (vertical movement)
+            const ySpeed = Math.abs(player.velocityY);
+            if (ySpeed > 0.5) {
+                const yParticleChance = Math.min(ySpeed / 10, 0.8);
+                if (Math.random() < yParticleChance) {
+                    const yParticleCount = Math.floor(ySpeed / 2);
+                    spawnParticles(
+                        player.x + player.width / 2 + (Math.random() - 0.5) * player.width,
+                        player.y + player.height / 2,
+                        Math.max(1, yParticleCount),
+                        'rgb(255, 255, 255)',
+                        player.currentSize
+                    );
+                }
+            }
+
+            // Orange particles based on X velocity (horizontal movement)
+            const xSpeed = Math.abs(player.velocityX);
+            if (xSpeed > 0.5) {
+                const xParticleChance = Math.min(xSpeed / 10, 0.8);
+                if (Math.random() < xParticleChance) {
+                    const xParticleCount = Math.floor(xSpeed / 2);
+                    spawnParticles(
+                        player.x + player.width / 2 + (Math.random() - 0.5) * player.width,
+                        player.y + player.height,
+                        Math.max(1, xParticleCount),
+                        'rgb(255, 140, 66)',
+                        player.currentSize
+                    );
+                }
+            }
+        }
+
         // Cosmetics catalog
         const cosmeticsCatalog = {
             skins: [
@@ -1307,10 +1342,6 @@
                 }
             }
 
-            // Landing particles (gray)
-            if (isGrounded && !menuPlayer.wasGrounded) {
-                spawnParticles(menuPlayer.x + menuPlayer.width / 2, menuPlayer.y + menuPlayer.height, 8, 'rgb(200, 200, 200)', menuPlayer.currentSize);
-            }
             menuPlayer.wasGrounded = isGrounded;
 
             // Check for platform interaction when standing on action platform
@@ -1320,10 +1351,6 @@
                 }
             }
 
-            // White particles when starting movement (action particles)
-            const wasMovingLeft = menuPlayer.velocityX < -0.5;
-            const wasMovingRight = menuPlayer.velocityX > 0.5;
-
             // Apply gravity with fast fall
             if ((menuKeys['s'] || menuKeys['ArrowDown']) && !isGrounded) {
                 menuPlayer.velocityY += GRAVITY * FAST_FALL_MULTIPLIER * deltaTime;
@@ -1331,38 +1358,16 @@
                 menuPlayer.velocityY += GRAVITY * deltaTime;
             }
 
-            // Handle input with action particles
+            // Handle input
             if (menuKeys['a'] || menuKeys['ArrowLeft']) {
                 menuPlayer.velocityX -= MOVE_SPEED * deltaTime;
-                // White particles when starting left movement
-                if (!wasMovingLeft && Math.random() < 0.3) {
-                    spawnParticles(menuPlayer.x + menuPlayer.width / 2, menuPlayer.y + menuPlayer.height / 2, 2, 'rgb(255, 255, 255)', menuPlayer.currentSize);
-                }
             }
             if (menuKeys['d'] || menuKeys['ArrowRight']) {
                 menuPlayer.velocityX += MOVE_SPEED * deltaTime;
-                // White particles when starting right movement
-                if (!wasMovingRight && Math.random() < 0.3) {
-                    spawnParticles(menuPlayer.x + menuPlayer.width / 2, menuPlayer.y + menuPlayer.height / 2, 2, 'rgb(255, 255, 255)', menuPlayer.currentSize);
-                }
             }
 
-            // Orange speed-based movement particles (changed from skin color)
-            const speed = Math.abs(menuPlayer.velocityX);
-            if (speed > 0.5) {
-                // More particles = faster movement
-                const particleChance = Math.min(speed / 10, 0.8); // Max 80% chance
-                if (Math.random() < particleChance) {
-                    const particleCount = Math.floor(speed / 2);
-                    spawnParticles(
-                        menuPlayer.x + menuPlayer.width / 2 + (Math.random() - 0.5) * menuPlayer.width,
-                        menuPlayer.y + menuPlayer.height,
-                        Math.max(1, particleCount),
-                        'rgb(255, 140, 66)', // Orange
-                        menuPlayer.currentSize
-                    );
-                }
-            }
+            // Velocity-based particles (white for Y velocity, orange for X velocity)
+            spawnVelocityParticles(menuPlayer);
 
             // Jump with variable height (W or Up Arrow only, NOT space)
             if ((menuKeys['w'] || menuKeys['ArrowUp']) && isGrounded) {
@@ -1370,8 +1375,6 @@
                 const sizeScale = menuPlayer.currentSize / 40;
                 menuPlayer.velocityY = -JUMP_POWER * sizeScale;
                 menuIsJumping = true;
-                // Jump particles (white)
-                spawnParticles(menuPlayer.x + menuPlayer.width / 2, menuPlayer.y + menuPlayer.height, 12, 'rgb(255, 255, 255)', menuPlayer.currentSize);
             }
 
             // Cut jump short if button released (variable jump height)
@@ -1641,9 +1644,6 @@
             if (!levelSelectPlayer) return;
 
             // White particles when starting movement
-            const wasMovingLeft = levelSelectPlayer.velocityX < -0.5;
-            const wasMovingRight = levelSelectPlayer.velocityX > 0.5;
-
             // Apply gravity
             levelSelectPlayer.velocityY += GRAVITY * deltaTime;
 
@@ -1662,35 +1662,16 @@
             const maxSpeed = GROUND_MAX_SPEED;
             levelSelectPlayer.velocityX = Math.max(-maxSpeed, Math.min(maxSpeed, levelSelectPlayer.velocityX));
 
-            // Handle movement with particles
+            // Handle movement
             if (levelSelectKeys['a'] || levelSelectKeys['ArrowLeft']) {
                 levelSelectPlayer.velocityX -= MOVE_SPEED * deltaTime;
-                if (!wasMovingLeft && Math.random() < 0.3) {
-                    spawnParticles(levelSelectPlayer.x + levelSelectPlayer.width / 2, levelSelectPlayer.y + levelSelectPlayer.height / 2, 2, 'rgb(255, 255, 255)', levelSelectPlayer.currentSize);
-                }
             }
             if (levelSelectKeys['d'] || levelSelectKeys['ArrowRight']) {
                 levelSelectPlayer.velocityX += MOVE_SPEED * deltaTime;
-                if (!wasMovingRight && Math.random() < 0.3) {
-                    spawnParticles(levelSelectPlayer.x + levelSelectPlayer.width / 2, levelSelectPlayer.y + levelSelectPlayer.height / 2, 2, 'rgb(255, 255, 255)', levelSelectPlayer.currentSize);
-                }
             }
 
-            // Orange speed-based particles
-            const speed = Math.abs(levelSelectPlayer.velocityX);
-            if (speed > 0.5) {
-                const particleChance = Math.min(speed / 10, 0.8);
-                if (Math.random() < particleChance) {
-                    const particleCount = Math.floor(speed / 2);
-                    spawnParticles(
-                        levelSelectPlayer.x + levelSelectPlayer.width / 2 + (Math.random() - 0.5) * levelSelectPlayer.width,
-                        levelSelectPlayer.y + levelSelectPlayer.height,
-                        Math.max(1, particleCount),
-                        'rgb(255, 140, 66)',
-                        levelSelectPlayer.currentSize
-                    );
-                }
-            }
+            // Velocity-based particles (white for Y velocity, orange for X velocity)
+            spawnVelocityParticles(levelSelectPlayer);
 
             // Update position
             levelSelectPlayer.x += levelSelectPlayer.velocityX * deltaTime;
@@ -1718,10 +1699,6 @@
                         (levelSelectPlayer.velocityY > 0 && overlapTop < overlapBottom &&
                          overlapTop < overlapLeft * 0.5 && overlapTop < overlapRight * 0.5)) {
                         levelSelectPlayer.y = platform.y - levelSelectPlayer.height;
-                        // Landing particles (cyan)
-                        if (levelSelectPlayer.velocityY > 2) {
-                            spawnParticles(levelSelectPlayer.x + levelSelectPlayer.width / 2, levelSelectPlayer.y + levelSelectPlayer.height, 5, 'rgb(0, 255, 255)', levelSelectPlayer.currentSize);
-                        }
                         levelSelectPlayer.velocityY = 0;
                         isGrounded = true;
                         standingOnPlatform = platform;
@@ -1764,8 +1741,6 @@
             // Jump with W or Up (no space)
             if ((levelSelectKeys['w'] || levelSelectKeys['ArrowUp']) && isGrounded) {
                 levelSelectPlayer.velocityY = -JUMP_POWER;
-                // White jump particles
-                spawnParticles(levelSelectPlayer.x + levelSelectPlayer.width / 2, levelSelectPlayer.y + levelSelectPlayer.height, 5, 'rgb(255, 255, 255)', levelSelectPlayer.currentSize);
             }
         }
 
@@ -2785,40 +2760,17 @@
 
                 // Handle input - scaled by size like level creator
                 const scaledMoveSpeed = MOVE_SPEED * sizeScale;
-                const wasMovingLeft = player.velocityX < -0.5;
-                const wasMovingRight = player.velocityX > 0.5;
 
                 if (practiceMode.keys['a'] || practiceMode.keys['ArrowLeft']) {
                     player.velocityX -= scaledMoveSpeed * deltaTime;
-                    // White particles when starting left movement or changing direction
-                    if (!wasMovingLeft && Math.random() < 0.3) {
-                        spawnParticles(player.x + player.width / 2, player.y + player.height / 2, 2, 'rgb(255, 255, 255)', player.currentSize);
-                    }
                 }
                 if (practiceMode.keys['d'] || practiceMode.keys['ArrowRight']) {
                     player.velocityX += scaledMoveSpeed * deltaTime;
-                    // White particles when starting right movement or changing direction
-                    if (!wasMovingRight && Math.random() < 0.3) {
-                        spawnParticles(player.x + player.width / 2, player.y + player.height / 2, 2, 'rgb(255, 255, 255)', player.currentSize);
-                    }
                 }
             }
 
-            // Orange speed-based movement particles (more = faster)
-            const speed = Math.abs(player.velocityX);
-            if (speed > 0.5) {
-                const particleChance = Math.min(speed / 10, 0.8); // Max 80% chance
-                if (Math.random() < particleChance) {
-                    const particleCount = Math.floor(speed / 2);
-                    spawnParticles(
-                        player.x + player.width / 2 + (Math.random() - 0.5) * player.width,
-                        player.y + player.height,
-                        Math.max(1, particleCount),
-                        'rgb(255, 140, 66)', // Orange
-                        player.currentSize
-                    );
-                }
-            }
+            // Velocity-based particles (white for Y velocity, orange for X velocity)
+            spawnVelocityParticles(player);
 
             // JUMP BUFFER: Remember jump input (W or Up only, NOT space)
             if (practiceMode.keys['w'] || practiceMode.keys['ArrowUp']) {
@@ -2834,8 +2786,6 @@
                 practiceIsJumping = true;
                 player.coyoteTimer = 0;
                 player.jumpBufferTimer = 0;
-                // White jump particles
-                spawnParticles(player.x + player.width / 2, player.y + player.height, 12, 'rgb(255, 255, 255)', player.currentSize);
             }
 
             // Cut jump short if button released (variable jump height)
@@ -2849,10 +2799,6 @@
             // Apply gravity scaled by size (from level creator)
             if ((practiceMode.keys['s'] || practiceMode.keys['ArrowDown']) && !player.wasGrounded && player.velocityY > 0) {
                 player.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
-                // White fast-fall particles - only when actually falling down
-                if (Math.random() < 0.3) {
-                    spawnParticles(player.x + player.width / 2, player.y, 3, 'rgb(255, 255, 255)', player.currentSize);
-                }
             } else {
                 player.velocityY += GRAVITY * sizeScale * deltaTime;
             }
@@ -4208,61 +4154,30 @@
                 }
             }
 
-            // White particles when starting movement (action particles)
-            const wasMovingLeft = basePlayer.velocityX < -0.5;
-            const wasMovingRight = basePlayer.velocityX > 0.5;
-
             // Apply gravity
             if ((baseKeys['s'] || baseKeys['ArrowDown']) && !isGrounded && basePlayer.velocityY > 0) {
                 basePlayer.velocityY += GRAVITY * FAST_FALL_MULTIPLIER * deltaTime;
-                // Fast-fall particles (white) - only when actually falling
-                if (Math.random() < 0.3) {
-                    spawnParticles(basePlayer.x + basePlayer.width / 2, basePlayer.y + basePlayer.height, 3, 'rgb(255, 255, 255)', basePlayer.currentSize);
-                }
             } else {
                 basePlayer.velocityY += GRAVITY * deltaTime;
             }
 
-            // Movement with action particles
+            // Movement
             if (baseKeys['a'] || baseKeys['ArrowLeft']) {
                 basePlayer.velocityX -= MOVE_SPEED * deltaTime;
-                // White particles when starting left movement
-                if (!wasMovingLeft && Math.random() < 0.3) {
-                    spawnParticles(basePlayer.x + basePlayer.width / 2, basePlayer.y + basePlayer.height / 2, 2, 'rgb(255, 255, 255)', basePlayer.currentSize);
-                }
             }
             if (baseKeys['d'] || baseKeys['ArrowRight']) {
                 basePlayer.velocityX += MOVE_SPEED * deltaTime;
-                // White particles when starting right movement
-                if (!wasMovingRight && Math.random() < 0.3) {
-                    spawnParticles(basePlayer.x + basePlayer.width / 2, basePlayer.y + basePlayer.height / 2, 2, 'rgb(255, 255, 255)', basePlayer.currentSize);
-                }
             }
 
-            // Orange speed-based movement particles
-            const speed = Math.abs(basePlayer.velocityX);
-            if (speed > 0.5) {
-                const particleChance = Math.min(speed / 10, 0.8);
-                if (Math.random() < particleChance) {
-                    const particleCount = Math.floor(speed / 2);
-                    spawnParticles(
-                        basePlayer.x + basePlayer.width / 2 + (Math.random() - 0.5) * basePlayer.width,
-                        basePlayer.y + basePlayer.height,
-                        Math.max(1, particleCount),
-                        'rgb(255, 140, 66)',
-                        basePlayer.currentSize
-                    );
-                }
-            }
+            // Velocity-based particles (white for Y velocity, orange for X velocity)
+            spawnVelocityParticles(basePlayer);
 
-            // Jump with particles
+            // Jump
             if ((baseKeys['w'] || baseKeys['ArrowUp']) && isGrounded) {
                 // Scale jump power by size (BASE player is always 40px)
                 const sizeScale = basePlayer.currentSize / 40;
                 basePlayer.velocityY = -JUMP_POWER * sizeScale;
                 baseIsJumping = true;
-                // White jump particles
-                spawnParticles(basePlayer.x + basePlayer.width / 2, basePlayer.y + basePlayer.height, 5, 'rgb(255, 255, 255)', basePlayer.currentSize);
             }
 
             // Variable jump height
@@ -4302,10 +4217,6 @@
                 if (checkCollision(basePlayer, platform)) {
                     if (basePlayer.velocityY > 0) {
                         basePlayer.y = platform.y - basePlayer.height;
-                        // Landing particles (cyan)
-                        if (basePlayer.velocityY > 2) {
-                            spawnParticles(basePlayer.x + basePlayer.width / 2, basePlayer.y + basePlayer.height, 5, 'rgb(0, 255, 255)', basePlayer.currentSize);
-                        }
                         basePlayer.velocityY = 0;
                     } else if (basePlayer.velocityY < 0) {
                         basePlayer.y = platform.y + platform.height;
