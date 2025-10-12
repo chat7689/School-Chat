@@ -1102,37 +1102,11 @@
             const groundY = middleBottomY + 120; // Ground 120px below EARN MODE
 
             menuPlatforms = [
-                // Boundary walls - symmetrical around center
-                { x: -640, y: -640, width: 40, height: 1400, label: '', action: 'none' }, // Left wall
-                { x: 1200, y: -640, width: 40, height: 1400, label: '', action: 'none' }, // Right wall
-                { x: -640, y: -640, width: 1880, height: 40, label: '', action: 'none' }, // Ceiling
-                { x: -640, y: 720, width: 1880, height: 40, label: '', action: 'none' },  // Ground (moved to boundaries)
-
-                // Interior platforms from JSON
-                { x: -40, y: -120, width: 120, height: 40, label: '', action: 'none' },
-                { x: -40, y: -240, width: 120, height: 40, label: '', action: 'none' },
-                { x: -40, y: -360, width: 120, height: 40, label: '', action: 'none' },
-                { x: 160, y: -280, width: 120, height: 40, label: '', action: 'none' },
-                { x: 160, y: -160, width: 120, height: 40, label: '', action: 'none' },
-                { x: -240, y: -280, width: 120, height: 40, label: '', action: 'none' },
-                { x: -240, y: -160, width: 120, height: 40, label: '', action: 'none' },
-                { x: -240, y: -400, width: 120, height: 40, label: '', action: 'none' },
-                { x: -40, y: -480, width: 120, height: 40, label: '', action: 'none' },
-                { x: 160, y: -400, width: 120, height: 40, label: '', action: 'none' },
-
-                // Stepped walls from JSON
-                { x: -360, y: -80, width: 40, height: 80, label: '', action: 'none' },
-                { x: -400, y: -160, width: 40, height: 160, label: '', action: 'none' },
-                { x: -440, y: -240, width: 40, height: 240, label: '', action: 'none' },
-                { x: -480, y: -320, width: 40, height: 320, label: '', action: 'none' },
-                { x: -520, y: -400, width: 40, height: 400, label: '', action: 'none' },
-                { x: -560, y: -480, width: 40, height: 480, label: '', action: 'none' },
-                { x: 360, y: -80, width: 40, height: 80, label: '', action: 'none' },
-                { x: 400, y: -160, width: 40, height: 160, label: '', action: 'none' },
-                { x: 440, y: -240, width: 40, height: 240, label: '', action: 'none' },
-                { x: 480, y: -320, width: 40, height: 320, label: '', action: 'none' },
-                { x: 520, y: -400, width: 40, height: 400, label: '', action: 'none' },
-                { x: 560, y: -480, width: 40, height: 480, label: '', action: 'none' },
+                // Boundary walls - thick floor (80px), side walls (40px), ceiling (40px)
+                { x: 0, y: 0, width: 40, height: 800, label: '', action: 'none' }, // Left wall (40px wide)
+                { x: 1160, y: 0, width: 40, height: 800, label: '', action: 'none' }, // Right wall (40px wide)
+                { x: 0, y: 0, width: 1200, height: 40, label: '', action: 'none' }, // Ceiling (40px thick)
+                { x: 0, y: 720, width: 1200, height: 80, label: '', action: 'none' },  // Ground (80px thick - twice as thick)
 
                 // LEFT STACK (3 portals) - 40px higher than middle
                 { x: leftX, y: sideBottomY, width: 120, height: 40, label: 'BASE', action: 'base' },
@@ -1601,11 +1575,11 @@
             const bottomPortalY = groundY - 120; // 120px above ground
 
             levelSelectPlatforms = [
-                // Boundary walls
-                { x: -40, y: -40, width: 40, height: 880 }, // Left wall
-                { x: 1200, y: -40, width: 40, height: 880 }, // Right wall
-                { x: -40, y: -40, width: 1280, height: 40 }, // Ceiling
-                { x: -40, y: groundY, width: 1280, height: 80 }, // Ground (80px tall = 2 blocks)
+                // Boundary walls - thick floor (80px), side walls (40px), ceiling (40px)
+                { x: 0, y: 0, width: 40, height: 800 }, // Left wall (40px wide)
+                { x: 1160, y: 0, width: 40, height: 800 }, // Right wall (40px wide)
+                { x: 0, y: 0, width: 1200, height: 40 }, // Ceiling (40px thick)
+                { x: 0, y: 720, width: 1200, height: 80 }, // Ground (80px thick - twice as thick)
             ];
 
             // Add "Back to Menu" portal (dark blue) on the left
@@ -4749,10 +4723,11 @@
                 const bottomPortalY = groundY - 120;
 
                 leaderboardPlatforms = [
-                    { x: -40, y: -40, width: 40, height: 880 },
-                    { x: 1200, y: -40, width: 40, height: 880 },
-                    { x: -40, y: -40, width: 1280, height: 40 },
-                    { x: -40, y: groundY, width: 1280, height: 80 }
+                    // Boundary walls - thick floor (80px), side walls (40px), ceiling (40px)
+                    { x: 0, y: 0, width: 40, height: 800 }, // Left wall (40px wide)
+                    { x: 1160, y: 0, width: 40, height: 800 }, // Right wall (40px wide)
+                    { x: 0, y: 0, width: 1200, height: 40 }, // Ceiling (40px thick)
+                    { x: 0, y: 720, width: 1200, height: 80 } // Ground (80px thick - twice as thick)
                 ];
 
                 // Add "Back to Menu" portal
