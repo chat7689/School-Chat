@@ -1042,6 +1042,7 @@
         let menuPlatforms = [];
         let menuCameraX = 0;
         let menuCameraY = 0;
+        let menuLoopRunning = false;
 
         async function loadMiniLeaderboard() {
             try {
@@ -1175,7 +1176,10 @@
             // Game loop with delta time
             let lastMenuFrameTime = performance.now();
             function menuLoop(currentTime) {
-                if (canvas.style.display === 'none') return;
+                if (canvas.style.display === 'none') {
+                    menuLoopRunning = false;
+                    return;
+                }
 
                 // Calculate delta time (normalize to 60fps baseline)
                 if (!currentTime) currentTime = performance.now();
@@ -1282,7 +1286,10 @@
             }
 
             console.log('initMainMenu: Starting menu loop...');
-            menuLoop();
+            if (!menuLoopRunning) {
+                menuLoopRunning = true;
+                menuLoop();
+            }
             console.log('initMainMenu: Initialization complete!');
             } catch (error) {
                 console.error('ERROR in initMainMenu:', error);
@@ -1445,7 +1452,7 @@
                         // Moving down, hit top of platform
                         // Cyan landing particles if falling with significant velocity
                         if (menuPlayer.velocityY > 2) {
-                            spawnParticles(menuPlayer.x + menuPlayer.width / 2, menuPlayer.y + menuPlayer.height, 8, 'rgb(0, 255, 255)', menuPlayer.currentSize);
+                            spawnParticles(menuPlayer.x + menuPlayer.width / 2, menuPlayer.y + menuPlayer.height, 8, 'rgb(255, 255, 255)', menuPlayer.currentSize);
                         }
                         menuPlayer.y = platform.y - menuPlayer.height;
                         menuPlayer.velocityY = 0;
@@ -1756,7 +1763,7 @@
                          overlapTop < overlapLeft * 0.5 && overlapTop < overlapRight * 0.5)) {
                         // Cyan landing particles if falling with significant velocity
                         if (levelSelectPlayer.velocityY > 2) {
-                            spawnParticles(levelSelectPlayer.x + levelSelectPlayer.width / 2, levelSelectPlayer.y + levelSelectPlayer.height, 8, 'rgb(0, 255, 255)', levelSelectPlayer.currentSize);
+                            spawnParticles(levelSelectPlayer.x + levelSelectPlayer.width / 2, levelSelectPlayer.y + levelSelectPlayer.height, 8, 'rgb(255, 255, 255)', levelSelectPlayer.currentSize);
                         }
                         levelSelectPlayer.y = platform.y - levelSelectPlayer.height;
                         levelSelectPlayer.velocityY = 0;
@@ -3086,7 +3093,7 @@
                          overlapTop < overlapLeft * 0.5 && overlapTop < overlapRight * 0.5)) {
                         // Cyan landing particles if falling with significant velocity
                         if (player.velocityY > 2) {
-                            spawnParticles(player.x + player.width / 2, player.y + player.height, 8, 'rgb(0, 255, 255)', player.currentSize);
+                            spawnParticles(player.x + player.width / 2, player.y + player.height, 8, 'rgb(255, 255, 255)', player.currentSize);
                         }
                         player.y = platform.y - player.height;
                         player.velocityY = 0;
@@ -3969,7 +3976,7 @@
                          overlapTop < overlapLeft * 0.5 && overlapTop < overlapRight * 0.5)) {
                         // Cyan landing particles if falling with significant velocity
                         if (player.velocityY > 2) {
-                            spawnParticles(player.x + player.width / 2, player.y + player.height, 8, 'rgb(0, 255, 255)', player.currentSize);
+                            spawnParticles(player.x + player.width / 2, player.y + player.height, 8, 'rgb(255, 255, 255)', player.currentSize);
                         }
                         player.y = platform.y - player.height;
                         player.velocityY = 0;
@@ -4547,7 +4554,7 @@
                     if (basePlayer.velocityY > 0) {
                         // Cyan landing particles if falling with significant velocity
                         if (basePlayer.velocityY > 2) {
-                            spawnParticles(basePlayer.x + basePlayer.width / 2, basePlayer.y + basePlayer.height, 8, 'rgb(0, 255, 255)', basePlayer.currentSize);
+                            spawnParticles(basePlayer.x + basePlayer.width / 2, basePlayer.y + basePlayer.height, 8, 'rgb(255, 255, 255)', basePlayer.currentSize);
                         }
                         basePlayer.y = platform.y - basePlayer.height;
                         basePlayer.velocityY = 0;
@@ -4971,7 +4978,7 @@
                          overlapTop < overlapLeft * 0.5 && overlapTop < overlapRight * 0.5)) {
                         // Cyan landing particles if falling with significant velocity
                         if (leaderboardPlayer.velocityY > 2) {
-                            spawnParticles(leaderboardPlayer.x + leaderboardPlayer.width / 2, leaderboardPlayer.y + leaderboardPlayer.height, 8, 'rgb(0, 255, 255)', leaderboardPlayer.currentSize);
+                            spawnParticles(leaderboardPlayer.x + leaderboardPlayer.width / 2, leaderboardPlayer.y + leaderboardPlayer.height, 8, 'rgb(255, 255, 255)', leaderboardPlayer.currentSize);
                         }
                         leaderboardPlayer.y = platform.y - leaderboardPlayer.height;
                         leaderboardPlayer.velocityY = 0;
@@ -5313,6 +5320,9 @@
             currentLobbyId = null;
             practiceMode.active = false;
             raceState.active = false;
+            levelSelectActive = false;
+            leaderboardActive = false;
+            baseActive = false;
 
             // Hide all screens
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
