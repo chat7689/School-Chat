@@ -866,7 +866,7 @@
                 }
             }
 
-            draw(ctx, cameraX, cameraY, showName, name) {
+            draw(ctx, cameraX, cameraY, showName, name, isLocalPlayer = false) {
                 const screenX = this.x - cameraX;
                 const screenY = this.y - cameraY;
 
@@ -970,10 +970,27 @@
 
                 // Draw name
                 if (showName && name) {
-                    ctx.fillStyle = 'white';
                     ctx.font = 'bold 14px Arial';
                     ctx.textAlign = 'center';
-                    ctx.fillText(name, screenX + this.width / 2, screenY - 10);
+
+                    if (isLocalPlayer) {
+                        // Local player: use skin color with black outline
+                        const nameX = screenX + this.width / 2;
+                        const nameY = screenY - 10;
+
+                        // Draw black outline (stroke)
+                        ctx.strokeStyle = '#000000';
+                        ctx.lineWidth = 3;
+                        ctx.strokeText(name, nameX, nameY);
+
+                        // Draw colored text (fill)
+                        ctx.fillStyle = this.getSkinColor();
+                        ctx.fillText(name, nameX, nameY);
+                    } else {
+                        // Other players: black text
+                        ctx.fillStyle = '#000000';
+                        ctx.fillText(name, screenX + this.width / 2, screenY - 10);
+                    }
                 }
             }
         }
@@ -3598,12 +3615,12 @@
                     }
 
                     opponent.player.updateTrail();
-                    opponent.player.draw(ctx, raceState.cameraX, raceState.cameraY, true, opponent.username);
+                    opponent.player.draw(ctx, raceState.cameraX, raceState.cameraY, true, opponent.username, false);
                 }
 
                 // Draw local player
                 raceState.player.updateTrail();
-                raceState.player.draw(ctx, raceState.cameraX, raceState.cameraY, true, currentUsername);
+                raceState.player.draw(ctx, raceState.cameraX, raceState.cameraY, true, currentUsername, true);
 
                 requestAnimationFrame(raceLoop);
             }
