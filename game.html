@@ -2031,13 +2031,16 @@
             }
         }
 
-        // Add the "Vertical Challenge" level on first load
+        // Add default levels if they don't exist
         async function initializeDefaultLevels() {
             const levelsSnapshot = await database.ref('levels').once('value');
             const levels = levelsSnapshot.val();
 
-            // Only add default level if no levels exist
-            if (!levels) {
+            // Check which default levels exist
+            const existingLevelNames = levels ? Object.values(levels).map(l => l.name) : [];
+
+            // Add Vertical Challenge if it doesn't exist
+            if (!existingLevelNames.includes('Vertical Challenge')) {
                 const verticalChallengeData = {
                     "platforms": [
                         {"x": 0, "y": 0, "width": 240, "height": 40},
@@ -2118,6 +2121,298 @@
 
                 await addLevelToDatabase('Vertical Challenge', 'System', verticalChallengeData);
                 console.log('Default level "Vertical Challenge" added to database');
+            }
+
+            // Speed Runner - Fast horizontal course with minimal obstacles
+            if (!existingLevelNames.includes('Speed Runner')) {
+                const speedRunnerData = {
+                    "platforms": [
+                        {"x": 0, "y": 0, "width": 200, "height": 40},
+                        {"x": 280, "y": 0, "width": 200, "height": 40},
+                        {"x": 560, "y": 0, "width": 200, "height": 40},
+                        {"x": 840, "y": 0, "width": 200, "height": 40},
+                        {"x": 1120, "y": -80, "width": 200, "height": 40},
+                        {"x": 1400, "y": -80, "width": 200, "height": 40},
+                        {"x": 1680, "y": 0, "width": 200, "height": 40},
+                        {"x": 1960, "y": 0, "width": 240, "height": 40}
+                    ],
+                    "hazards": [
+                        {"x": 240, "y": -40, "width": 40, "height": 40},
+                        {"x": 520, "y": -40, "width": 40, "height": 40},
+                        {"x": 800, "y": -40, "width": 40, "height": 40}
+                    ],
+                    "growers": [],
+                    "shrinkers": [],
+                    "defaultSizeBlocks": [],
+                    "backgroundBlocks": [],
+                    "foregroundBlocks": [],
+                    "triggers": [],
+                    "comments": [],
+                    "start": {"x": 40, "y": -40, "width": 40, "height": 40},
+                    "finish": {"x": 2000, "y": -40, "width": 40, "height": 40},
+                    "physics": {
+                        "gravity": 0.042,
+                        "moveSpeed": 0.28,
+                        "jumpPower": 3.7,
+                        "maxSpeed": 3.5,
+                        "friction": 0.94,
+                        "airRes": 0.88,
+                        "fastFallMultiplier": 2
+                    }
+                };
+                await addLevelToDatabase('Speed Runner', 'System', speedRunnerData);
+                console.log('Default level "Speed Runner" added to database');
+            }
+
+            // Precision Parkour - Tight jumps requiring accuracy
+            if (!existingLevelNames.includes('Precision Parkour')) {
+                const precisionParkourData = {
+                    "platforms": [
+                        {"x": 0, "y": 0, "width": 120, "height": 40},
+                        {"x": 200, "y": -40, "width": 40, "height": 40},
+                        {"x": 320, "y": -120, "width": 40, "height": 40},
+                        {"x": 440, "y": -80, "width": 40, "height": 40},
+                        {"x": 560, "y": -160, "width": 40, "height": 40},
+                        {"x": 680, "y": -120, "width": 40, "height": 40},
+                        {"x": 800, "y": -200, "width": 40, "height": 40},
+                        {"x": 920, "y": -160, "width": 40, "height": 40},
+                        {"x": 1040, "y": -80, "width": 40, "height": 40},
+                        {"x": 1160, "y": -40, "width": 120, "height": 40}
+                    ],
+                    "hazards": [
+                        {"x": 0, "y": 200, "width": 1280, "height": 40}
+                    ],
+                    "growers": [],
+                    "shrinkers": [],
+                    "defaultSizeBlocks": [],
+                    "backgroundBlocks": [],
+                    "foregroundBlocks": [],
+                    "triggers": [],
+                    "comments": [],
+                    "start": {"x": 40, "y": -40, "width": 40, "height": 40},
+                    "finish": {"x": 1200, "y": -80, "width": 40, "height": 40},
+                    "physics": {
+                        "gravity": 0.042,
+                        "moveSpeed": 0.28,
+                        "jumpPower": 3.7,
+                        "maxSpeed": 3.5,
+                        "friction": 0.94,
+                        "airRes": 0.88,
+                        "fastFallMultiplier": 2
+                    }
+                };
+                await addLevelToDatabase('Precision Parkour', 'System', precisionParkourData);
+                console.log('Default level "Precision Parkour" added to database');
+            }
+
+            // The Maze - Navigate through corridors
+            if (!existingLevelNames.includes('The Maze')) {
+                const mazeData = {
+                    "platforms": [
+                        {"x": 0, "y": 0, "width": 600, "height": 40},
+                        {"x": 0, "y": -400, "width": 600, "height": 40},
+                        {"x": 0, "y": -400, "width": 40, "height": 400},
+                        {"x": 560, "y": -400, "width": 40, "height": 200},
+                        {"x": 280, "y": -240, "width": 280, "height": 40},
+                        {"x": 280, "y": -240, "width": 40, "height": 240},
+                        {"x": 120, "y": -120, "width": 160, "height": 40},
+                        {"x": 400, "y": -320, "width": 160, "height": 40},
+                        {"x": 400, "y": -320, "width": 40, "height": 120},
+                        {"x": 640, "y": 0, "width": 400, "height": 40},
+                        {"x": 1000, "y": -400, "width": 40, "height": 440},
+                        {"x": 640, "y": -400, "width": 400, "height": 40}
+                    ],
+                    "hazards": [],
+                    "growers": [],
+                    "shrinkers": [],
+                    "defaultSizeBlocks": [],
+                    "backgroundBlocks": [],
+                    "foregroundBlocks": [],
+                    "triggers": [],
+                    "comments": [],
+                    "start": {"x": 40, "y": -40, "width": 40, "height": 40},
+                    "finish": {"x": 960, "y": -40, "width": 40, "height": 40},
+                    "physics": {
+                        "gravity": 0.042,
+                        "moveSpeed": 0.28,
+                        "jumpPower": 3.7,
+                        "maxSpeed": 3.5,
+                        "friction": 0.94,
+                        "airRes": 0.88,
+                        "fastFallMultiplier": 2
+                    }
+                };
+                await addLevelToDatabase('The Maze', 'System', mazeData);
+                console.log('Default level "The Maze" added to database');
+            }
+
+            // Size Shifter - Uses growers and shrinkers
+            if (!existingLevelNames.includes('Size Shifter')) {
+                const sizeShifterData = {
+                    "platforms": [
+                        {"x": 0, "y": 0, "width": 200, "height": 40},
+                        {"x": 280, "y": -80, "width": 120, "height": 40},
+                        {"x": 480, "y": -80, "width": 120, "height": 40},
+                        {"x": 680, "y": -80, "width": 120, "height": 40},
+                        {"x": 880, "y": 0, "width": 200, "height": 40}
+                    ],
+                    "hazards": [],
+                    "growers": [
+                        {"x": 280, "y": -120, "width": 40, "height": 40}
+                    ],
+                    "shrinkers": [
+                        {"x": 760, "y": -120, "width": 40, "height": 40}
+                    ],
+                    "defaultSizeBlocks": [
+                        {"x": 520, "y": -120, "width": 40, "height": 40}
+                    ],
+                    "backgroundBlocks": [],
+                    "foregroundBlocks": [],
+                    "triggers": [],
+                    "comments": [],
+                    "start": {"x": 40, "y": -40, "width": 40, "height": 40},
+                    "finish": {"x": 1000, "y": -40, "width": 40, "height": 40},
+                    "physics": {
+                        "gravity": 0.042,
+                        "moveSpeed": 0.28,
+                        "jumpPower": 3.7,
+                        "maxSpeed": 3.5,
+                        "friction": 0.94,
+                        "airRes": 0.88,
+                        "fastFallMultiplier": 2
+                    }
+                };
+                await addLevelToDatabase('Size Shifter', 'System', sizeShifterData);
+                console.log('Default level "Size Shifter" added to database');
+            }
+
+            // Hazard Hell - Lots of hazards to avoid
+            if (!existingLevelNames.includes('Hazard Hell')) {
+                const hazardHellData = {
+                    "platforms": [
+                        {"x": 0, "y": 0, "width": 160, "height": 40},
+                        {"x": 240, "y": -80, "width": 160, "height": 40},
+                        {"x": 480, "y": 0, "width": 160, "height": 40},
+                        {"x": 720, "y": -120, "width": 160, "height": 40},
+                        {"x": 960, "y": 0, "width": 160, "height": 40},
+                        {"x": 1200, "y": -80, "width": 200, "height": 40}
+                    ],
+                    "hazards": [
+                        {"x": 120, "y": -200, "width": 40, "height": 200},
+                        {"x": 400, "y": -200, "width": 40, "height": 120},
+                        {"x": 640, "y": -200, "width": 40, "height": 200},
+                        {"x": 880, "y": -200, "width": 40, "height": 80},
+                        {"x": 1120, "y": -200, "width": 40, "height": 200}
+                    ],
+                    "growers": [],
+                    "shrinkers": [],
+                    "defaultSizeBlocks": [],
+                    "backgroundBlocks": [],
+                    "foregroundBlocks": [],
+                    "triggers": [],
+                    "comments": [],
+                    "start": {"x": 40, "y": -40, "width": 40, "height": 40},
+                    "finish": {"x": 1280, "y": -120, "width": 40, "height": 40},
+                    "physics": {
+                        "gravity": 0.042,
+                        "moveSpeed": 0.28,
+                        "jumpPower": 3.7,
+                        "maxSpeed": 3.5,
+                        "friction": 0.94,
+                        "airRes": 0.88,
+                        "fastFallMultiplier": 2
+                    }
+                };
+                await addLevelToDatabase('Hazard Hell', 'System', hazardHellData);
+                console.log('Default level "Hazard Hell" added to database');
+            }
+
+            // Stairway to Heaven - Long ascending staircase
+            if (!existingLevelNames.includes('Stairway to Heaven')) {
+                const stairwayData = {
+                    "platforms": [
+                        {"x": 0, "y": 0, "width": 120, "height": 40},
+                        {"x": 120, "y": -40, "width": 120, "height": 40},
+                        {"x": 240, "y": -80, "width": 120, "height": 40},
+                        {"x": 360, "y": -120, "width": 120, "height": 40},
+                        {"x": 480, "y": -160, "width": 120, "height": 40},
+                        {"x": 600, "y": -200, "width": 120, "height": 40},
+                        {"x": 720, "y": -240, "width": 120, "height": 40},
+                        {"x": 840, "y": -280, "width": 120, "height": 40},
+                        {"x": 960, "y": -320, "width": 120, "height": 40},
+                        {"x": 1080, "y": -360, "width": 200, "height": 40}
+                    ],
+                    "hazards": [],
+                    "growers": [],
+                    "shrinkers": [],
+                    "defaultSizeBlocks": [],
+                    "backgroundBlocks": [],
+                    "foregroundBlocks": [],
+                    "triggers": [],
+                    "comments": [],
+                    "start": {"x": 40, "y": -40, "width": 40, "height": 40},
+                    "finish": {"x": 1160, "y": -400, "width": 40, "height": 40},
+                    "physics": {
+                        "gravity": 0.042,
+                        "moveSpeed": 0.28,
+                        "jumpPower": 3.7,
+                        "maxSpeed": 3.5,
+                        "friction": 0.94,
+                        "airRes": 0.88,
+                        "fastFallMultiplier": 2
+                    }
+                };
+                await addLevelToDatabase('Stairway to Heaven', 'System', stairwayData);
+                console.log('Default level "Stairway to Heaven" added to database');
+            }
+
+            // The Gauntlet - Mixed challenges
+            if (!existingLevelNames.includes('The Gauntlet')) {
+                const gauntletData = {
+                    "platforms": [
+                        {"x": 0, "y": 0, "width": 120, "height": 40},
+                        {"x": 200, "y": -80, "width": 80, "height": 40},
+                        {"x": 360, "y": -40, "width": 80, "height": 40},
+                        {"x": 520, "y": -120, "width": 80, "height": 40},
+                        {"x": 680, "y": -80, "width": 80, "height": 40},
+                        {"x": 840, "y": -160, "width": 80, "height": 40},
+                        {"x": 1000, "y": -200, "width": 80, "height": 40},
+                        {"x": 1160, "y": -160, "width": 80, "height": 40},
+                        {"x": 1320, "y": -120, "width": 80, "height": 40},
+                        {"x": 1480, "y": -80, "width": 200, "height": 40}
+                    ],
+                    "hazards": [
+                        {"x": 320, "y": -200, "width": 40, "height": 160},
+                        {"x": 800, "y": -300, "width": 40, "height": 220},
+                        {"x": 1120, "y": -280, "width": 40, "height": 120}
+                    ],
+                    "growers": [
+                        {"x": 200, "y": -120, "width": 40, "height": 40}
+                    ],
+                    "shrinkers": [
+                        {"x": 1000, "y": -240, "width": 40, "height": 40}
+                    ],
+                    "defaultSizeBlocks": [
+                        {"x": 1320, "y": -160, "width": 40, "height": 40}
+                    ],
+                    "backgroundBlocks": [],
+                    "foregroundBlocks": [],
+                    "triggers": [],
+                    "comments": [],
+                    "start": {"x": 40, "y": -40, "width": 40, "height": 40},
+                    "finish": {"x": 1580, "y": -120, "width": 40, "height": 40},
+                    "physics": {
+                        "gravity": 0.042,
+                        "moveSpeed": 0.28,
+                        "jumpPower": 3.7,
+                        "maxSpeed": 3.5,
+                        "friction": 0.94,
+                        "airRes": 0.88,
+                        "fastFallMultiplier": 2
+                    }
+                };
+                await addLevelToDatabase('The Gauntlet', 'System', gauntletData);
+                console.log('Default level "The Gauntlet" added to database');
             }
         }
 
