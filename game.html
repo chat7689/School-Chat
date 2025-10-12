@@ -1303,20 +1303,25 @@
                         ctx.fillText(platform.label, screenX + platform.width / 2, screenY + platform.height / 2 + 5);
                         ctx.shadowBlur = 0;
                     } else {
-                        // Green platform
-                        ctx.fillStyle = '#00AA00';
+                        // Green platform - standardized
+                        ctx.fillStyle = '#4CAF50';
                         ctx.fillRect(screenX, screenY, platform.width, platform.height);
 
-                        // Draw 40x40 grid lines
-                        ctx.strokeStyle = '#006600';
+                        // Thicker dark border
+                        ctx.strokeStyle = '#333';
+                        ctx.lineWidth = 4;
+                        ctx.strokeRect(screenX, screenY, platform.width, platform.height);
+
+                        // Inner 40x40 grid lines
+                        ctx.strokeStyle = '#388E3C';
                         ctx.lineWidth = 1;
-                        for (let gx = 0; gx < platform.width; gx += 40) {
+                        for (let gx = 40; gx < platform.width; gx += 40) {
                             ctx.beginPath();
                             ctx.moveTo(screenX + gx, screenY);
                             ctx.lineTo(screenX + gx, screenY + platform.height);
                             ctx.stroke();
                         }
-                        for (let gy = 0; gy < platform.height; gy += 40) {
+                        for (let gy = 40; gy < platform.height; gy += 40) {
                             ctx.beginPath();
                             ctx.moveTo(screenX, screenY + gy);
                             ctx.lineTo(screenX + platform.width, screenY + gy);
@@ -1855,14 +1860,30 @@
                         ctx.fillText('Not completed', platform.x + platform.width / 2, platform.y + 31);
                     }
                 } else {
-                    // Boundary platforms - solid green without grid lines
+                    // Boundary platforms - standardized
                     ctx.fillStyle = '#4CAF50';
                     ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
 
-                    // Subtle dark border for depth
+                    // Thicker dark border
                     ctx.strokeStyle = '#333';
-                    ctx.lineWidth = 2;
+                    ctx.lineWidth = 4;
                     ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+
+                    // Inner 40x40 grid lines
+                    ctx.strokeStyle = '#388E3C';
+                    ctx.lineWidth = 1;
+                    for (let gx = 40; gx < platform.width; gx += 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(platform.x + gx, platform.y);
+                        ctx.lineTo(platform.x + gx, platform.y + platform.height);
+                        ctx.stroke();
+                    }
+                    for (let gy = 40; gy < platform.height; gy += 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(platform.x, platform.y + gy);
+                        ctx.lineTo(platform.x + platform.width, platform.y + gy);
+                        ctx.stroke();
+                    }
                 }
             }
 
@@ -2040,15 +2061,34 @@
                     practiceMode.cameraX = practiceMode.player.x - canvas.width / 2 + practiceMode.player.width / 2;
                     practiceMode.cameraY = practiceMode.player.y - canvas.height / 2 + practiceMode.player.height / 2;
 
-                    // Draw platforms (exact colors from level creator)
-                    ctx.fillStyle = '#4CAF50';
-                    ctx.strokeStyle = '#333';
-                    ctx.lineWidth = 2;
+                    // Draw platforms - standardized
                     for (const platform of practiceMode.platforms) {
                         const screenX = platform.x - practiceMode.cameraX;
                         const screenY = platform.y - practiceMode.cameraY;
+
+                        ctx.fillStyle = '#4CAF50';
                         ctx.fillRect(screenX, screenY, platform.width, platform.height);
+
+                        // Thicker dark border
+                        ctx.strokeStyle = '#333';
+                        ctx.lineWidth = 4;
                         ctx.strokeRect(screenX, screenY, platform.width, platform.height);
+
+                        // Inner 40x40 grid lines
+                        ctx.strokeStyle = '#388E3C';
+                        ctx.lineWidth = 1;
+                        for (let gx = 40; gx < platform.width; gx += 40) {
+                            ctx.beginPath();
+                            ctx.moveTo(screenX + gx, screenY);
+                            ctx.lineTo(screenX + gx, screenY + platform.height);
+                            ctx.stroke();
+                        }
+                        for (let gy = 40; gy < platform.height; gy += 40) {
+                            ctx.beginPath();
+                            ctx.moveTo(screenX, screenY + gy);
+                            ctx.lineTo(screenX + platform.width, screenY + gy);
+                            ctx.stroke();
+                        }
                     }
 
                     // Draw hazards (exact colors from level creator)
@@ -2654,20 +2694,25 @@
                         ctx.fillStyle = '#FF0000';
                         ctx.fillRect(screenX, screenY, platform.width, platform.height);
                     } else {
-                        // Green platform
-                        ctx.fillStyle = '#00AA00';
+                        // Green platform - standardized
+                        ctx.fillStyle = '#4CAF50';
                         ctx.fillRect(screenX, screenY, platform.width, platform.height);
 
-                        // Draw 40x40 grid lines
-                        ctx.strokeStyle = '#006600';
+                        // Thicker dark border
+                        ctx.strokeStyle = '#333';
+                        ctx.lineWidth = 4;
+                        ctx.strokeRect(screenX, screenY, platform.width, platform.height);
+
+                        // Inner 40x40 grid lines
+                        ctx.strokeStyle = '#388E3C';
                         ctx.lineWidth = 1;
-                        for (let gx = 0; gx < platform.width; gx += 40) {
+                        for (let gx = 40; gx < platform.width; gx += 40) {
                             ctx.beginPath();
                             ctx.moveTo(screenX + gx, screenY);
                             ctx.lineTo(screenX + gx, screenY + platform.height);
                             ctx.stroke();
                         }
-                        for (let gy = 0; gy < platform.height; gy += 40) {
+                        for (let gy = 40; gy < platform.height; gy += 40) {
                             ctx.beginPath();
                             ctx.moveTo(screenX, screenY + gy);
                             ctx.lineTo(screenX + platform.width, screenY + gy);
@@ -3565,25 +3610,29 @@
                 ctx.fillStyle = '#87CEEB';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                // Draw platforms
+                // Draw platforms - standardized
                 for (const platform of raceState.platforms) {
                     const screenX = platform.x - raceState.cameraX;
                     const screenY = platform.y - raceState.cameraY;
 
-                    // Green platform
-                    ctx.fillStyle = '#00AA00';
+                    ctx.fillStyle = '#4CAF50';
                     ctx.fillRect(screenX, screenY, platform.width, platform.height);
 
-                    // Draw 40x40 grid lines
-                    ctx.strokeStyle = '#006600';
+                    // Thicker dark border
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 4;
+                    ctx.strokeRect(screenX, screenY, platform.width, platform.height);
+
+                    // Inner 40x40 grid lines
+                    ctx.strokeStyle = '#388E3C';
                     ctx.lineWidth = 1;
-                    for (let gx = 0; gx < platform.width; gx += 40) {
+                    for (let gx = 40; gx < platform.width; gx += 40) {
                         ctx.beginPath();
                         ctx.moveTo(screenX + gx, screenY);
                         ctx.lineTo(screenX + gx, screenY + platform.height);
                         ctx.stroke();
                     }
-                    for (let gy = 0; gy < platform.height; gy += 40) {
+                    for (let gy = 40; gy < platform.height; gy += 40) {
                         ctx.beginPath();
                         ctx.moveTo(screenX, screenY + gy);
                         ctx.lineTo(screenX + platform.width, screenY + gy);
@@ -4273,23 +4322,29 @@
                 baseCtx.stroke();
             }
 
-            // Draw boundary platforms (ground and walls)
+            // Draw boundary platforms - standardized
             for (const platform of basePlatforms) {
                 const screenX = platform.x - cameraX;
                 const screenY = platform.y - cameraY;
-                baseCtx.fillStyle = '#00AA00';
+
+                baseCtx.fillStyle = '#4CAF50';
                 baseCtx.fillRect(screenX, screenY, platform.width, platform.height);
 
-                // Grid lines
-                baseCtx.strokeStyle = '#006600';
+                // Thicker dark border
+                baseCtx.strokeStyle = '#333';
+                baseCtx.lineWidth = 4;
+                baseCtx.strokeRect(screenX, screenY, platform.width, platform.height);
+
+                // Inner 40x40 grid lines
+                baseCtx.strokeStyle = '#388E3C';
                 baseCtx.lineWidth = 1;
-                for (let gx = 0; gx < platform.width; gx += 40) {
+                for (let gx = 40; gx < platform.width; gx += 40) {
                     baseCtx.beginPath();
                     baseCtx.moveTo(screenX + gx, screenY);
                     baseCtx.lineTo(screenX + gx, screenY + platform.height);
                     baseCtx.stroke();
                 }
-                for (let gy = 0; gy < platform.height; gy += 40) {
+                for (let gy = 40; gy < platform.height; gy += 40) {
                     baseCtx.beginPath();
                     baseCtx.moveTo(screenX, screenY + gy);
                     baseCtx.lineTo(screenX + platform.width, screenY + gy);
@@ -4719,13 +4774,30 @@
                     ctx.fillStyle = '#FFFFFF';
                     ctx.fillText(platform.levelName, platform.x + platform.width / 2, platform.y + platform.height / 2 + 4);
                 } else {
-                    // Boundary platforms - solid green
+                    // Boundary platforms - standardized
                     ctx.fillStyle = '#4CAF50';
                     ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
 
+                    // Thicker dark border
                     ctx.strokeStyle = '#333';
-                    ctx.lineWidth = 2;
+                    ctx.lineWidth = 4;
                     ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+
+                    // Inner 40x40 grid lines
+                    ctx.strokeStyle = '#388E3C';
+                    ctx.lineWidth = 1;
+                    for (let gx = 40; gx < platform.width; gx += 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(platform.x + gx, platform.y);
+                        ctx.lineTo(platform.x + gx, platform.y + platform.height);
+                        ctx.stroke();
+                    }
+                    for (let gy = 40; gy < platform.height; gy += 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(platform.x, platform.y + gy);
+                        ctx.lineTo(platform.x + platform.width, platform.y + gy);
+                        ctx.stroke();
+                    }
                 }
             }
 
