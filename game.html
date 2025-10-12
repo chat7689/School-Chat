@@ -651,41 +651,6 @@
             }
         }
 
-        // Unified velocity-based particle system
-        function spawnVelocityParticles(player) {
-            // White particles based on Y velocity (vertical movement)
-            const ySpeed = Math.abs(player.velocityY);
-            if (ySpeed > 0.5) {
-                const yParticleChance = Math.min(ySpeed / 10, 0.8);
-                if (Math.random() < yParticleChance) {
-                    const yParticleCount = Math.floor(ySpeed / 2);
-                    spawnParticles(
-                        player.x + player.width / 2 + (Math.random() - 0.5) * player.width,
-                        player.y + player.height / 2,
-                        Math.max(1, yParticleCount),
-                        'rgb(255, 255, 255)',
-                        player.currentSize
-                    );
-                }
-            }
-
-            // Orange particles based on X velocity (horizontal movement)
-            const xSpeed = Math.abs(player.velocityX);
-            if (xSpeed > 0.5) {
-                const xParticleChance = Math.min(xSpeed / 10, 0.8);
-                if (Math.random() < xParticleChance) {
-                    const xParticleCount = Math.floor(xSpeed / 2);
-                    spawnParticles(
-                        player.x + player.width / 2 + (Math.random() - 0.5) * player.width,
-                        player.y + player.height,
-                        Math.max(1, xParticleCount),
-                        'rgb(255, 140, 66)',
-                        player.currentSize
-                    );
-                }
-            }
-        }
-
         // Cosmetics catalog
         const cosmeticsCatalog = {
             skins: [
@@ -1393,8 +1358,33 @@
                 menuPlayer.velocityX += MOVE_SPEED * deltaTime;
             }
 
-            // Velocity-based particles (white for Y velocity, orange for X velocity)
-            spawnVelocityParticles(menuPlayer);
+            // Old action-based particle system
+            // Track movement state for movement start particles
+            const wasMovingLeft = menuPlayer.prevVelocityX !== undefined && menuPlayer.prevVelocityX < -0.5;
+            const wasMovingRight = menuPlayer.prevVelocityX !== undefined && menuPlayer.prevVelocityX > 0.5;
+            const isMovingLeft = menuPlayer.velocityX < -0.5;
+            const isMovingRight = menuPlayer.velocityX > 0.5;
+
+            // White particles on movement START (when starting to move from stopped/opposite direction)
+            if (isMovingLeft && !wasMovingLeft && Math.random() < 0.3) {
+                spawnParticles(menuPlayer.x + menuPlayer.width / 2, menuPlayer.y + menuPlayer.height / 2, 2, 'rgb(255, 255, 255)', menuPlayer.currentSize);
+            }
+            if (isMovingRight && !wasMovingRight && Math.random() < 0.3) {
+                spawnParticles(menuPlayer.x + menuPlayer.width / 2, menuPlayer.y + menuPlayer.height / 2, 2, 'rgb(255, 255, 255)', menuPlayer.currentSize);
+            }
+
+            // Orange speed-based particles (when moving fast horizontally)
+            const speed = Math.abs(menuPlayer.velocityX);
+            if (speed > 0.5) {
+                const particleChance = Math.min(speed / 10, 0.8);
+                if (Math.random() < particleChance) {
+                    const particleCount = Math.floor(speed / 2);
+                    spawnParticles(menuPlayer.x + menuPlayer.width / 2, menuPlayer.y + menuPlayer.height / 2, particleCount, 'rgb(255, 140, 66)', menuPlayer.currentSize);
+                }
+            }
+
+            // Store current velocity for next frame
+            menuPlayer.prevVelocityX = menuPlayer.velocityX;
 
             // Jump with variable height (W or Up Arrow only, NOT space)
             if ((menuKeys['w'] || menuKeys['ArrowUp']) && isGrounded) {
@@ -1402,6 +1392,9 @@
                 const sizeScale = menuPlayer.currentSize / 40;
                 menuPlayer.velocityY = -JUMP_POWER * sizeScale;
                 menuIsJumping = true;
+
+                // White jump particles
+                spawnParticles(menuPlayer.x + menuPlayer.width / 2, menuPlayer.y + menuPlayer.height, 12, 'rgb(255, 255, 255)', menuPlayer.currentSize);
             }
 
             // Cut jump short if button released (variable jump height)
@@ -1460,6 +1453,10 @@
                 if (checkCollision(menuPlayer, platform)) {
                     if (menuPlayer.velocityY > 0) {
                         // Moving down, hit top of platform
+                        // Cyan landing particles if falling with significant velocity
+                        if (menuPlayer.velocityY > 2) {
+                            spawnParticles(menuPlayer.x + menuPlayer.width / 2, menuPlayer.y + menuPlayer.height, 8, 'rgb(0, 255, 255)', menuPlayer.currentSize);
+                        }
                         menuPlayer.y = platform.y - menuPlayer.height;
                         menuPlayer.velocityY = 0;
                     } else if (menuPlayer.velocityY < 0) {
@@ -1697,8 +1694,33 @@
                 levelSelectPlayer.velocityX += MOVE_SPEED * deltaTime;
             }
 
-            // Velocity-based particles (white for Y velocity, orange for X velocity)
-            spawnVelocityParticles(levelSelectPlayer);
+            // Old action-based particle system
+            // Track movement state for movement start particles
+            const wasMovingLeft = levelSelectPlayer.prevVelocityX !== undefined && levelSelectPlayer.prevVelocityX < -0.5;
+            const wasMovingRight = levelSelectPlayer.prevVelocityX !== undefined && levelSelectPlayer.prevVelocityX > 0.5;
+            const isMovingLeft = levelSelectPlayer.velocityX < -0.5;
+            const isMovingRight = levelSelectPlayer.velocityX > 0.5;
+
+            // White particles on movement START
+            if (isMovingLeft && !wasMovingLeft && Math.random() < 0.3) {
+                spawnParticles(levelSelectPlayer.x + levelSelectPlayer.width / 2, levelSelectPlayer.y + levelSelectPlayer.height / 2, 2, 'rgb(255, 255, 255)', levelSelectPlayer.currentSize);
+            }
+            if (isMovingRight && !wasMovingRight && Math.random() < 0.3) {
+                spawnParticles(levelSelectPlayer.x + levelSelectPlayer.width / 2, levelSelectPlayer.y + levelSelectPlayer.height / 2, 2, 'rgb(255, 255, 255)', levelSelectPlayer.currentSize);
+            }
+
+            // Orange speed-based particles
+            const speed = Math.abs(levelSelectPlayer.velocityX);
+            if (speed > 0.5) {
+                const particleChance = Math.min(speed / 10, 0.8);
+                if (Math.random() < particleChance) {
+                    const particleCount = Math.floor(speed / 2);
+                    spawnParticles(levelSelectPlayer.x + levelSelectPlayer.width / 2, levelSelectPlayer.y + levelSelectPlayer.height / 2, particleCount, 'rgb(255, 140, 66)', levelSelectPlayer.currentSize);
+                }
+            }
+
+            // Store current velocity for next frame
+            levelSelectPlayer.prevVelocityX = levelSelectPlayer.velocityX;
 
             // Update position
             levelSelectPlayer.x += levelSelectPlayer.velocityX * deltaTime;
@@ -1725,6 +1747,10 @@
                     if ((minOverlap === overlapTop && levelSelectPlayer.velocityY >= 0) ||
                         (levelSelectPlayer.velocityY > 0 && overlapTop < overlapBottom &&
                          overlapTop < overlapLeft * 0.5 && overlapTop < overlapRight * 0.5)) {
+                        // Cyan landing particles if falling with significant velocity
+                        if (levelSelectPlayer.velocityY > 2) {
+                            spawnParticles(levelSelectPlayer.x + levelSelectPlayer.width / 2, levelSelectPlayer.y + levelSelectPlayer.height, 8, 'rgb(0, 255, 255)', levelSelectPlayer.currentSize);
+                        }
                         levelSelectPlayer.y = platform.y - levelSelectPlayer.height;
                         levelSelectPlayer.velocityY = 0;
                         isGrounded = true;
@@ -1768,6 +1794,8 @@
             // Jump with W or Up (no space)
             if ((levelSelectKeys['w'] || levelSelectKeys['ArrowUp']) && isGrounded) {
                 levelSelectPlayer.velocityY = -JUMP_POWER;
+                // White jump particles
+                spawnParticles(levelSelectPlayer.x + levelSelectPlayer.width / 2, levelSelectPlayer.y + levelSelectPlayer.height, 12, 'rgb(255, 255, 255)', levelSelectPlayer.currentSize);
             }
         }
 
@@ -2211,6 +2239,104 @@
 
             // Check which default levels exist
             const existingLevelNames = levels ? Object.values(levels).map(l => l.name) : [];
+
+            // Check if Vertical Challenge needs updating (fix for old impossible finish position)
+            if (levels && existingLevelNames.includes('Vertical Challenge')) {
+                // Find the Vertical Challenge level
+                const vcEntry = Object.entries(levels).find(([id, level]) => level.name === 'Vertical Challenge');
+                if (vcEntry) {
+                    const [vcId, vcLevel] = vcEntry;
+                    const currentFinish = vcLevel.levelData?.finish;
+
+                    // Check if finish position is wrong (old impossible position was y: -4040 or other wrong values)
+                    // Correct position should be y: -4000
+                    if (!currentFinish || currentFinish.y !== -4000) {
+                        console.log('Updating Vertical Challenge to fix finish position...');
+
+                        const verticalChallengeData = {
+                            "platforms": [
+                                {"x": 0, "y": 0, "width": 240, "height": 40},
+                                {"x": 280, "y": -40, "width": 200, "height": 40},
+                                {"x": 520, "y": -80, "width": 160, "height": 40},
+                                {"x": 720, "y": -120, "width": 120, "height": 40},
+                                {"x": 880, "y": -160, "width": 80, "height": 40},
+                                {"x": 1000, "y": -200, "width": 40, "height": 40},
+                                {"x": 1040, "y": -320, "width": 40, "height": 80},
+                                {"x": 1080, "y": -480, "width": 40, "height": 120},
+                                {"x": 1120, "y": -680, "width": 40, "height": 160},
+                                {"x": 1160, "y": -920, "width": 40, "height": 200},
+                                {"x": 1200, "y": -1200, "width": 40, "height": 240},
+                                {"x": -320, "y": 40, "width": 280, "height": 40},
+                                {"x": -680, "y": 80, "width": 320, "height": 40},
+                                {"x": -1120, "y": 120, "width": 400, "height": 40},
+                                {"x": 1240, "y": -1520, "width": 40, "height": 280},
+                                {"x": 1280, "y": -1880, "width": 40, "height": 320},
+                                {"x": 1320, "y": -2280, "width": 40, "height": 360},
+                                {"x": 1360, "y": -2720, "width": 40, "height": 400},
+                                {"x": 1030, "y": -250, "width": 10, "height": 10},
+                                {"x": 1070, "y": -400, "width": 10, "height": 10},
+                                {"x": 1110, "y": -560, "width": 10, "height": 10},
+                                {"x": 1110, "y": -640, "width": 10, "height": 10},
+                                {"x": 1150, "y": -760, "width": 10, "height": 10},
+                                {"x": 1150, "y": -840, "width": 10, "height": 10},
+                                {"x": 1180, "y": -1080, "width": 20, "height": 20},
+                                {"x": 1220, "y": -1360, "width": 20, "height": 20},
+                                {"x": 1260, "y": -1640, "width": 20, "height": 20},
+                                {"x": 1260, "y": -1760, "width": 20, "height": 20},
+                                {"x": 1300, "y": -2040, "width": 20, "height": 20},
+                                {"x": 1300, "y": -2180, "width": 20, "height": 20},
+                                {"x": 1340, "y": -2400, "width": 20, "height": 20},
+                                {"x": 1340, "y": -2520, "width": 20, "height": 20},
+                                {"x": 1340, "y": -2640, "width": 20, "height": 20},
+                                {"x": 1400, "y": -3200, "width": 40, "height": 440},
+                                {"x": 1440, "y": -3680, "width": 40, "height": 440},
+                                {"x": 1360, "y": -3040, "width": 40, "height": 40},
+                                {"x": -1600, "y": 160, "width": 440, "height": 40},
+                                {"x": -2120, "y": 200, "width": 480, "height": 40},
+                                {"x": 1400, "y": -3480, "width": 40, "height": 40},
+                                {"x": 1400, "y": -3720, "width": 120, "height": 40},
+                                {"x": 1360, "y": -3960, "width": 200, "height": 40}
+                            ],
+                            "hazards": [],
+                            "growers": [
+                                {"x": 1360, "y": -2760, "width": 40, "height": 40},
+                                {"x": -2120, "y": 120, "width": 40, "height": 80},
+                                {"x": -2080, "y": 120, "width": 40, "height": 40},
+                                {"x": -2040, "y": 120, "width": 40, "height": 80}
+                            ],
+                            "shrinkers": [
+                                {"x": 280, "y": -280, "width": 20, "height": 240}
+                            ],
+                            "defaultSizeBlocks": [
+                                {"x": 1160, "y": -930, "width": 40, "height": 10},
+                                {"x": -680, "y": -280, "width": 20, "height": 360},
+                                {"x": 1360, "y": -4080, "width": 40, "height": 120},
+                                {"x": 1400, "y": -4080, "width": 120, "height": 40},
+                                {"x": 1520, "y": -4080, "width": 40, "height": 120}
+                            ],
+                            "backgroundBlocks": [],
+                            "foregroundBlocks": [],
+                            "triggers": [],
+                            "comments": [],
+                            "start": {"x": -2080, "y": 160, "width": 40, "height": 40},
+                            "finish": {"x": 1440, "y": -4000, "width": 40, "height": 40},
+                            "physics": {
+                                "gravity": 0.042,
+                                "moveSpeed": 0.28,
+                                "jumpPower": 3.7,
+                                "maxSpeed": 3.5,
+                                "friction": 0.94,
+                                "airRes": 0.88,
+                                "fastFallMultiplier": 2
+                            }
+                        };
+
+                        // Update the level data
+                        await database.ref(`levels/${vcId}/levelData`).set(verticalChallengeData);
+                        console.log('Vertical Challenge updated with correct finish position');
+                    }
+                }
+            }
 
             // Add Vertical Challenge if it doesn't exist
             if (!existingLevelNames.includes('Vertical Challenge')) {
@@ -2825,8 +2951,33 @@
                 }
             }
 
-            // Velocity-based particles (white for Y velocity, orange for X velocity)
-            spawnVelocityParticles(player);
+            // Old action-based particle system
+            // Track movement state for movement start particles
+            const wasMovingLeft = player.prevVelocityX !== undefined && player.prevVelocityX < -0.5;
+            const wasMovingRight = player.prevVelocityX !== undefined && player.prevVelocityX > 0.5;
+            const isMovingLeft = player.velocityX < -0.5;
+            const isMovingRight = player.velocityX > 0.5;
+
+            // White particles on movement START
+            if (isMovingLeft && !wasMovingLeft && Math.random() < 0.3) {
+                spawnParticles(player.x + player.width / 2, player.y + player.height / 2, 2, 'rgb(255, 255, 255)', player.currentSize);
+            }
+            if (isMovingRight && !wasMovingRight && Math.random() < 0.3) {
+                spawnParticles(player.x + player.width / 2, player.y + player.height / 2, 2, 'rgb(255, 255, 255)', player.currentSize);
+            }
+
+            // Orange speed-based particles
+            const speed = Math.abs(player.velocityX);
+            if (speed > 0.5) {
+                const particleChance = Math.min(speed / 10, 0.8);
+                if (Math.random() < particleChance) {
+                    const particleCount = Math.floor(speed / 2);
+                    spawnParticles(player.x + player.width / 2, player.y + player.height / 2, particleCount, 'rgb(255, 140, 66)', player.currentSize);
+                }
+            }
+
+            // Store current velocity for next frame
+            player.prevVelocityX = player.velocityX;
 
             // JUMP BUFFER: Remember jump input (W or Up only, NOT space)
             if (practiceMode.keys['w'] || practiceMode.keys['ArrowUp']) {
@@ -2842,6 +2993,8 @@
                 practiceIsJumping = true;
                 player.coyoteTimer = 0;
                 player.jumpBufferTimer = 0;
+                // White jump particles
+                spawnParticles(player.x + player.width / 2, player.y + player.height, 12, 'rgb(255, 255, 255)', player.currentSize);
             }
 
             // Cut jump short if button released (variable jump height)
@@ -2897,6 +3050,10 @@
                     if ((minOverlap === overlapTop && player.velocityY >= 0) ||
                         (player.velocityY > 0 && overlapTop < overlapBottom &&
                          overlapTop < overlapLeft * 0.5 && overlapTop < overlapRight * 0.5)) {
+                        // Cyan landing particles if falling with significant velocity
+                        if (player.velocityY > 2) {
+                            spawnParticles(player.x + player.width / 2, player.y + player.height, 8, 'rgb(0, 255, 255)', player.currentSize);
+                        }
                         player.y = platform.y - player.height;
                         player.velocityY = 0;
                         isGrounded = true;
@@ -2922,10 +3079,6 @@
             // COYOTE TIME: Allow jumping shortly after leaving platform
             if (isGrounded) {
                 player.coyoteTimer = COYOTE_TIME;
-                // Landing particles
-                if (!player.wasGrounded) {
-                    spawnParticles(player.x + player.width / 2, player.y + player.height, 8, 'rgb(200, 200, 200)', player.currentSize);
-                }
             } else {
                 player.coyoteTimer = Math.max(0, player.coyoteTimer - deltaTime);
             }
@@ -3729,6 +3882,34 @@
                 player.velocityX += MOVE_SPEED * deltaTime;
             }
 
+            // Old action-based particle system
+            // Track movement state for movement start particles
+            const wasMovingLeft = player.prevVelocityX !== undefined && player.prevVelocityX < -0.5;
+            const wasMovingRight = player.prevVelocityX !== undefined && player.prevVelocityX > 0.5;
+            const isMovingLeft = player.velocityX < -0.5;
+            const isMovingRight = player.velocityX > 0.5;
+
+            // White particles on movement START
+            if (isMovingLeft && !wasMovingLeft && Math.random() < 0.3) {
+                spawnParticles(player.x + player.width / 2, player.y + player.height / 2, 2, 'rgb(255, 255, 255)', player.currentSize);
+            }
+            if (isMovingRight && !wasMovingRight && Math.random() < 0.3) {
+                spawnParticles(player.x + player.width / 2, player.y + player.height / 2, 2, 'rgb(255, 255, 255)', player.currentSize);
+            }
+
+            // Orange speed-based particles
+            const speed = Math.abs(player.velocityX);
+            if (speed > 0.5) {
+                const particleChance = Math.min(speed / 10, 0.8);
+                if (Math.random() < particleChance) {
+                    const particleCount = Math.floor(speed / 2);
+                    spawnParticles(player.x + player.width / 2, player.y + player.height / 2, particleCount, 'rgb(255, 140, 66)', player.currentSize);
+                }
+            }
+
+            // Store current velocity for next frame
+            player.prevVelocityX = player.velocityX;
+
             // Update position
             player.x += player.velocityX * deltaTime;
             player.y += player.velocityY * deltaTime;
@@ -3752,6 +3933,10 @@
                     if ((minOverlap === overlapTop && player.velocityY >= 0) ||
                         (player.velocityY > 0 && overlapTop < overlapBottom &&
                          overlapTop < overlapLeft * 0.5 && overlapTop < overlapRight * 0.5)) {
+                        // Cyan landing particles if falling with significant velocity
+                        if (player.velocityY > 2) {
+                            spawnParticles(player.x + player.width / 2, player.y + player.height, 8, 'rgb(0, 255, 255)', player.currentSize);
+                        }
                         player.y = platform.y - player.height;
                         player.velocityY = 0;
                         isGrounded = true;
@@ -3774,10 +3959,6 @@
                 }
             }
 
-            // Landing particles (gray)
-            if (isGrounded && !player.wasGrounded) {
-                spawnParticles(player.x + player.width / 2, player.y + player.height, 8, 'rgb(200, 200, 200)', player.currentSize);
-            }
             player.wasGrounded = isGrounded;
 
             // Jump with variable height (W or Up only, NOT space)
@@ -4229,8 +4410,33 @@
                 basePlayer.velocityX += MOVE_SPEED * deltaTime;
             }
 
-            // Velocity-based particles (white for Y velocity, orange for X velocity)
-            spawnVelocityParticles(basePlayer);
+            // Old action-based particle system
+            // Track movement state for movement start particles
+            const wasMovingLeft = basePlayer.prevVelocityX !== undefined && basePlayer.prevVelocityX < -0.5;
+            const wasMovingRight = basePlayer.prevVelocityX !== undefined && basePlayer.prevVelocityX > 0.5;
+            const isMovingLeft = basePlayer.velocityX < -0.5;
+            const isMovingRight = basePlayer.velocityX > 0.5;
+
+            // White particles on movement START
+            if (isMovingLeft && !wasMovingLeft && Math.random() < 0.3) {
+                spawnParticles(basePlayer.x + basePlayer.width / 2, basePlayer.y + basePlayer.height / 2, 2, 'rgb(255, 255, 255)', basePlayer.currentSize);
+            }
+            if (isMovingRight && !wasMovingRight && Math.random() < 0.3) {
+                spawnParticles(basePlayer.x + basePlayer.width / 2, basePlayer.y + basePlayer.height / 2, 2, 'rgb(255, 255, 255)', basePlayer.currentSize);
+            }
+
+            // Orange speed-based particles
+            const speed = Math.abs(basePlayer.velocityX);
+            if (speed > 0.5) {
+                const particleChance = Math.min(speed / 10, 0.8);
+                if (Math.random() < particleChance) {
+                    const particleCount = Math.floor(speed / 2);
+                    spawnParticles(basePlayer.x + basePlayer.width / 2, basePlayer.y + basePlayer.height / 2, particleCount, 'rgb(255, 140, 66)', basePlayer.currentSize);
+                }
+            }
+
+            // Store current velocity for next frame
+            basePlayer.prevVelocityX = basePlayer.velocityX;
 
             // Jump
             if ((baseKeys['w'] || baseKeys['ArrowUp']) && isGrounded) {
@@ -4238,6 +4444,8 @@
                 const sizeScale = basePlayer.currentSize / 40;
                 basePlayer.velocityY = -JUMP_POWER * sizeScale;
                 baseIsJumping = true;
+                // White jump particles
+                spawnParticles(basePlayer.x + basePlayer.width / 2, basePlayer.y + basePlayer.height, 12, 'rgb(255, 255, 255)', basePlayer.currentSize);
             }
 
             // Variable jump height
@@ -4276,6 +4484,10 @@
             for (const platform of allPlatforms) {
                 if (checkCollision(basePlayer, platform)) {
                     if (basePlayer.velocityY > 0) {
+                        // Cyan landing particles if falling with significant velocity
+                        if (basePlayer.velocityY > 2) {
+                            spawnParticles(basePlayer.x + basePlayer.width / 2, basePlayer.y + basePlayer.height, 8, 'rgb(0, 255, 255)', basePlayer.currentSize);
+                        }
                         basePlayer.y = platform.y - basePlayer.height;
                         basePlayer.velocityY = 0;
                     } else if (basePlayer.velocityY < 0) {
@@ -4642,8 +4854,33 @@
                 leaderboardPlayer.velocityX += MOVE_SPEED * deltaTime;
             }
 
-            // Velocity particles
-            spawnVelocityParticles(leaderboardPlayer);
+            // Old action-based particle system
+            // Track movement state for movement start particles
+            const wasMovingLeft = leaderboardPlayer.prevVelocityX !== undefined && leaderboardPlayer.prevVelocityX < -0.5;
+            const wasMovingRight = leaderboardPlayer.prevVelocityX !== undefined && leaderboardPlayer.prevVelocityX > 0.5;
+            const isMovingLeft = leaderboardPlayer.velocityX < -0.5;
+            const isMovingRight = leaderboardPlayer.velocityX > 0.5;
+
+            // White particles on movement START
+            if (isMovingLeft && !wasMovingLeft && Math.random() < 0.3) {
+                spawnParticles(leaderboardPlayer.x + leaderboardPlayer.width / 2, leaderboardPlayer.y + leaderboardPlayer.height / 2, 2, 'rgb(255, 255, 255)', leaderboardPlayer.currentSize);
+            }
+            if (isMovingRight && !wasMovingRight && Math.random() < 0.3) {
+                spawnParticles(leaderboardPlayer.x + leaderboardPlayer.width / 2, leaderboardPlayer.y + leaderboardPlayer.height / 2, 2, 'rgb(255, 255, 255)', leaderboardPlayer.currentSize);
+            }
+
+            // Orange speed-based particles
+            const speed = Math.abs(leaderboardPlayer.velocityX);
+            if (speed > 0.5) {
+                const particleChance = Math.min(speed / 10, 0.8);
+                if (Math.random() < particleChance) {
+                    const particleCount = Math.floor(speed / 2);
+                    spawnParticles(leaderboardPlayer.x + leaderboardPlayer.width / 2, leaderboardPlayer.y + leaderboardPlayer.height / 2, particleCount, 'rgb(255, 140, 66)', leaderboardPlayer.currentSize);
+                }
+            }
+
+            // Store current velocity for next frame
+            leaderboardPlayer.prevVelocityX = leaderboardPlayer.velocityX;
 
             // Update position
             leaderboardPlayer.x += leaderboardPlayer.velocityX * deltaTime;
@@ -4669,6 +4906,10 @@
                     if ((minOverlap === overlapTop && leaderboardPlayer.velocityY >= 0) ||
                         (leaderboardPlayer.velocityY > 0 && overlapTop < overlapBottom &&
                          overlapTop < overlapLeft * 0.5 && overlapTop < overlapRight * 0.5)) {
+                        // Cyan landing particles if falling with significant velocity
+                        if (leaderboardPlayer.velocityY > 2) {
+                            spawnParticles(leaderboardPlayer.x + leaderboardPlayer.width / 2, leaderboardPlayer.y + leaderboardPlayer.height, 8, 'rgb(0, 255, 255)', leaderboardPlayer.currentSize);
+                        }
                         leaderboardPlayer.y = platform.y - leaderboardPlayer.height;
                         leaderboardPlayer.velocityY = 0;
                         isGrounded = true;
@@ -4704,6 +4945,8 @@
             // Jump
             if ((leaderboardKeys['w'] || leaderboardKeys['ArrowUp']) && isGrounded) {
                 leaderboardPlayer.velocityY = -JUMP_POWER;
+                // White jump particles
+                spawnParticles(leaderboardPlayer.x + leaderboardPlayer.width / 2, leaderboardPlayer.y + leaderboardPlayer.height, 12, 'rgb(255, 255, 255)', leaderboardPlayer.currentSize);
             }
         }
 

@@ -264,6 +264,8 @@
                     addOutput('Available Admin Commands:', 'info');
                     addOutput('  /help - Show this help message', 'info');
                     addOutput('  /all - Show all usernames', 'info');
+                    addOutput('  /levels - List all levels with IDs', 'info');
+                    addOutput('  /level (levelId) data - Get copyable level data', 'info');
                     addOutput('  /user (username) - Show user info (email/password, credits, secure credits)', 'info');
                     addOutput('  /user (username) secure delete - Delete user\'s BASE and set secure credits to 0', 'error');
                     addOutput('  /user (username) onhand delete - Set user\'s onhand credits to 0', 'error');
@@ -310,6 +312,18 @@
 
                 case '/all':
                     await showAllUsers();
+                    break;
+
+                case '/levels':
+                    await showAllLevels();
+                    break;
+
+                case '/level':
+                    if (parts[1] && parts[2] === 'data') {
+                        await showLevelData(parts[1]);
+                    } else {
+                        addOutput('Usage: /level (levelId) data', 'error');
+                    }
                     break;
 
                 case '/reset':
@@ -989,6 +1003,112 @@
             } catch (error) {
                 addOutput('Error deleting account: ' + error.message, 'error');
                 console.error('Outer error:', error);
+            }
+        }
+
+        async function showAllLevels() {
+            addOutput('Fetching all levels...', 'info');
+
+            try {
+                const levelsSnapshot = await database.ref('levels').once('value');
+                const levelsData = levelsSnapshot.val();
+
+                if (!levelsData) {
+                    addOutput('No levels found.', 'warning');
+                    return;
+                }
+
+                const levels = [];
+                for (const [levelId, levelInfo] of Object.entries(levelsData)) {
+                    levels.push({
+                        id: levelId,
+                        name: levelInfo.name || 'Unnamed',
+                        creator: levelInfo.creator || 'Unknown',
+                        createdAt: levelInfo.createdAt || 0
+                    });
+                }
+
+                // Sort by creation time
+                levels.sort((a, b) => a.createdAt - b.createdAt);
+
+                addOutput(`Found ${levels.length} level(s):`, 'success');
+                addOutput('', 'info');
+                levels.forEach((level, index) => {
+                    addOutput(`${index + 1}. "${level.name}" by ${level.creator}`, 'info');
+                    addOutput(`   ID: ${level.id}`, 'success');
+                    addOutput('', 'info');
+                });
+                addOutput('Use /level (levelId) data to get level data', 'warning');
+            } catch (error) {
+                addOutput('Error fetching levels: ' + error.message, 'error');
+                console.error('Fetch levels error:', error);
+            }
+        }
+
+        async function showLevelData(levelId) {
+            addOutput(`Fetching data for level: ${levelId}...`, 'info');
+
+            try {
+                const levelSnapshot = await database.ref('levels/' + levelId).once('value');
+                const levelData = levelSnapshot.val();
+
+                if (!levelData) {
+                    addOutput(`Level "${levelId}" not found.`, 'error');
+                    return;
+                }
+
+                // Format the level data as JSON
+                const jsonData = JSON.stringify(levelData.levelData || {}, null, 2);
+
+                addOutput(`--- Level Data for "${levelData.name}" ---`, 'success');
+                addOutput(`Creator: ${levelData.creator || 'Unknown'}`, 'info');
+                addOutput('', 'info');
+
+                // Create a copyable button
+                const buttonId = 'copy-btn-' + Date.now();
+                const line = document.createElement('div');
+                line.className = 'output-line success';
+                line.innerHTML = `<button id="${buttonId}" style="
+                    background: rgba(0, 255, 0, 0.3);
+                    border: 2px solid #00ff00;
+                    color: #00ff00;
+                    padding: 10px 20px;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    font-family: 'Courier New', monospace;
+                    font-size: 14px;
+                    margin: 10px 0;
+                    transition: all 0.2s;
+                " onmouseover="this.style.background='rgba(0, 255, 0, 0.5)'" onmouseout="this.style.background='rgba(0, 255, 0, 0.3)'">📋 Click to Copy Level Data</button>`;
+                outputContainer.appendChild(line);
+                outputContainer.scrollTop = outputContainer.scrollHeight;
+
+                // Add click handler
+                document.getElementById(buttonId).addEventListener('click', () => {
+                    navigator.clipboard.writeText(jsonData).then(() => {
+                        addOutput('✅ Level data copied to clipboard!', 'success');
+                    }).catch(err => {
+                        addOutput('❌ Failed to copy: ' + err.message, 'error');
+                        // Fallback: show the data
+                        addOutput('Level data:', 'info');
+                        addOutput(jsonData, 'success');
+                    });
+                });
+
+                addOutput('', 'info');
+                addOutput('You can also view the data below:', 'info');
+
+                // Show a preview (first 10 lines)
+                const lines = jsonData.split('\n');
+                const preview = lines.slice(0, 10).join('\n');
+                addOutput(preview, 'success');
+                if (lines.length > 10) {
+                    addOutput(`... (${lines.length - 10} more lines, click button to copy all)`, 'warning');
+                }
+
+            } catch (error) {
+                addOutput('Error fetching level data: ' + error.message, 'error');
+                console.error('Fetch level data error:', error);
             }
         }
 
