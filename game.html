@@ -1165,6 +1165,15 @@
             loadMiniLeaderboard();
             document.getElementById('leaderboardPanel').style.display = 'block';
 
+            // Auto-refresh leaderboard every 5 seconds
+            const leaderboardRefreshInterval = setInterval(() => {
+                if (canvas.style.display !== 'none') {
+                    loadMiniLeaderboard();
+                } else {
+                    clearInterval(leaderboardRefreshInterval);
+                }
+            }, 5000);
+
             // Game loop with delta time
             let lastMenuFrameTime = performance.now();
             function menuLoop(currentTime) {
@@ -3346,22 +3355,46 @@
             await showCountdown();
 
             // Listen for opponent positions (use party members, not lobby players)
+            // With smooth interpolation for lagless movement
             database.ref('parties/' + currentPartyId + '/members').on('value', (snapshot) => {
                 const members = snapshot.val();
-                raceState.opponents = {};
+                if (!members) return;
+
                 for (const [uid, member] of Object.entries(members)) {
                     if (uid !== currentUser.uid && member.position) {
-                        raceState.opponents[uid] = {
-                            username: member.username,
-                            player: new Player(member.position.x, member.position.y, member.equippedCosmetics || {}),
-                            finished: member.finished || false
-                        };
+                        if (!raceState.opponents[uid]) {
+                            // New opponent - create player
+                            raceState.opponents[uid] = {
+                                username: member.username,
+                                player: new Player(member.position.x, member.position.y, member.equippedCosmetics || {}),
+                                finished: member.finished || false,
+                                targetX: member.position.x,
+                                targetY: member.position.y
+                            };
+                        } else {
+                            // Existing opponent - update target position for interpolation
+                            raceState.opponents[uid].targetX = member.position.x;
+                            raceState.opponents[uid].targetY = member.position.y;
+                            raceState.opponents[uid].finished = member.finished || false;
+                            if (member.size) {
+                                raceState.opponents[uid].player.currentSize = member.size;
+                                raceState.opponents[uid].player.width = member.size;
+                                raceState.opponents[uid].player.height = member.size;
+                            }
+                        }
+                    }
+                }
+
+                // Remove opponents who left
+                for (const uid in raceState.opponents) {
+                    if (!members[uid]) {
+                        delete raceState.opponents[uid];
                     }
                 }
             });
 
             // Start position sync (use party path, not lobby path)
-            // Update every 33ms (~30fps) for smoother multiplayer movement
+            // Update every 16ms (~60fps) for ultra-smooth multiplayer movement
             const positionSyncInterval = setInterval(() => {
                 if (!raceState.active || raceState.finished) {
                     clearInterval(positionSyncInterval);
@@ -3371,9 +3404,10 @@
                 database.ref('parties/' + currentPartyId + '/members/' + currentUser.uid).update({
                     position: { x: raceState.player.x, y: raceState.player.y },
                     velocity: { x: raceState.player.velocityX, y: raceState.player.velocityY },
-                    equippedCosmetics: equippedCosmetics
+                    equippedCosmetics: equippedCosmetics,
+                    size: raceState.player.currentSize
                 });
-            }, 33);
+            }, 16);
 
             let lastRaceFrameTime = performance.now();
             function raceLoop(currentTime) {
@@ -3444,8 +3478,15 @@
                 ctx.fillStyle = '#00FF00';
                 ctx.fillRect(finishScreenX, finishScreenY, raceState.map.finish.width, raceState.map.finish.height);
 
-                // Draw opponents
+                // Interpolate and draw opponents for smooth movement
                 for (const opponent of Object.values(raceState.opponents)) {
+                    // Smooth interpolation towards target position (reduces jitter)
+                    const interpolationSpeed = 0.3; // 30% lerp each frame = smooth but responsive
+                    if (opponent.targetX !== undefined) {
+                        opponent.player.x += (opponent.targetX - opponent.player.x) * interpolationSpeed;
+                        opponent.player.y += (opponent.targetY - opponent.player.y) * interpolationSpeed;
+                    }
+
                     opponent.player.updateTrail();
                     opponent.player.draw(ctx, raceState.cameraX, raceState.cameraY, true, opponent.username);
                 }
