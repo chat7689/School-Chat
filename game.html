@@ -1726,52 +1726,104 @@
                 ctx.stroke();
             }
 
-            // Draw platforms
+            // Draw platforms with clean styling matching main menu
             for (const platform of levelSelectPlatforms) {
                 if (platform.levelId) {
-                    // Level portal platform - green with blue outline
-                    ctx.fillStyle = '#00AA00';
+                    // Level portal platform - clean green with shadow
+                    ctx.fillStyle = '#4CAF50';
                     ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
 
-                    // Blue portal outline
-                    ctx.strokeStyle = '#0066FF';
-                    ctx.lineWidth = 4;
+                    // Subtle dark border for depth
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 2;
                     ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
 
-                    // Level name (white text, smaller font)
-                    ctx.fillStyle = '#FFFFFF';
-                    ctx.font = 'bold 10px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(platform.levelName, platform.x + platform.width / 2, platform.y + 20);
+                    // Inner grid lines for visual consistency (40x40 grid)
+                    ctx.strokeStyle = '#388E3C';
+                    ctx.lineWidth = 1;
+                    for (let gx = 0; gx < platform.width; gx += 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(platform.x + gx, platform.y);
+                        ctx.lineTo(platform.x + gx, platform.y + platform.height);
+                        ctx.stroke();
+                    }
+                    for (let gy = 0; gy < platform.height; gy += 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(platform.x, platform.y + gy);
+                        ctx.lineTo(platform.x + platform.width, platform.y + gy);
+                        ctx.stroke();
+                    }
 
-                    // Best time indicator
+                    // Level name with shadow for readability
+                    ctx.fillStyle = '#000000';
+                    ctx.font = 'bold 11px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(platform.levelName, platform.x + platform.width / 2 + 1, platform.y + 18);
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.fillText(platform.levelName, platform.x + platform.width / 2, platform.y + 17);
+
+                    // Best time indicator with gold color
                     const bestTime = playerBestTimes[platform.levelId];
                     if (bestTime) {
-                        ctx.font = '8px Arial';
+                        ctx.font = 'bold 9px Arial';
+                        ctx.fillStyle = '#000000';
+                        ctx.fillText(`${formatTime(bestTime)}`, platform.x + platform.width / 2 + 1, platform.y + 32);
                         ctx.fillStyle = '#FFD700';
-                        ctx.fillText(`${formatTime(bestTime)}`, platform.x + platform.width / 2, platform.y + 32);
+                        ctx.fillText(`${formatTime(bestTime)}`, platform.x + platform.width / 2, platform.y + 31);
                     } else {
                         ctx.font = '8px Arial';
-                        ctx.fillStyle = '#CCCCCC';
-                        ctx.fillText('No time', platform.x + platform.width / 2, platform.y + 32);
+                        ctx.fillStyle = '#999999';
+                        ctx.fillText('Not completed', platform.x + platform.width / 2, platform.y + 31);
                     }
                 } else {
-                    // Boundary platforms - dark green
-                    ctx.fillStyle = '#00AA00';
+                    // Boundary platforms - same green as main menu
+                    ctx.fillStyle = '#4CAF50';
                     ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+
+                    // Grid lines on boundaries too
+                    ctx.strokeStyle = '#388E3C';
+                    ctx.lineWidth = 1;
+                    for (let gx = 0; gx < platform.width; gx += 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(platform.x + gx, platform.y);
+                        ctx.lineTo(platform.x + gx, platform.y + platform.height);
+                        ctx.stroke();
+                    }
+                    for (let gy = 0; gy < platform.height; gy += 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(platform.x, platform.y + gy);
+                        ctx.lineTo(platform.x + platform.width, platform.y + gy);
+                        ctx.stroke();
+                    }
                 }
             }
 
             // Draw player
             levelSelectPlayer.draw(ctx, 0, 0);
 
-            // Draw instructions at top
-            ctx.fillStyle = '#000000';
-            ctx.font = 'bold 16px Arial';
+            // Draw clean title and instructions with shadow
             ctx.textAlign = 'center';
-            ctx.fillText('Jump to a portal and press SPACE to play!', 600, 30);
-            ctx.font = '12px Arial';
-            ctx.fillText('WASD or Arrow Keys to move | ESC to go back', 600, 50);
+
+            // Title
+            ctx.font = 'bold 24px Arial';
+            ctx.fillStyle = '#000000';
+            ctx.fillText('PRACTICE LEVELS', 600, 32);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillText('PRACTICE LEVELS', 600, 30);
+
+            // Instructions
+            ctx.font = 'bold 14px Arial';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillText('Jump to a portal and press SPACE to start', 600, 57);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillText('Jump to a portal and press SPACE to start', 600, 55);
+
+            // Controls hint
+            ctx.font = '11px Arial';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillText('WASD/Arrows to move • ESC to return', 600, 77);
+            ctx.fillStyle = '#CCCCCC';
+            ctx.fillText('WASD/Arrows to move • ESC to return', 600, 75);
         }
 
         function formatTime(ms) {
