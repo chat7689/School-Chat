@@ -1867,11 +1867,11 @@
                             practiceMode.finished = true;
                             practiceMode.finishTime = Date.now() - practiceMode.startTime;
 
-                            // Save time to Firebase
-                            await database.ref('times_history/' + currentUser.uid + '/' + levelId).push({
+                            // Save time to Firebase (no await needed in game loop)
+                            database.ref('times_history/' + currentUser.uid + '/' + levelId).push({
                                 time: practiceMode.finishTime,
                                 timestamp: firebase.database.ServerValue.TIMESTAMP
-                            });
+                            }).catch(err => console.error('Error saving time:', err));
                         }
                     }
 
