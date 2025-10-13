@@ -1370,9 +1370,9 @@
 
             // Jump with variable height based on hold time (W or Up Arrow only, NOT space)
             if ((menuKeys['w'] || menuKeys['ArrowUp']) && isGrounded && !menuIsJumping) {
-                // Start jump immediately
+                // Start jump immediately with strong initial velocity
                 const sizeScale = menuPlayer.currentSize / 40;
-                menuPlayer.velocityY = -JUMP_CHARGE_RATE * sizeScale;
+                menuPlayer.velocityY = -1.5 * sizeScale; // Strong initial jump
                 menuIsJumping = true;
                 menuPlayer.jumpHoldTime = 0;
                 // White jump particles
@@ -1384,7 +1384,7 @@
                 const sizeScale = menuPlayer.currentSize / 40;
                 menuPlayer.jumpHoldTime += deltaTime;
 
-                // Add upward acceleration while holding (max height = playerSize + 1px)
+                // Add upward acceleration while holding (max height = 4x playerSize + 1px)
                 const maxJumpVelocity = JUMP_POWER * sizeScale;
                 if (Math.abs(menuPlayer.velocityY) < maxJumpVelocity) {
                     menuPlayer.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
@@ -1806,9 +1806,9 @@
 
             // Jump with variable height based on hold time (W or Up only, NOT space)
             if ((levelSelectKeys['w'] || levelSelectKeys['ArrowUp']) && isGrounded && !levelSelectIsJumping) {
-                // Start jump immediately
+                // Start jump immediately with strong initial velocity
                 const sizeScale = levelSelectPlayer.currentSize / 40;
-                levelSelectPlayer.velocityY = -JUMP_CHARGE_RATE * sizeScale;
+                levelSelectPlayer.velocityY = -1.5 * sizeScale; // Strong initial jump
                 levelSelectIsJumping = true;
                 levelSelectPlayer.jumpHoldTime = 0;
                 // White jump particles
@@ -1820,7 +1820,7 @@
                 const sizeScale = levelSelectPlayer.currentSize / 40;
                 levelSelectPlayer.jumpHoldTime += deltaTime;
 
-                // Add upward acceleration while holding (max height = playerSize + 1px)
+                // Add upward acceleration while holding (max height = 4x playerSize + 1px)
                 const maxJumpVelocity = JUMP_POWER * sizeScale;
                 if (Math.abs(levelSelectPlayer.velocityY) < maxJumpVelocity) {
                     levelSelectPlayer.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
@@ -2961,8 +2961,8 @@
 
             // Jump with variable height based on hold time (W or Up only, NOT space)
             if ((practiceMode.keys['w'] || practiceMode.keys['ArrowUp']) && isGrounded && !practiceIsJumping) {
-                // Start jump immediately
-                player.velocityY = -JUMP_CHARGE_RATE * sizeScale;
+                // Start jump immediately with strong initial velocity
+                player.velocityY = -1.5 * sizeScale; // Strong initial jump
                 practiceIsJumping = true;
                 player.jumpHoldTime = 0;
                 // White jump particles
@@ -2973,7 +2973,7 @@
             if (practiceIsJumping && (practiceMode.keys['w'] || practiceMode.keys['ArrowUp']) && player.velocityY < 0) {
                 player.jumpHoldTime += deltaTime;
 
-                // Add upward acceleration while holding (max height = playerSize + 1px)
+                // Add upward acceleration while holding (max height = 4x playerSize + 1px)
                 const maxJumpVelocity = JUMP_POWER * sizeScale;
                 if (Math.abs(player.velocityY) < maxJumpVelocity) {
                     player.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
@@ -3958,8 +3958,8 @@
 
             // Jump with variable height based on hold time (W or Up only, NOT space)
             if ((raceState.keys['w'] || raceState.keys['ArrowUp']) && isGrounded && !raceIsJumping) {
-                // Start jump immediately
-                player.velocityY = -JUMP_CHARGE_RATE * sizeScale;
+                // Start jump immediately with strong initial velocity
+                player.velocityY = -1.5 * sizeScale; // Strong initial jump
                 raceIsJumping = true;
                 player.jumpHoldTime = 0;
                 // White jump particles
@@ -3970,7 +3970,7 @@
             if (raceIsJumping && (raceState.keys['w'] || raceState.keys['ArrowUp']) && player.velocityY < 0) {
                 player.jumpHoldTime += deltaTime;
 
-                // Add upward acceleration while holding (max height = playerSize + 1px)
+                // Add upward acceleration while holding (max height = 4x playerSize + 1px)
                 const maxJumpVelocity = JUMP_POWER * sizeScale;
                 if (Math.abs(player.velocityY) < maxJumpVelocity) {
                     player.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
@@ -4587,9 +4587,9 @@
 
             // Jump with variable height based on hold time (W or Up only, NOT space)
             if ((baseKeys['w'] || baseKeys['ArrowUp']) && isGrounded && !baseIsJumping) {
-                // Start jump immediately
+                // Start jump immediately with strong initial velocity
                 const sizeScale = basePlayer.currentSize / 40;
-                basePlayer.velocityY = -JUMP_CHARGE_RATE * sizeScale;
+                basePlayer.velocityY = -1.5 * sizeScale; // Strong initial jump
                 baseIsJumping = true;
                 basePlayer.jumpHoldTime = 0;
                 // White jump particles
@@ -4601,7 +4601,7 @@
                 const sizeScale = basePlayer.currentSize / 40;
                 basePlayer.jumpHoldTime += deltaTime;
 
-                // Add upward acceleration while holding (max height = playerSize + 1px)
+                // Add upward acceleration while holding (max height = 4x playerSize + 1px)
                 const maxJumpVelocity = JUMP_POWER * sizeScale;
                 if (Math.abs(basePlayer.velocityY) < maxJumpVelocity) {
                     basePlayer.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
@@ -5103,9 +5103,9 @@
 
             // Jump with variable height based on hold time (W or Up only, NOT space)
             if ((leaderboardKeys['w'] || leaderboardKeys['ArrowUp']) && isGrounded && !leaderboardIsJumping) {
-                // Start jump immediately
+                // Start jump immediately with strong initial velocity
                 const sizeScale = leaderboardPlayer.currentSize / 40;
-                leaderboardPlayer.velocityY = -JUMP_CHARGE_RATE * sizeScale;
+                leaderboardPlayer.velocityY = -1.5 * sizeScale; // Strong initial jump
                 leaderboardIsJumping = true;
                 leaderboardPlayer.jumpHoldTime = 0;
                 // White jump particles
@@ -5117,7 +5117,7 @@
                 const sizeScale = leaderboardPlayer.currentSize / 40;
                 leaderboardPlayer.jumpHoldTime += deltaTime;
 
-                // Add upward acceleration while holding (max height = playerSize + 1px)
+                // Add upward acceleration while holding (max height = 4x playerSize + 1px)
                 const maxJumpVelocity = JUMP_POWER * sizeScale;
                 if (Math.abs(leaderboardPlayer.velocityY) < maxJumpVelocity) {
                     leaderboardPlayer.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
