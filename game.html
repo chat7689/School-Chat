@@ -1371,14 +1371,12 @@
             // Jump with variable height based on hold time (W or Up Arrow only, NOT space)
             if ((menuKeys['w'] || menuKeys['ArrowUp']) && isGrounded && !menuIsJumping) {
                 // Start charging jump
-                const sizeScale = menuPlayer.currentSize / 40;
-                menuPlayer.velocityY = 0;
                 menuIsJumping = true;
                 menuPlayer.jumpCharge = 0; // Start charging from 0
             }
 
-            // Charge jump while holding button and grounded
-            if (menuIsJumping && isGrounded && (menuKeys['w'] || menuKeys['ArrowUp'])) {
+            // Charge jump while holding button
+            if (menuIsJumping && (menuKeys['w'] || menuKeys['ArrowUp']) && isGrounded) {
                 const sizeScale = menuPlayer.currentSize / 40;
                 menuPlayer.jumpCharge = (menuPlayer.jumpCharge || 0) + (JUMP_CHARGE_RATE * deltaTime);
                 // Cap at max jump power
@@ -1386,10 +1384,12 @@
                 if (menuPlayer.jumpCharge > maxCharge) {
                     menuPlayer.jumpCharge = maxCharge;
                 }
+                // Hold player on ground while charging
+                menuPlayer.velocityY = 0;
             }
 
-            // Release jump when button released or leaving ground
-            if (menuIsJumping && (!menuKeys['w'] && !menuKeys['ArrowUp'] || !isGrounded)) {
+            // Release jump when button released
+            if (menuIsJumping && (!menuKeys['w'] && !menuKeys['ArrowUp'])) {
                 if (menuPlayer.jumpCharge > 0) {
                     // Apply accumulated jump charge
                     menuPlayer.velocityY = -menuPlayer.jumpCharge;
@@ -1397,13 +1397,11 @@
                     spawnParticles(menuPlayer.x + menuPlayer.width / 2, menuPlayer.y + menuPlayer.height, 12, 'rgb(255, 255, 255)', menuPlayer.currentSize);
                 }
                 menuPlayer.jumpCharge = 0;
-                if (!isGrounded) {
-                    menuIsJumping = false;
-                }
+                menuIsJumping = false;
             }
 
-            // Reset jump state when grounded
-            if (isGrounded && menuPlayer.velocityY >= 0) {
+            // Reset jump state when grounded and not pressing jump
+            if (isGrounded && menuPlayer.velocityY >= 0 && !menuKeys['w'] && !menuKeys['ArrowUp']) {
                 menuIsJumping = false;
             }
 
@@ -1813,14 +1811,12 @@
             // Jump with variable height based on hold time (W or Up only, NOT space)
             if ((levelSelectKeys['w'] || levelSelectKeys['ArrowUp']) && isGrounded && !levelSelectIsJumping) {
                 // Start charging jump
-                const sizeScale = levelSelectPlayer.currentSize / 40;
-                levelSelectPlayer.velocityY = 0;
                 levelSelectIsJumping = true;
                 levelSelectPlayer.jumpCharge = 0; // Start charging from 0
             }
 
-            // Charge jump while holding button and grounded
-            if (levelSelectIsJumping && isGrounded && (levelSelectKeys['w'] || levelSelectKeys['ArrowUp'])) {
+            // Charge jump while holding button
+            if (levelSelectIsJumping && (levelSelectKeys['w'] || levelSelectKeys['ArrowUp']) && isGrounded) {
                 const sizeScale = levelSelectPlayer.currentSize / 40;
                 levelSelectPlayer.jumpCharge = (levelSelectPlayer.jumpCharge || 0) + (JUMP_CHARGE_RATE * deltaTime);
                 // Cap at max jump power
@@ -1828,10 +1824,12 @@
                 if (levelSelectPlayer.jumpCharge > maxCharge) {
                     levelSelectPlayer.jumpCharge = maxCharge;
                 }
+                // Hold player on ground while charging
+                levelSelectPlayer.velocityY = 0;
             }
 
-            // Release jump when button released or leaving ground
-            if (levelSelectIsJumping && (!levelSelectKeys['w'] && !levelSelectKeys['ArrowUp'] || !isGrounded)) {
+            // Release jump when button released
+            if (levelSelectIsJumping && (!levelSelectKeys['w'] && !levelSelectKeys['ArrowUp'])) {
                 if (levelSelectPlayer.jumpCharge > 0) {
                     // Apply accumulated jump charge
                     levelSelectPlayer.velocityY = -levelSelectPlayer.jumpCharge;
@@ -1839,9 +1837,7 @@
                     spawnParticles(levelSelectPlayer.x + levelSelectPlayer.width / 2, levelSelectPlayer.y + levelSelectPlayer.height, 12, 'rgb(255, 255, 255)', levelSelectPlayer.currentSize);
                 }
                 levelSelectPlayer.jumpCharge = 0;
-                if (!isGrounded) {
-                    levelSelectIsJumping = false;
-                }
+                levelSelectIsJumping = false;
             }
 
             // Reset jump state when grounded
@@ -2974,23 +2970,24 @@
             // Jump with variable height based on hold time (W or Up only, NOT space)
             if ((practiceMode.keys['w'] || practiceMode.keys['ArrowUp']) && isGrounded && !practiceIsJumping) {
                 // Start charging jump
-                player.velocityY = 0;
                 practiceIsJumping = true;
                 player.jumpCharge = 0; // Start charging from 0
             }
 
-            // Charge jump while holding button and grounded
-            if (practiceIsJumping && isGrounded && (practiceMode.keys['w'] || practiceMode.keys['ArrowUp'])) {
+            // Charge jump while holding button
+            if (practiceIsJumping && (practiceMode.keys['w'] || practiceMode.keys['ArrowUp']) && isGrounded) {
                 player.jumpCharge = (player.jumpCharge || 0) + (JUMP_CHARGE_RATE * deltaTime);
                 // Cap at max jump power
                 const maxCharge = JUMP_POWER * sizeScale;
                 if (player.jumpCharge > maxCharge) {
                     player.jumpCharge = maxCharge;
                 }
+                // Hold player on ground while charging
+                player.velocityY = 0;
             }
 
-            // Release jump when button released or leaving ground
-            if (practiceIsJumping && (!practiceMode.keys['w'] && !practiceMode.keys['ArrowUp'] || !isGrounded)) {
+            // Release jump when button released
+            if (practiceIsJumping && (!practiceMode.keys['w'] && !practiceMode.keys['ArrowUp'])) {
                 if (player.jumpCharge > 0) {
                     // Apply accumulated jump charge
                     player.velocityY = -player.jumpCharge;
@@ -2998,9 +2995,7 @@
                     spawnParticles(player.x + player.width / 2, player.y + player.height, 12, 'rgb(255, 255, 255)', player.currentSize);
                 }
                 player.jumpCharge = 0;
-                if (!isGrounded) {
-                    practiceIsJumping = false;
-                }
+                practiceIsJumping = false;
             }
 
             // Apply gravity scaled by size (from level creator)
@@ -3977,23 +3972,24 @@
             // Jump with variable height based on hold time (W or Up only, NOT space)
             if ((raceState.keys['w'] || raceState.keys['ArrowUp']) && isGrounded && !raceIsJumping) {
                 // Start charging jump
-                player.velocityY = 0;
                 raceIsJumping = true;
                 player.jumpCharge = 0; // Start charging from 0
             }
 
-            // Charge jump while holding button and grounded
-            if (raceIsJumping && isGrounded && (raceState.keys['w'] || raceState.keys['ArrowUp'])) {
+            // Charge jump while holding button
+            if (raceIsJumping && (raceState.keys['w'] || raceState.keys['ArrowUp']) && isGrounded) {
                 player.jumpCharge = (player.jumpCharge || 0) + (JUMP_CHARGE_RATE * deltaTime);
                 // Cap at max jump power
                 const maxCharge = JUMP_POWER * sizeScale;
                 if (player.jumpCharge > maxCharge) {
                     player.jumpCharge = maxCharge;
                 }
+                // Hold player on ground while charging
+                player.velocityY = 0;
             }
 
-            // Release jump when button released or leaving ground
-            if (raceIsJumping && (!raceState.keys['w'] && !raceState.keys['ArrowUp'] || !isGrounded)) {
+            // Release jump when button released
+            if (raceIsJumping && (!raceState.keys['w'] && !raceState.keys['ArrowUp'])) {
                 if (player.jumpCharge > 0) {
                     // Apply accumulated jump charge
                     player.velocityY = -player.jumpCharge;
@@ -4001,13 +3997,11 @@
                     spawnParticles(player.x + player.width / 2, player.y + player.height, 12, 'rgb(255, 255, 255)', player.currentSize);
                 }
                 player.jumpCharge = 0;
-                if (!isGrounded) {
-                    raceIsJumping = false;
-                }
+                raceIsJumping = false;
             }
 
-            // Reset jump state when grounded
-            if (isGrounded && player.velocityY >= 0) {
+            // Reset jump state when grounded and not pressing jump
+            if (isGrounded && player.velocityY >= 0 && !raceState.keys['w'] && !raceState.keys['ArrowUp']) {
                 raceIsJumping = false;
             }
 
@@ -4469,14 +4463,12 @@
             // Jump with variable height based on hold time (W or Up only, NOT space)
             if ((baseKeys['w'] || baseKeys['ArrowUp']) && isGrounded && !baseIsJumping) {
                 // Start charging jump
-                const sizeScale = basePlayer.currentSize / 40;
-                basePlayer.velocityY = 0;
                 baseIsJumping = true;
                 basePlayer.jumpCharge = 0; // Start charging from 0
             }
 
-            // Charge jump while holding button and grounded
-            if (baseIsJumping && isGrounded && (baseKeys['w'] || baseKeys['ArrowUp'])) {
+            // Charge jump while holding button
+            if (baseIsJumping && (baseKeys['w'] || baseKeys['ArrowUp']) && isGrounded) {
                 const sizeScale = basePlayer.currentSize / 40;
                 basePlayer.jumpCharge = (basePlayer.jumpCharge || 0) + (JUMP_CHARGE_RATE * deltaTime);
                 // Cap at max jump power
@@ -4484,10 +4476,12 @@
                 if (basePlayer.jumpCharge > maxCharge) {
                     basePlayer.jumpCharge = maxCharge;
                 }
+                // Hold player on ground while charging
+                basePlayer.velocityY = 0;
             }
 
-            // Release jump when button released or leaving ground
-            if (baseIsJumping && (!baseKeys['w'] && !baseKeys['ArrowUp'] || !isGrounded)) {
+            // Release jump when button released
+            if (baseIsJumping && (!baseKeys['w'] && !baseKeys['ArrowUp'])) {
                 if (basePlayer.jumpCharge > 0) {
                     // Apply accumulated jump charge
                     basePlayer.velocityY = -basePlayer.jumpCharge;
@@ -4495,9 +4489,7 @@
                     spawnParticles(basePlayer.x + basePlayer.width / 2, basePlayer.y + basePlayer.height, 12, 'rgb(255, 255, 255)', basePlayer.currentSize);
                 }
                 basePlayer.jumpCharge = 0;
-                if (!isGrounded) {
-                    baseIsJumping = false;
-                }
+                baseIsJumping = false;
             }
 
             // Friction
@@ -4991,14 +4983,12 @@
             // Jump with variable height based on hold time (W or Up only, NOT space)
             if ((leaderboardKeys['w'] || leaderboardKeys['ArrowUp']) && isGrounded && !leaderboardIsJumping) {
                 // Start charging jump
-                const sizeScale = leaderboardPlayer.currentSize / 40;
-                leaderboardPlayer.velocityY = 0;
                 leaderboardIsJumping = true;
                 leaderboardPlayer.jumpCharge = 0; // Start charging from 0
             }
 
-            // Charge jump while holding button and grounded
-            if (leaderboardIsJumping && isGrounded && (leaderboardKeys['w'] || leaderboardKeys['ArrowUp'])) {
+            // Charge jump while holding button
+            if (leaderboardIsJumping && (leaderboardKeys['w'] || leaderboardKeys['ArrowUp']) && isGrounded) {
                 const sizeScale = leaderboardPlayer.currentSize / 40;
                 leaderboardPlayer.jumpCharge = (leaderboardPlayer.jumpCharge || 0) + (JUMP_CHARGE_RATE * deltaTime);
                 // Cap at max jump power
@@ -5006,10 +4996,12 @@
                 if (leaderboardPlayer.jumpCharge > maxCharge) {
                     leaderboardPlayer.jumpCharge = maxCharge;
                 }
+                // Hold player on ground while charging
+                leaderboardPlayer.velocityY = 0;
             }
 
-            // Release jump when button released or leaving ground
-            if (leaderboardIsJumping && (!leaderboardKeys['w'] && !leaderboardKeys['ArrowUp'] || !isGrounded)) {
+            // Release jump when button released
+            if (leaderboardIsJumping && (!leaderboardKeys['w'] && !leaderboardKeys['ArrowUp'])) {
                 if (leaderboardPlayer.jumpCharge > 0) {
                     // Apply accumulated jump charge
                     leaderboardPlayer.velocityY = -leaderboardPlayer.jumpCharge;
@@ -5017,13 +5009,11 @@
                     spawnParticles(leaderboardPlayer.x + leaderboardPlayer.width / 2, leaderboardPlayer.y + leaderboardPlayer.height, 12, 'rgb(255, 255, 255)', leaderboardPlayer.currentSize);
                 }
                 leaderboardPlayer.jumpCharge = 0;
-                if (!isGrounded) {
-                    leaderboardIsJumping = false;
-                }
+                leaderboardIsJumping = false;
             }
 
-            // Reset jump state when grounded
-            if (isGrounded && leaderboardPlayer.velocityY >= 0) {
+            // Reset jump state when grounded and not pressing jump
+            if (isGrounded && leaderboardPlayer.velocityY >= 0 && !leaderboardKeys['w'] && !leaderboardKeys['ArrowUp']) {
                 leaderboardIsJumping = false;
             }
         }
