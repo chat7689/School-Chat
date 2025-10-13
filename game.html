@@ -580,9 +580,9 @@
         const AIR_RESISTANCE = 0.88;
         const GROUND_FRICTION = 0.94;
         const GROUND_ACCELERATION = 0.15; // Gradual acceleration when grounded
-        const JUMP_POWER = 0.917; // Max jump: 1x player height + 1px (calculated from sqrt(2 * gravity * (height+1)))
+        const JUMP_POWER = 3.68; // Max jump: 4x player height + 1px (calculated from sqrt(2 * gravity * (4*height+1)))
         const FAST_FALL_MULTIPLIER = 2.0;
-        const JUMP_CHARGE_RATE = 0.12; // How fast jump power builds per frame
+        const JUMP_CHARGE_RATE = 0.25; // How fast jump power builds per frame (faster for responsive jumps)
 
         // Game feel constants
         const COYOTE_TIME = 6; // Frames you can still jump after leaving platform
