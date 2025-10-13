@@ -4188,6 +4188,7 @@
                     const equipped = equippedCosmetics[category === 'skins' ? 'skin' : category.slice(0, -1)] === item.id;
 
                     html += `<div class="cosmetic-item ${owned ? 'owned' : ''} ${equipped ? 'equipped' : ''}">
+                        <canvas id="preview_${category}_${item.id}" width="80" height="80" style="border: 2px solid #444; border-radius: 5px; margin-bottom: 10px; background: #87CEEB;"></canvas>
                         <div style="font-weight: bold;">${item.name}</div>
                         <div style="color: #FFC107;">${item.price} credits</div>`;
 
@@ -4209,6 +4210,148 @@
             }
 
             document.getElementById('shopContent').innerHTML = html;
+
+            // Draw previews for all cosmetics
+            setTimeout(() => drawCosmeticPreviews(), 0);
+        }
+
+        function drawCosmeticPreviews() {
+            for (const [category, items] of Object.entries(cosmeticsCatalog)) {
+                for (const item of items) {
+                    const canvas = document.getElementById(`preview_${category}_${item.id}`);
+                    if (!canvas) continue;
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, 80, 80);
+
+                    // Draw player square (centered)
+                    const playerSize = 30;
+                    const playerX = 25;
+                    const playerY = 45;
+
+                    // Apply cosmetic based on category
+                    if (category === 'skins') {
+                        // Draw player with skin color
+                        ctx.fillStyle = item.color || '#FF8C42';
+                        ctx.fillRect(playerX, playerY, playerSize, playerSize);
+                        ctx.strokeStyle = '#333';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(playerX + 1, playerY + 1, playerSize - 2, playerSize - 2);
+                    } else if (category === 'trails') {
+                        // Draw default player
+                        ctx.fillStyle = '#FF8C42';
+                        ctx.fillRect(playerX, playerY, playerSize, playerSize);
+
+                        // Draw trail behind player
+                        if (item.id === 'rainbow') {
+                            const colors = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#8B00FF'];
+                            for (let i = 0; i < 6; i++) {
+                                ctx.fillStyle = colors[i];
+                                ctx.globalAlpha = 0.6 - i * 0.1;
+                                ctx.fillRect(playerX - 8 - i * 3, playerY + 5, 8, 20);
+                            }
+                            ctx.globalAlpha = 1;
+                        } else if (item.id === 'fire') {
+                            ctx.fillStyle = '#FF4500';
+                            ctx.globalAlpha = 0.7;
+                            ctx.fillRect(playerX - 10, playerY + 5, 8, 20);
+                            ctx.fillStyle = '#FFA500';
+                            ctx.fillRect(playerX - 6, playerY + 10, 6, 15);
+                            ctx.globalAlpha = 1;
+                        } else if (item.id === 'ice') {
+                            ctx.fillStyle = '#00CED1';
+                            ctx.globalAlpha = 0.7;
+                            ctx.fillRect(playerX - 10, playerY + 5, 8, 20);
+                            ctx.fillStyle = '#B0E0E6';
+                            ctx.fillRect(playerX - 6, playerY + 10, 6, 15);
+                            ctx.globalAlpha = 1;
+                        } else if (item.id === 'star') {
+                            // Draw stars
+                            for (let i = 0; i < 3; i++) {
+                                ctx.fillStyle = '#FFD700';
+                                ctx.globalAlpha = 0.8 - i * 0.2;
+                                ctx.beginPath();
+                                const x = playerX - 5 - i * 8;
+                                const y = playerY + 15;
+                                ctx.moveTo(x, y - 3);
+                                ctx.lineTo(x + 2, y + 1);
+                                ctx.lineTo(x + 6, y + 1);
+                                ctx.lineTo(x + 3, y + 3);
+                                ctx.lineTo(x + 4, y + 7);
+                                ctx.lineTo(x, y + 4);
+                                ctx.lineTo(x - 4, y + 7);
+                                ctx.lineTo(x - 3, y + 3);
+                                ctx.lineTo(x - 6, y + 1);
+                                ctx.lineTo(x - 2, y + 1);
+                                ctx.closePath();
+                                ctx.fill();
+                            }
+                            ctx.globalAlpha = 1;
+                        }
+                    } else if (category === 'hats') {
+                        // Draw default player
+                        ctx.fillStyle = '#FF8C42';
+                        ctx.fillRect(playerX, playerY, playerSize, playerSize);
+
+                        // Draw hat on top
+                        if (item.id === 'crown') {
+                            ctx.fillStyle = '#FFD700';
+                            ctx.fillRect(playerX + 5, playerY - 8, 20, 6);
+                            ctx.fillRect(playerX + 7, playerY - 12, 4, 4);
+                            ctx.fillRect(playerX + 13, playerY - 14, 4, 6);
+                            ctx.fillRect(playerX + 19, playerY - 12, 4, 4);
+                        } else if (item.id === 'propeller') {
+                            ctx.fillStyle = '#666';
+                            ctx.fillRect(playerX + 13, playerY - 10, 4, 10);
+                            ctx.fillStyle = '#444';
+                            ctx.fillRect(playerX + 5, playerY - 14, 20, 4);
+                        } else if (item.id === 'halo') {
+                            ctx.strokeStyle = '#FFD700';
+                            ctx.lineWidth = 3;
+                            ctx.beginPath();
+                            ctx.arc(playerX + 15, playerY - 8, 12, 0, Math.PI * 2);
+                            ctx.stroke();
+                        }
+                    } else if (category === 'effects') {
+                        // Draw default player
+                        ctx.fillStyle = '#FF8C42';
+                        ctx.fillRect(playerX, playerY, playerSize, playerSize);
+
+                        // Draw effect
+                        if (item.id === 'sparkles') {
+                            ctx.fillStyle = '#FFD700';
+                            for (let i = 0; i < 8; i++) {
+                                const angle = (i / 8) * Math.PI * 2;
+                                const dist = 20;
+                                const x = playerX + 15 + Math.cos(angle) * dist;
+                                const y = playerY + 15 + Math.sin(angle) * dist;
+                                ctx.fillRect(x - 2, y - 2, 4, 4);
+                            }
+                        } else if (item.id === 'glow') {
+                            ctx.shadowColor = '#FFD700';
+                            ctx.shadowBlur = 15;
+                            ctx.fillStyle = '#FF8C42';
+                            ctx.fillRect(playerX, playerY, playerSize, playerSize);
+                            ctx.shadowBlur = 0;
+                        } else if (item.id === 'shadow_clone') {
+                            // Draw shadow clone behind
+                            ctx.globalAlpha = 0.4;
+                            ctx.fillStyle = '#000';
+                            ctx.fillRect(playerX - 10, playerY, playerSize, playerSize);
+                            ctx.globalAlpha = 1;
+                            ctx.fillStyle = '#FF8C42';
+                            ctx.fillRect(playerX, playerY, playerSize, playerSize);
+                        }
+                    }
+
+                    // Draw border on player
+                    if (category !== 'effects' || item.id !== 'glow') {
+                        ctx.strokeStyle = '#333';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(playerX + 1, playerY + 1, playerSize - 2, playerSize - 2);
+                    }
+                }
+            }
         }
 
         async function buyCosmetic(category, itemId, price) {
