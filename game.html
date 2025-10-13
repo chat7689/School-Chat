@@ -580,10 +580,9 @@
         const AIR_RESISTANCE = 0.88;
         const GROUND_FRICTION = 0.94;
         const GROUND_ACCELERATION = 0.15; // Gradual acceleration when grounded
-        const JUMP_POWER = 3.70; // Max jump: 4x player height + 1px
-        const MIN_JUMP_VELOCITY = 1.833; // Min jump: 1x player height (when tapped)
+        const JUMP_POWER = 0.917; // Max jump: 1x player height + 1px (calculated from sqrt(2 * gravity * (height+1)))
         const FAST_FALL_MULTIPLIER = 2.0;
-        const MIN_JUMP_HOLD_TIME = 8; // Frames to guarantee minimum jump height
+        const JUMP_CHARGE_RATE = 0.12; // How fast jump power builds per frame
 
         // Game feel constants
         const COYOTE_TIME = 6; // Frames you can still jump after leaving platform
@@ -1067,8 +1066,8 @@
                     const player = players[i];
                     const isCurrentUser = player.username === currentUsername;
                     html += `<div style="padding: 4px 0; ${isCurrentUser ? 'background: rgba(79, 172, 254, 0.3); border-radius: 5px; padding: 4px;' : ''}">
-                        <div style="font-size: 9px;">${i + 1}. ${player.username}</div>
-                        <div style="font-size: 8px; color: #FFD700;">${player.secureCredits}</div>
+                        <div style="font-size: 12px; font-weight: bold;">${i + 1}. ${player.username}</div>
+                        <div style="font-size: 10px; color: #FFD700;">${player.secureCredits}</div>
                     </div>`;
                 }
 
@@ -1369,37 +1368,38 @@
             // Store current velocity for next frame
             menuPlayer.prevVelocityX = menuPlayer.velocityX;
 
-            // Jump with variable height (W or Up Arrow only, NOT space)
-            if ((menuKeys['w'] || menuKeys['ArrowUp']) && isGrounded) {
-                // Scale jump power by size (menu player is always 40px, so sizeScale = 1)
+            // Jump with variable height based on hold time (W or Up Arrow only, NOT space)
+            if ((menuKeys['w'] || menuKeys['ArrowUp']) && isGrounded && !menuIsJumping) {
+                // Start charging jump
                 const sizeScale = menuPlayer.currentSize / 40;
-                menuPlayer.velocityY = -JUMP_POWER * sizeScale;
+                menuPlayer.velocityY = 0;
                 menuIsJumping = true;
-                menuPlayer.jumpHoldTime = 0; // Start tracking hold time
-
-                // White jump particles
-                spawnParticles(menuPlayer.x + menuPlayer.width / 2, menuPlayer.y + menuPlayer.height, 12, 'rgb(255, 255, 255)', menuPlayer.currentSize);
+                menuPlayer.jumpCharge = 0; // Start charging from 0
             }
 
-            // Track jump hold time
-            if (menuIsJumping && (menuKeys['w'] || menuKeys['ArrowUp'])) {
-                menuPlayer.jumpHoldTime = (menuPlayer.jumpHoldTime || 0) + deltaTime;
-            }
-
-            // Cut jump short if button released (variable jump height)
-            // Only cut short if held less than minimum time, otherwise allow full jump
-            if (menuIsJumping && !menuKeys['w'] && !menuKeys['ArrowUp']) {
-                if (menuPlayer.velocityY < 0 && (menuPlayer.jumpHoldTime || 0) < MIN_JUMP_HOLD_TIME) {
-                    // Calculate velocity to reach exactly 1x player height
-                    const sizeScale = menuPlayer.currentSize / 40;
-                    const targetVelocity = MIN_JUMP_VELOCITY * sizeScale;
-                    // Only reduce if current velocity would go higher
-                    if (Math.abs(menuPlayer.velocityY) > targetVelocity) {
-                        menuPlayer.velocityY = -targetVelocity;
-                    }
+            // Charge jump while holding button and grounded
+            if (menuIsJumping && isGrounded && (menuKeys['w'] || menuKeys['ArrowUp'])) {
+                const sizeScale = menuPlayer.currentSize / 40;
+                menuPlayer.jumpCharge = (menuPlayer.jumpCharge || 0) + (JUMP_CHARGE_RATE * deltaTime);
+                // Cap at max jump power
+                const maxCharge = JUMP_POWER * sizeScale;
+                if (menuPlayer.jumpCharge > maxCharge) {
+                    menuPlayer.jumpCharge = maxCharge;
                 }
-                menuIsJumping = false;
-                menuPlayer.jumpHoldTime = 0;
+            }
+
+            // Release jump when button released or leaving ground
+            if (menuIsJumping && (!menuKeys['w'] && !menuKeys['ArrowUp'] || !isGrounded)) {
+                if (menuPlayer.jumpCharge > 0) {
+                    // Apply accumulated jump charge
+                    menuPlayer.velocityY = -menuPlayer.jumpCharge;
+                    // White jump particles
+                    spawnParticles(menuPlayer.x + menuPlayer.width / 2, menuPlayer.y + menuPlayer.height, 12, 'rgb(255, 255, 255)', menuPlayer.currentSize);
+                }
+                menuPlayer.jumpCharge = 0;
+                if (!isGrounded) {
+                    menuIsJumping = false;
+                }
             }
 
             // Reset jump state when grounded
@@ -1810,34 +1810,38 @@
                 levelSelectKeys['Space'] = false;
             }
 
-            // Jump with W or Up (no space)
-            if ((levelSelectKeys['w'] || levelSelectKeys['ArrowUp']) && isGrounded) {
-                levelSelectPlayer.velocityY = -JUMP_POWER;
+            // Jump with variable height based on hold time (W or Up only, NOT space)
+            if ((levelSelectKeys['w'] || levelSelectKeys['ArrowUp']) && isGrounded && !levelSelectIsJumping) {
+                // Start charging jump
+                const sizeScale = levelSelectPlayer.currentSize / 40;
+                levelSelectPlayer.velocityY = 0;
                 levelSelectIsJumping = true;
-                levelSelectPlayer.jumpHoldTime = 0; // Start tracking hold time
-                // White jump particles
-                spawnParticles(levelSelectPlayer.x + levelSelectPlayer.width / 2, levelSelectPlayer.y + levelSelectPlayer.height, 12, 'rgb(255, 255, 255)', levelSelectPlayer.currentSize);
+                levelSelectPlayer.jumpCharge = 0; // Start charging from 0
             }
 
-            // Track jump hold time
-            if (levelSelectIsJumping && (levelSelectKeys['w'] || levelSelectKeys['ArrowUp'])) {
-                levelSelectPlayer.jumpHoldTime = (levelSelectPlayer.jumpHoldTime || 0) + deltaTime;
-            }
-
-            // Cut jump short if button released (variable jump height)
-            // Only cut short if held less than minimum time, otherwise allow full jump
-            if (levelSelectIsJumping && !levelSelectKeys['w'] && !levelSelectKeys['ArrowUp']) {
-                if (levelSelectPlayer.velocityY < 0 && (levelSelectPlayer.jumpHoldTime || 0) < MIN_JUMP_HOLD_TIME) {
-                    // Calculate velocity to reach exactly 1x player height
-                    const sizeScale = levelSelectPlayer.currentSize / 40;
-                    const targetVelocity = MIN_JUMP_VELOCITY * sizeScale;
-                    // Only reduce if current velocity would go higher
-                    if (Math.abs(levelSelectPlayer.velocityY) > targetVelocity) {
-                        levelSelectPlayer.velocityY = -targetVelocity;
-                    }
+            // Charge jump while holding button and grounded
+            if (levelSelectIsJumping && isGrounded && (levelSelectKeys['w'] || levelSelectKeys['ArrowUp'])) {
+                const sizeScale = levelSelectPlayer.currentSize / 40;
+                levelSelectPlayer.jumpCharge = (levelSelectPlayer.jumpCharge || 0) + (JUMP_CHARGE_RATE * deltaTime);
+                // Cap at max jump power
+                const maxCharge = JUMP_POWER * sizeScale;
+                if (levelSelectPlayer.jumpCharge > maxCharge) {
+                    levelSelectPlayer.jumpCharge = maxCharge;
                 }
-                levelSelectIsJumping = false;
-                levelSelectPlayer.jumpHoldTime = 0;
+            }
+
+            // Release jump when button released or leaving ground
+            if (levelSelectIsJumping && (!levelSelectKeys['w'] && !levelSelectKeys['ArrowUp'] || !isGrounded)) {
+                if (levelSelectPlayer.jumpCharge > 0) {
+                    // Apply accumulated jump charge
+                    levelSelectPlayer.velocityY = -levelSelectPlayer.jumpCharge;
+                    // White jump particles
+                    spawnParticles(levelSelectPlayer.x + levelSelectPlayer.width / 2, levelSelectPlayer.y + levelSelectPlayer.height, 12, 'rgb(255, 255, 255)', levelSelectPlayer.currentSize);
+                }
+                levelSelectPlayer.jumpCharge = 0;
+                if (!isGrounded) {
+                    levelSelectIsJumping = false;
+                }
             }
 
             // Reset jump state when grounded
@@ -2158,41 +2162,45 @@
                     // Draw hazards (exact colors from level creator)
                     ctx.fillStyle = '#FF3333';
                     ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 4;
                     for (const hazard of practiceMode.hazards) {
                         const screenX = hazard.x - practiceMode.cameraX;
                         const screenY = hazard.y - practiceMode.cameraY;
                         ctx.fillRect(screenX, screenY, hazard.width, hazard.height);
-                        ctx.strokeRect(screenX, screenY, hazard.width, hazard.height);
+                        ctx.strokeRect(screenX + 2, screenY + 2, hazard.width - 4, hazard.height - 4);
                     }
 
                     // Draw growers (exact colors from level creator)
                     ctx.fillStyle = '#00FF88';
                     ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 4;
                     for (const grower of practiceMode.growers) {
                         const screenX = grower.x - practiceMode.cameraX;
                         const screenY = grower.y - practiceMode.cameraY;
                         ctx.fillRect(screenX, screenY, grower.width, grower.height);
-                        ctx.strokeRect(screenX, screenY, grower.width, grower.height);
+                        ctx.strokeRect(screenX + 2, screenY + 2, grower.width - 4, grower.height - 4);
                     }
 
                     // Draw shrinkers (exact colors from level creator)
                     ctx.fillStyle = '#BB66FF';
                     ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 4;
                     for (const shrinker of practiceMode.shrinkers) {
                         const screenX = shrinker.x - practiceMode.cameraX;
                         const screenY = shrinker.y - practiceMode.cameraY;
                         ctx.fillRect(screenX, screenY, shrinker.width, shrinker.height);
-                        ctx.strokeRect(screenX, screenY, shrinker.width, shrinker.height);
+                        ctx.strokeRect(screenX + 2, screenY + 2, shrinker.width - 4, shrinker.height - 4);
                     }
 
                     // Draw default size blocks (exact colors from level creator)
                     ctx.fillStyle = '#FFB84D';
                     ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 4;
                     for (const block of practiceMode.defaultSizeBlocks) {
                         const screenX = block.x - practiceMode.cameraX;
                         const screenY = block.y - practiceMode.cameraY;
                         ctx.fillRect(screenX, screenY, block.width, block.height);
-                        ctx.strokeRect(screenX, screenY, block.width, block.height);
+                        ctx.strokeRect(screenX + 2, screenY + 2, block.width - 4, block.height - 4);
                     }
 
                     // Draw finish zone
@@ -2276,20 +2284,19 @@
             // Check which default levels exist
             const existingLevelNames = levels ? Object.values(levels).map(l => l.name) : [];
 
-            // Check if Vertical Challenge needs updating (fix for old impossible finish position)
+            // Delete Vertical Challenge if it exists (being replaced by The Curve)
             if (levels && existingLevelNames.includes('Vertical Challenge')) {
-                // Find the Vertical Challenge level
                 const vcEntry = Object.entries(levels).find(([id, level]) => level.name === 'Vertical Challenge');
                 if (vcEntry) {
-                    const [vcId, vcLevel] = vcEntry;
-                    const currentFinish = vcLevel.levelData?.finish;
+                    const [vcId] = vcEntry;
+                    await database.ref(`levels/${vcId}`).remove();
+                    console.log('Vertical Challenge deleted');
+                }
+            }
 
-                    // Check if finish position is wrong (old impossible position was y: -4040 or other wrong values)
-                    // Correct position should be y: -4000
-                    if (!currentFinish || currentFinish.y !== -4000) {
-                        console.log('Updating Vertical Challenge to fix finish position...');
-
-                        const verticalChallengeData = {
+            // Add The Curve if it doesn't exist
+            if (!existingLevelNames.includes('The Curve')) {
+                const theCurveData = {
                             "platforms": [
                                 {"x": 0, "y": 0, "width": 240, "height": 40},
                                 {"x": 280, "y": -40, "width": 200, "height": 40},
@@ -2344,11 +2351,11 @@
                                 {"x": 280, "y": -280, "width": 20, "height": 240}
                             ],
                             "defaultSizeBlocks": [
-                                {"x": 1160, "y": -930, "width": 40, "height": 10},
                                 {"x": -680, "y": -280, "width": 20, "height": 360},
                                 {"x": 1360, "y": -4080, "width": 40, "height": 120},
                                 {"x": 1400, "y": -4080, "width": 120, "height": 40},
-                                {"x": 1520, "y": -4080, "width": 40, "height": 120}
+                                {"x": 1520, "y": -4080, "width": 40, "height": 120},
+                                {"x": 1180, "y": -940, "width": 20, "height": 20}
                             ],
                             "backgroundBlocks": [],
                             "foregroundBlocks": [],
@@ -2367,95 +2374,8 @@
                             }
                         };
 
-                        // Update the level data
-                        await database.ref(`levels/${vcId}/levelData`).set(verticalChallengeData);
-                        console.log('Vertical Challenge updated with correct finish position');
-                    }
-                }
-            }
-
-            // Add Vertical Challenge if it doesn't exist
-            if (!existingLevelNames.includes('Vertical Challenge')) {
-                const verticalChallengeData = {
-                    "platforms": [
-                        {"x": 0, "y": 0, "width": 240, "height": 40},
-                        {"x": 280, "y": -40, "width": 200, "height": 40},
-                        {"x": 520, "y": -80, "width": 160, "height": 40},
-                        {"x": 720, "y": -120, "width": 120, "height": 40},
-                        {"x": 880, "y": -160, "width": 80, "height": 40},
-                        {"x": 1000, "y": -200, "width": 40, "height": 40},
-                        {"x": 1040, "y": -320, "width": 40, "height": 80},
-                        {"x": 1080, "y": -480, "width": 40, "height": 120},
-                        {"x": 1120, "y": -680, "width": 40, "height": 160},
-                        {"x": 1160, "y": -920, "width": 40, "height": 200},
-                        {"x": 1200, "y": -1200, "width": 40, "height": 240},
-                        {"x": -320, "y": 40, "width": 280, "height": 40},
-                        {"x": -680, "y": 80, "width": 320, "height": 40},
-                        {"x": -1120, "y": 120, "width": 400, "height": 40},
-                        {"x": 1240, "y": -1520, "width": 40, "height": 280},
-                        {"x": 1280, "y": -1880, "width": 40, "height": 320},
-                        {"x": 1320, "y": -2280, "width": 40, "height": 360},
-                        {"x": 1360, "y": -2720, "width": 40, "height": 400},
-                        {"x": 1030, "y": -250, "width": 10, "height": 10},
-                        {"x": 1070, "y": -400, "width": 10, "height": 10},
-                        {"x": 1110, "y": -560, "width": 10, "height": 10},
-                        {"x": 1110, "y": -640, "width": 10, "height": 10},
-                        {"x": 1150, "y": -760, "width": 10, "height": 10},
-                        {"x": 1150, "y": -840, "width": 10, "height": 10},
-                        {"x": 1180, "y": -1080, "width": 20, "height": 20},
-                        {"x": 1220, "y": -1360, "width": 20, "height": 20},
-                        {"x": 1260, "y": -1640, "width": 20, "height": 20},
-                        {"x": 1260, "y": -1760, "width": 20, "height": 20},
-                        {"x": 1300, "y": -2040, "width": 20, "height": 20},
-                        {"x": 1300, "y": -2180, "width": 20, "height": 20},
-                        {"x": 1340, "y": -2400, "width": 20, "height": 20},
-                        {"x": 1340, "y": -2520, "width": 20, "height": 20},
-                        {"x": 1340, "y": -2640, "width": 20, "height": 20},
-                        {"x": 1400, "y": -3200, "width": 40, "height": 440},
-                        {"x": 1440, "y": -3680, "width": 40, "height": 440},
-                        {"x": 1360, "y": -3040, "width": 40, "height": 40},
-                        {"x": -1600, "y": 160, "width": 440, "height": 40},
-                        {"x": -2120, "y": 200, "width": 480, "height": 40},
-                        {"x": 1400, "y": -3480, "width": 40, "height": 40},
-                        {"x": 1400, "y": -3720, "width": 120, "height": 40},
-                        {"x": 1360, "y": -3960, "width": 200, "height": 40}
-                    ],
-                    "hazards": [],
-                    "growers": [
-                        {"x": 1360, "y": -2760, "width": 40, "height": 40},
-                        {"x": -2120, "y": 120, "width": 40, "height": 80},
-                        {"x": -2080, "y": 120, "width": 40, "height": 40},
-                        {"x": -2040, "y": 120, "width": 40, "height": 80}
-                    ],
-                    "shrinkers": [
-                        {"x": 280, "y": -280, "width": 20, "height": 240}
-                    ],
-                    "defaultSizeBlocks": [
-                        {"x": 1160, "y": -930, "width": 40, "height": 10},
-                        {"x": -680, "y": -280, "width": 20, "height": 360},
-                        {"x": 1360, "y": -4080, "width": 40, "height": 120},
-                        {"x": 1400, "y": -4080, "width": 120, "height": 40},
-                        {"x": 1520, "y": -4080, "width": 40, "height": 120}
-                    ],
-                    "backgroundBlocks": [],
-                    "foregroundBlocks": [],
-                    "triggers": [],
-                    "comments": [],
-                    "start": {"x": -2080, "y": 160, "width": 40, "height": 40},
-                    "finish": {"x": 1440, "y": -4000, "width": 40, "height": 40},
-                    "physics": {
-                        "gravity": 0.042,
-                        "moveSpeed": 0.28,
-                        "jumpPower": 3.7,
-                        "maxSpeed": 3.5,
-                        "friction": 0.94,
-                        "airRes": 0.88,
-                        "fastFallMultiplier": 2
-                    }
-                };
-
-                await addLevelToDatabase('Vertical Challenge', 'System', verticalChallengeData);
-                console.log('Default level "Vertical Challenge" added to database');
+                await addLevelToDatabase('The Curve', 'System', theCurveData);
+                console.log('Default level "The Curve" added to database');
             }
 
             // Speed Runner - Fast horizontal course with minimal obstacles
@@ -2762,7 +2682,9 @@
             lastPlatformX: 0,
             cameraX: 0,
             cameraY: 0,
-            keys: {}
+            keys: {},
+            respawnCountdown: 0, // Countdown timer before respawn
+            isDead: false // Whether player is in death state
         };
 
         function startPracticeMode() {
@@ -2973,6 +2895,37 @@
             const player = practiceMode.player;
             const sizeScale = player.currentSize / 40;
 
+            // Handle respawn countdown
+            if (practiceMode.isDead) {
+                practiceMode.respawnCountdown -= deltaTime;
+                if (practiceMode.respawnCountdown <= 0) {
+                    // Respawn player at start of level
+                    player.x = 40;
+                    player.y = -40;
+                    player.velocityX = 0;
+                    player.velocityY = 0;
+                    practiceIsJumping = false;
+                    practiceMode.isDead = false;
+                }
+                // Skip physics while dead
+                return;
+            }
+
+            // Check hazard collision (before position update)
+            if (practiceMode.hazards) {
+                for (const hazard of practiceMode.hazards) {
+                    if (checkCollision(player, hazard)) {
+                        // Kill player and start countdown
+                        practiceMode.isDead = true;
+                        practiceMode.respawnCountdown = 180; // 3 seconds at 60fps
+                        // Spawn death particles
+                        spawnParticles(player.x + player.width / 2, player.y + player.height / 2, 30, 'rgb(255, 255, 255)');
+                        // Skip physics this frame
+                        return;
+                    }
+                }
+            }
+
             // Scale factors based on player size (from level creator) - freeze movement during transition
             if (!player.sizeTransitioning) {
 
@@ -3015,43 +2968,39 @@
             // Store current velocity for next frame
             player.prevVelocityX = player.velocityX;
 
-            // JUMP BUFFER: Remember jump input (W or Up only, NOT space)
-            if (practiceMode.keys['w'] || practiceMode.keys['ArrowUp']) {
-                player.jumpBufferTimer = JUMP_BUFFER_TIME;
-            } else {
-                player.jumpBufferTimer = Math.max(0, player.jumpBufferTimer - deltaTime);
-            }
+            // Check if player is grounded (use previous frame state)
+            const isGrounded = player.wasGrounded || false;
 
-            // Jump with coyote time and jump buffering
-            if (player.jumpBufferTimer > 0 && player.coyoteTimer > 0 && !practiceIsJumping) {
-                // Scale jump power by size so all sizes can jump 4x their height + 1px
-                player.velocityY = -JUMP_POWER * sizeScale;
+            // Jump with variable height based on hold time (W or Up only, NOT space)
+            if ((practiceMode.keys['w'] || practiceMode.keys['ArrowUp']) && isGrounded && !practiceIsJumping) {
+                // Start charging jump
+                player.velocityY = 0;
                 practiceIsJumping = true;
-                player.coyoteTimer = 0;
-                player.jumpBufferTimer = 0;
-                player.jumpHoldTime = 0; // Start tracking hold time
-                // White jump particles
-                spawnParticles(player.x + player.width / 2, player.y + player.height, 12, 'rgb(255, 255, 255)', player.currentSize);
+                player.jumpCharge = 0; // Start charging from 0
             }
 
-            // Track jump hold time
-            if (practiceIsJumping && (practiceMode.keys['w'] || practiceMode.keys['ArrowUp'])) {
-                player.jumpHoldTime = (player.jumpHoldTime || 0) + deltaTime;
-            }
-
-            // Cut jump short if button released (variable jump height)
-            // Only cut short if held less than minimum time, otherwise allow full jump
-            if (practiceIsJumping && !practiceMode.keys['w'] && !practiceMode.keys['ArrowUp']) {
-                if (player.velocityY < 0 && (player.jumpHoldTime || 0) < MIN_JUMP_HOLD_TIME) {
-                    // Calculate velocity to reach exactly 1x player height
-                    const targetVelocity = MIN_JUMP_VELOCITY * sizeScale;
-                    // Only reduce if current velocity would go higher
-                    if (Math.abs(player.velocityY) > targetVelocity) {
-                        player.velocityY = -targetVelocity;
-                    }
+            // Charge jump while holding button and grounded
+            if (practiceIsJumping && isGrounded && (practiceMode.keys['w'] || practiceMode.keys['ArrowUp'])) {
+                player.jumpCharge = (player.jumpCharge || 0) + (JUMP_CHARGE_RATE * deltaTime);
+                // Cap at max jump power
+                const maxCharge = JUMP_POWER * sizeScale;
+                if (player.jumpCharge > maxCharge) {
+                    player.jumpCharge = maxCharge;
                 }
-                practiceIsJumping = false;
-                player.jumpHoldTime = 0;
+            }
+
+            // Release jump when button released or leaving ground
+            if (practiceIsJumping && (!practiceMode.keys['w'] && !practiceMode.keys['ArrowUp'] || !isGrounded)) {
+                if (player.jumpCharge > 0) {
+                    // Apply accumulated jump charge
+                    player.velocityY = -player.jumpCharge;
+                    // White jump particles
+                    spawnParticles(player.x + player.width / 2, player.y + player.height, 12, 'rgb(255, 255, 255)', player.currentSize);
+                }
+                player.jumpCharge = 0;
+                if (!isGrounded) {
+                    practiceIsJumping = false;
+                }
             }
 
             // Apply gravity scaled by size (from level creator)
@@ -3081,7 +3030,7 @@
             player.y += player.velocityY * deltaTime;
 
             // Collision detection - matches level creator
-            let isGrounded = false;
+            let newIsGrounded = false;
             for (const platform of practiceMode.platforms) {
                 if (player.x + player.width > platform.x &&
                     player.x < platform.x + platform.width &&
@@ -3105,7 +3054,7 @@
                         }
                         player.y = platform.y - player.height;
                         player.velocityY = 0;
-                        isGrounded = true;
+                        newIsGrounded = true;
                     }
                     // Ceiling collision (hitting from below)
                     else if (minOverlap === overlapBottom && player.velocityY < 0) {
@@ -3125,16 +3074,11 @@
                 }
             }
 
-            // COYOTE TIME: Allow jumping shortly after leaving platform
-            if (isGrounded) {
-                player.coyoteTimer = COYOTE_TIME;
-            } else {
-                player.coyoteTimer = Math.max(0, player.coyoteTimer - deltaTime);
-            }
-            player.wasGrounded = isGrounded;
+            // Update grounded state
+            player.wasGrounded = newIsGrounded;
 
             // Reset jump state when grounded
-            if (isGrounded && player.velocityY >= 0) {
+            if (newIsGrounded && player.velocityY >= 0) {
                 practiceIsJumping = false;
             }
 
@@ -3701,7 +3645,9 @@
             cameraY: 0,
             keys: {},
             platforms: [],
-            hazards: []
+            hazards: [],
+            respawnCountdown: 0, // Countdown timer before respawn
+            isDead: false // Whether player is in death state
         };
 
         async function startMultiplayerRace() {
@@ -3842,12 +3788,15 @@
                     }
                 }
 
-                // Draw hazards (red)
+                // Draw hazards (red with inner borders)
+                ctx.fillStyle = '#FF3333';
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 4;
                 for (const hazard of raceState.hazards) {
                     const screenX = hazard.x - raceState.cameraX;
                     const screenY = hazard.y - raceState.cameraY;
-                    ctx.fillStyle = '#FF0000';
                     ctx.fillRect(screenX, screenY, hazard.width, hazard.height);
+                    ctx.strokeRect(screenX + 2, screenY + 2, hazard.width - 4, hazard.height - 4);
                 }
 
                 // Draw finish line
@@ -3883,16 +3832,31 @@
             const player = raceState.player;
             const sizeScale = player.currentSize / 40;
 
-            // Check hazards first (before position update)
-            for (const hazard of raceState.hazards) {
-                if (checkCollision(player, hazard)) {
-                    // Reset to start
+            // Handle respawn countdown
+            if (raceState.isDead) {
+                raceState.respawnCountdown -= deltaTime;
+                if (raceState.respawnCountdown <= 0) {
+                    // Respawn player
                     player.x = raceState.map.start.x;
                     player.y = raceState.map.start.y;
                     player.velocityX = 0;
                     player.velocityY = 0;
                     raceIsJumping = false;
-                    // Skip physics this frame to prevent wall phasing
+                    raceState.isDead = false;
+                }
+                // Skip physics while dead
+                return;
+            }
+
+            // Check hazards first (before position update)
+            for (const hazard of raceState.hazards) {
+                if (checkCollision(player, hazard)) {
+                    // Kill player and start countdown
+                    raceState.isDead = true;
+                    raceState.respawnCountdown = 180; // 3 seconds at 60fps
+                    // Spawn death particles
+                    spawnParticles(player.x + player.width / 2, player.y + player.height / 2, 30, 'rgb(255, 255, 255)');
+                    // Skip physics this frame
                     return;
                 }
             }
@@ -3988,7 +3952,7 @@
                         }
                         player.y = platform.y - player.height;
                         player.velocityY = 0;
-                        isGrounded = true;
+                        newIsGrounded = true;
                     }
                     // Ceiling collision (hitting from below)
                     else if (minOverlap === overlapBottom && player.velocityY < 0) {
@@ -4010,34 +3974,36 @@
 
             player.wasGrounded = isGrounded;
 
-            // Jump with variable height (W or Up only, NOT space)
-            if ((raceState.keys['w'] || raceState.keys['ArrowUp']) && isGrounded) {
-                // Scale jump power by size
-                player.velocityY = -JUMP_POWER * sizeScale;
+            // Jump with variable height based on hold time (W or Up only, NOT space)
+            if ((raceState.keys['w'] || raceState.keys['ArrowUp']) && isGrounded && !raceIsJumping) {
+                // Start charging jump
+                player.velocityY = 0;
                 raceIsJumping = true;
-                player.jumpHoldTime = 0; // Start tracking hold time
-                // Jump particles (white)
-                spawnParticles(player.x + player.width / 2, player.y + player.height, 12, 'rgb(255, 255, 255)', player.currentSize);
+                player.jumpCharge = 0; // Start charging from 0
             }
 
-            // Track jump hold time
-            if (raceIsJumping && (raceState.keys['w'] || raceState.keys['ArrowUp'])) {
-                player.jumpHoldTime = (player.jumpHoldTime || 0) + deltaTime;
-            }
-
-            // Cut jump short if button released (variable jump height)
-            // Only cut short if held less than minimum time, otherwise allow full jump
-            if (raceIsJumping && !raceState.keys['w'] && !raceState.keys['ArrowUp']) {
-                if (player.velocityY < 0 && (player.jumpHoldTime || 0) < MIN_JUMP_HOLD_TIME) {
-                    // Calculate velocity to reach exactly 1x player height
-                    const targetVelocity = MIN_JUMP_VELOCITY * sizeScale;
-                    // Only reduce if current velocity would go higher
-                    if (Math.abs(player.velocityY) > targetVelocity) {
-                        player.velocityY = -targetVelocity;
-                    }
+            // Charge jump while holding button and grounded
+            if (raceIsJumping && isGrounded && (raceState.keys['w'] || raceState.keys['ArrowUp'])) {
+                player.jumpCharge = (player.jumpCharge || 0) + (JUMP_CHARGE_RATE * deltaTime);
+                // Cap at max jump power
+                const maxCharge = JUMP_POWER * sizeScale;
+                if (player.jumpCharge > maxCharge) {
+                    player.jumpCharge = maxCharge;
                 }
-                raceIsJumping = false;
-                player.jumpHoldTime = 0;
+            }
+
+            // Release jump when button released or leaving ground
+            if (raceIsJumping && (!raceState.keys['w'] && !raceState.keys['ArrowUp'] || !isGrounded)) {
+                if (player.jumpCharge > 0) {
+                    // Apply accumulated jump charge
+                    player.velocityY = -player.jumpCharge;
+                    // White jump particles
+                    spawnParticles(player.x + player.width / 2, player.y + player.height, 12, 'rgb(255, 255, 255)', player.currentSize);
+                }
+                player.jumpCharge = 0;
+                if (!isGrounded) {
+                    raceIsJumping = false;
+                }
             }
 
             // Reset jump state when grounded
@@ -4500,36 +4466,38 @@
             // Store current velocity for next frame
             basePlayer.prevVelocityX = basePlayer.velocityX;
 
-            // Jump
-            if ((baseKeys['w'] || baseKeys['ArrowUp']) && isGrounded) {
-                // Scale jump power by size (BASE player is always 40px)
+            // Jump with variable height based on hold time (W or Up only, NOT space)
+            if ((baseKeys['w'] || baseKeys['ArrowUp']) && isGrounded && !baseIsJumping) {
+                // Start charging jump
                 const sizeScale = basePlayer.currentSize / 40;
-                basePlayer.velocityY = -JUMP_POWER * sizeScale;
+                basePlayer.velocityY = 0;
                 baseIsJumping = true;
-                basePlayer.jumpHoldTime = 0; // Start tracking hold time
-                // White jump particles
-                spawnParticles(basePlayer.x + basePlayer.width / 2, basePlayer.y + basePlayer.height, 12, 'rgb(255, 255, 255)', basePlayer.currentSize);
+                basePlayer.jumpCharge = 0; // Start charging from 0
             }
 
-            // Track jump hold time
-            if (baseIsJumping && (baseKeys['w'] || baseKeys['ArrowUp'])) {
-                basePlayer.jumpHoldTime = (basePlayer.jumpHoldTime || 0) + deltaTime;
-            }
-
-            // Variable jump height
-            // Only cut short if held less than minimum time, otherwise allow full jump
-            if (baseIsJumping && !baseKeys['w'] && !baseKeys['ArrowUp']) {
-                if (basePlayer.velocityY < 0 && (basePlayer.jumpHoldTime || 0) < MIN_JUMP_HOLD_TIME) {
-                    // Calculate velocity to reach exactly 1x player height
-                    const sizeScale = basePlayer.currentSize / 40;
-                    const targetVelocity = MIN_JUMP_VELOCITY * sizeScale;
-                    // Only reduce if current velocity would go higher
-                    if (Math.abs(basePlayer.velocityY) > targetVelocity) {
-                        basePlayer.velocityY = -targetVelocity;
-                    }
+            // Charge jump while holding button and grounded
+            if (baseIsJumping && isGrounded && (baseKeys['w'] || baseKeys['ArrowUp'])) {
+                const sizeScale = basePlayer.currentSize / 40;
+                basePlayer.jumpCharge = (basePlayer.jumpCharge || 0) + (JUMP_CHARGE_RATE * deltaTime);
+                // Cap at max jump power
+                const maxCharge = JUMP_POWER * sizeScale;
+                if (basePlayer.jumpCharge > maxCharge) {
+                    basePlayer.jumpCharge = maxCharge;
                 }
-                baseIsJumping = false;
-                basePlayer.jumpHoldTime = 0;
+            }
+
+            // Release jump when button released or leaving ground
+            if (baseIsJumping && (!baseKeys['w'] && !baseKeys['ArrowUp'] || !isGrounded)) {
+                if (basePlayer.jumpCharge > 0) {
+                    // Apply accumulated jump charge
+                    basePlayer.velocityY = -basePlayer.jumpCharge;
+                    // White jump particles
+                    spawnParticles(basePlayer.x + basePlayer.width / 2, basePlayer.y + basePlayer.height, 12, 'rgb(255, 255, 255)', basePlayer.currentSize);
+                }
+                basePlayer.jumpCharge = 0;
+                if (!isGrounded) {
+                    baseIsJumping = false;
+                }
             }
 
             // Friction
@@ -5020,34 +4988,38 @@
                 leaderboardKeys['Space'] = false;
             }
 
-            // Jump
-            if ((leaderboardKeys['w'] || leaderboardKeys['ArrowUp']) && isGrounded) {
-                leaderboardPlayer.velocityY = -JUMP_POWER;
+            // Jump with variable height based on hold time (W or Up only, NOT space)
+            if ((leaderboardKeys['w'] || leaderboardKeys['ArrowUp']) && isGrounded && !leaderboardIsJumping) {
+                // Start charging jump
+                const sizeScale = leaderboardPlayer.currentSize / 40;
+                leaderboardPlayer.velocityY = 0;
                 leaderboardIsJumping = true;
-                leaderboardPlayer.jumpHoldTime = 0; // Start tracking hold time
-                // White jump particles
-                spawnParticles(leaderboardPlayer.x + leaderboardPlayer.width / 2, leaderboardPlayer.y + leaderboardPlayer.height, 12, 'rgb(255, 255, 255)', leaderboardPlayer.currentSize);
+                leaderboardPlayer.jumpCharge = 0; // Start charging from 0
             }
 
-            // Track jump hold time
-            if (leaderboardIsJumping && (leaderboardKeys['w'] || leaderboardKeys['ArrowUp'])) {
-                leaderboardPlayer.jumpHoldTime = (leaderboardPlayer.jumpHoldTime || 0) + deltaTime;
-            }
-
-            // Variable jump height
-            // Only cut short if held less than minimum time, otherwise allow full jump
-            if (leaderboardIsJumping && !leaderboardKeys['w'] && !leaderboardKeys['ArrowUp']) {
-                if (leaderboardPlayer.velocityY < 0 && (leaderboardPlayer.jumpHoldTime || 0) < MIN_JUMP_HOLD_TIME) {
-                    // Calculate velocity to reach exactly 1x player height
-                    const sizeScale = leaderboardPlayer.currentSize / 40;
-                    const targetVelocity = MIN_JUMP_VELOCITY * sizeScale;
-                    // Only reduce if current velocity would go higher
-                    if (Math.abs(leaderboardPlayer.velocityY) > targetVelocity) {
-                        leaderboardPlayer.velocityY = -targetVelocity;
-                    }
+            // Charge jump while holding button and grounded
+            if (leaderboardIsJumping && isGrounded && (leaderboardKeys['w'] || leaderboardKeys['ArrowUp'])) {
+                const sizeScale = leaderboardPlayer.currentSize / 40;
+                leaderboardPlayer.jumpCharge = (leaderboardPlayer.jumpCharge || 0) + (JUMP_CHARGE_RATE * deltaTime);
+                // Cap at max jump power
+                const maxCharge = JUMP_POWER * sizeScale;
+                if (leaderboardPlayer.jumpCharge > maxCharge) {
+                    leaderboardPlayer.jumpCharge = maxCharge;
                 }
-                leaderboardIsJumping = false;
-                leaderboardPlayer.jumpHoldTime = 0;
+            }
+
+            // Release jump when button released or leaving ground
+            if (leaderboardIsJumping && (!leaderboardKeys['w'] && !leaderboardKeys['ArrowUp'] || !isGrounded)) {
+                if (leaderboardPlayer.jumpCharge > 0) {
+                    // Apply accumulated jump charge
+                    leaderboardPlayer.velocityY = -leaderboardPlayer.jumpCharge;
+                    // White jump particles
+                    spawnParticles(leaderboardPlayer.x + leaderboardPlayer.width / 2, leaderboardPlayer.y + leaderboardPlayer.height, 12, 'rgb(255, 255, 255)', leaderboardPlayer.currentSize);
+                }
+                leaderboardPlayer.jumpCharge = 0;
+                if (!isGrounded) {
+                    leaderboardIsJumping = false;
+                }
             }
 
             // Reset jump state when grounded
