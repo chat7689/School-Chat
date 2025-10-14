@@ -580,27 +580,15 @@
         const AIR_RESISTANCE = 0.88;
         const GROUND_FRICTION = 0.94;
         const GROUND_ACCELERATION = 0.15; // Gradual acceleration when grounded
+        const JUMP_POWER = 3.23; // Max jump: 4x player height + 1px = 161px for 40px player (adjusted for variable jump system)
         const FAST_FALL_MULTIPLIER = 3.5; // 1.75x stronger than before (was 2.0)
-
-        // Jump mechanics - variable height based on hold duration
-        // Max jump heights: 20px player = 81px, 40px player = 161px, 80px player = 321px (playerSize * 4 + 1)
-        const MIN_JUMP_VELOCITY = 2.0; // Minimum jump (tap) - increased for better feel
-        const MAX_JUMP_HOLD_TIME = 200; // Max milliseconds you can hold jump for full height
+        const JUMP_CHARGE_RATE = 0.25; // How fast jump power builds per frame (faster for responsive jumps)
 
         // Game feel constants
         const COYOTE_TIME = 6; // Frames you can still jump after leaving platform
         const JUMP_BUFFER_TIME = 8; // Frames to remember jump input before landing
         const ACCELERATION = 0.5; // Smoother acceleration
         const DECELERATION = 0.8; // Smoother deceleration
-
-        // Helper function to calculate max jump velocity for a player size
-        // Jump height formula: height = (velocity^2) / (2 * gravity)
-        // So: velocity = sqrt(2 * gravity * height)
-        function getMaxJumpVelocity(playerSize) {
-            const maxJumpHeight = playerSize * 4 + 1; // Player can jump 4x their height + 1px (161px for 40px player)
-            // Adjusted by 0.878 multiplier to account for variable jump system behavior
-            return Math.sqrt(2 * GRAVITY * maxJumpHeight) * 0.878;
-        }
 
         // Particle system
         class Particle {
@@ -1337,19 +1325,21 @@
                 }
             }
 
-            // Apply gravity with fast fall
+            // Apply gravity with fast fall (scaled by size)
+            const sizeScale = menuPlayer.currentSize / 40;
             if ((menuKeys['s'] || menuKeys['ArrowDown']) && !isGrounded) {
-                menuPlayer.velocityY += GRAVITY * FAST_FALL_MULTIPLIER * deltaTime;
+                menuPlayer.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
             } else {
-                menuPlayer.velocityY += GRAVITY * deltaTime;
+                menuPlayer.velocityY += GRAVITY * sizeScale * deltaTime;
             }
 
-            // Handle input
+            // Handle input (movement scaled by size)
+            const scaledMoveSpeed = MOVE_SPEED * sizeScale;
             if (menuKeys['a'] || menuKeys['ArrowLeft']) {
-                menuPlayer.velocityX -= MOVE_SPEED * deltaTime;
+                menuPlayer.velocityX -= scaledMoveSpeed * deltaTime;
             }
             if (menuKeys['d'] || menuKeys['ArrowRight']) {
-                menuPlayer.velocityX += MOVE_SPEED * deltaTime;
+                menuPlayer.velocityX += scaledMoveSpeed * deltaTime;
             }
 
             // Old action-based particle system
@@ -1382,36 +1372,29 @@
 
             // Jump with variable height based on hold time (W or Up Arrow only, NOT space)
             if ((menuKeys['w'] || menuKeys['ArrowUp']) && isGrounded && !menuIsJumping) {
-                // Start jump IMMEDIATELY with minimum velocity
-                menuPlayer.velocityY = -MIN_JUMP_VELOCITY;
+                // Start jump immediately with strong initial velocity
+                const sizeScale = menuPlayer.currentSize / 40;
+                menuPlayer.velocityY = -1.5 * sizeScale; // Strong initial jump
                 menuIsJumping = true;
                 menuPlayer.jumpHoldTime = 0;
-
                 // White jump particles
                 spawnParticles(menuPlayer.x + menuPlayer.width / 2, menuPlayer.y + menuPlayer.height, 12, 'rgb(255, 255, 255)', menuPlayer.currentSize);
             }
 
-            // Continue adding upward velocity while holding button (makes jump higher)
+            // Continue adding upward velocity while holding button (extends jump height)
             if (menuIsJumping && (menuKeys['w'] || menuKeys['ArrowUp']) && menuPlayer.velocityY < 0) {
+                const sizeScale = menuPlayer.currentSize / 40;
                 menuPlayer.jumpHoldTime += deltaTime;
-                const maxJumpVelocity = getMaxJumpVelocity(menuPlayer.currentSize);
 
-                // Only add velocity if under max time AND under max velocity
-                if (menuPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME && Math.abs(menuPlayer.velocityY) < maxJumpVelocity) {
-                    // Add velocity to reach max height (slower charge rate to prevent overshoot)
-                    const addVelocity = 0.12 * deltaTime;
-                    menuPlayer.velocityY -= addVelocity;
-
-                    // Cap at max velocity (use strict cap)
-                    if (Math.abs(menuPlayer.velocityY) >= maxJumpVelocity) {
-                        menuPlayer.velocityY = -maxJumpVelocity;
-                        menuIsJumping = false; // Stop charging once max reached
-                    }
+                // Add upward acceleration while holding (max height = 4x playerSize + 1px)
+                const maxJumpVelocity = JUMP_POWER * sizeScale;
+                if (Math.abs(menuPlayer.velocityY) < maxJumpVelocity) {
+                    menuPlayer.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
                 }
             }
 
             // Stop adding velocity when button released
-            if (menuIsJumping && !menuKeys['w'] && !menuKeys['ArrowUp']) {
+            if (menuIsJumping && (!menuKeys['w'] && !menuKeys['ArrowUp'])) {
                 menuIsJumping = false;
             }
 
@@ -1435,8 +1418,9 @@
                 menuPlayer.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
             }
 
-            // Limit speed
-            menuPlayer.velocityX = Math.max(-GROUND_MAX_SPEED, Math.min(GROUND_MAX_SPEED, menuPlayer.velocityX));
+            // Limit speed (scaled by size)
+            const scaledMaxSpeed = GROUND_MAX_SPEED * sizeScale;
+            menuPlayer.velocityX = Math.max(-scaledMaxSpeed, Math.min(scaledMaxSpeed, menuPlayer.velocityX));
 
             // Update position HORIZONTALLY first, then check X collisions
             menuPlayer.x += menuPlayer.velocityX * deltaTime;
@@ -1692,11 +1676,12 @@
                 }
             }
 
-            // Apply gravity with fast fall
+            // Apply gravity with fast fall (scaled by size)
+            const sizeScale = levelSelectPlayer.currentSize / 40;
             if ((levelSelectKeys['s'] || levelSelectKeys['ArrowDown']) && !isGrounded) {
-                levelSelectPlayer.velocityY += GRAVITY * FAST_FALL_MULTIPLIER * deltaTime;
+                levelSelectPlayer.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
             } else {
-                levelSelectPlayer.velocityY += GRAVITY * deltaTime;
+                levelSelectPlayer.velocityY += GRAVITY * sizeScale * deltaTime;
             }
 
             // Apply friction (use previous frame's grounded state)
@@ -1706,20 +1691,21 @@
                 levelSelectPlayer.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
             }
 
-            // Cap vertical velocity to prevent tunneling
-            const maxFallSpeed = 8;
+            // Cap vertical velocity to prevent tunneling (scaled by size)
+            const maxFallSpeed = 8 * sizeScale;
             levelSelectPlayer.velocityY = Math.min(levelSelectPlayer.velocityY, maxFallSpeed);
 
-            // Limit horizontal speed
-            const maxSpeed = GROUND_MAX_SPEED;
-            levelSelectPlayer.velocityX = Math.max(-maxSpeed, Math.min(maxSpeed, levelSelectPlayer.velocityX));
+            // Limit horizontal speed (scaled by size)
+            const scaledMaxSpeed = GROUND_MAX_SPEED * sizeScale;
+            levelSelectPlayer.velocityX = Math.max(-scaledMaxSpeed, Math.min(scaledMaxSpeed, levelSelectPlayer.velocityX));
 
-            // Handle movement
+            // Handle movement (scaled by size)
+            const scaledMoveSpeed = MOVE_SPEED * sizeScale;
             if (levelSelectKeys['a'] || levelSelectKeys['ArrowLeft']) {
-                levelSelectPlayer.velocityX -= MOVE_SPEED * deltaTime;
+                levelSelectPlayer.velocityX -= scaledMoveSpeed * deltaTime;
             }
             if (levelSelectKeys['d'] || levelSelectKeys['ArrowRight']) {
-                levelSelectPlayer.velocityX += MOVE_SPEED * deltaTime;
+                levelSelectPlayer.velocityX += scaledMoveSpeed * deltaTime;
             }
 
             // Old action-based particle system
@@ -1825,36 +1811,29 @@
 
             // Jump with variable height based on hold time (W or Up only, NOT space)
             if ((levelSelectKeys['w'] || levelSelectKeys['ArrowUp']) && isGrounded && !levelSelectIsJumping) {
-                // Start jump IMMEDIATELY with minimum velocity
-                levelSelectPlayer.velocityY = -MIN_JUMP_VELOCITY;
+                // Start jump immediately with strong initial velocity
+                const sizeScale = levelSelectPlayer.currentSize / 40;
+                levelSelectPlayer.velocityY = -1.5 * sizeScale; // Strong initial jump
                 levelSelectIsJumping = true;
                 levelSelectPlayer.jumpHoldTime = 0;
-
                 // White jump particles
                 spawnParticles(levelSelectPlayer.x + levelSelectPlayer.width / 2, levelSelectPlayer.y + levelSelectPlayer.height, 12, 'rgb(255, 255, 255)', levelSelectPlayer.currentSize);
             }
 
-            // Continue adding upward velocity while holding button (makes jump higher)
+            // Continue adding upward velocity while holding button (extends jump height)
             if (levelSelectIsJumping && (levelSelectKeys['w'] || levelSelectKeys['ArrowUp']) && levelSelectPlayer.velocityY < 0) {
+                const sizeScale = levelSelectPlayer.currentSize / 40;
                 levelSelectPlayer.jumpHoldTime += deltaTime;
-                const maxJumpVelocity = getMaxJumpVelocity(levelSelectPlayer.currentSize);
 
-                // Only add velocity if under max time AND under max velocity
-                if (levelSelectPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME && Math.abs(levelSelectPlayer.velocityY) < maxJumpVelocity) {
-                    // Add velocity to reach max height (slower charge rate to prevent overshoot)
-                    const addVelocity = 0.12 * deltaTime;
-                    levelSelectPlayer.velocityY -= addVelocity;
-
-                    // Cap at max velocity
-                    if (Math.abs(levelSelectPlayer.velocityY) >= maxJumpVelocity) {
-                        levelSelectPlayer.velocityY = -maxJumpVelocity;
-                        levelSelectIsJumping = false; // Stop charging once max reached
-                    }
+                // Add upward acceleration while holding (max height = 4x playerSize + 1px)
+                const maxJumpVelocity = JUMP_POWER * sizeScale;
+                if (Math.abs(levelSelectPlayer.velocityY) < maxJumpVelocity) {
+                    levelSelectPlayer.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
                 }
             }
 
             // Stop adding velocity when button released
-            if (levelSelectIsJumping && !levelSelectKeys['w'] && !levelSelectKeys['ArrowUp']) {
+            if (levelSelectIsJumping && (!levelSelectKeys['w'] && !levelSelectKeys['ArrowUp'])) {
                 levelSelectIsJumping = false;
             }
 
@@ -2987,36 +2966,27 @@
 
             // Jump with variable height based on hold time (W or Up only, NOT space)
             if ((practiceMode.keys['w'] || practiceMode.keys['ArrowUp']) && isGrounded && !practiceIsJumping) {
-                // Start jump IMMEDIATELY with minimum velocity
-                player.velocityY = -MIN_JUMP_VELOCITY;
+                // Start jump immediately with strong initial velocity
+                player.velocityY = -1.5 * sizeScale; // Strong initial jump
                 practiceIsJumping = true;
                 player.jumpHoldTime = 0;
-
                 // White jump particles
                 spawnParticles(player.x + player.width / 2, player.y + player.height, 12, 'rgb(255, 255, 255)', player.currentSize);
             }
 
-            // Continue adding upward velocity while holding button (makes jump higher)
+            // Continue adding upward velocity while holding button (extends jump height)
             if (practiceIsJumping && (practiceMode.keys['w'] || practiceMode.keys['ArrowUp']) && player.velocityY < 0) {
                 player.jumpHoldTime += deltaTime;
-                const maxJumpVelocity = getMaxJumpVelocity(player.currentSize);
 
-                // Only add velocity if under max time AND under max velocity
-                if (player.jumpHoldTime < MAX_JUMP_HOLD_TIME && Math.abs(player.velocityY) < maxJumpVelocity) {
-                    // Add velocity to reach max height (slower charge rate to prevent overshoot)
-                    const addVelocity = 0.12 * deltaTime;
-                    player.velocityY -= addVelocity;
-
-                    // Cap at max velocity
-                    if (Math.abs(player.velocityY) >= maxJumpVelocity) {
-                        player.velocityY = -maxJumpVelocity;
-                        practiceIsJumping = false; // Stop charging once max reached
-                    }
+                // Add upward acceleration while holding (max height = 4x playerSize + 1px)
+                const maxJumpVelocity = JUMP_POWER * sizeScale;
+                if (Math.abs(player.velocityY) < maxJumpVelocity) {
+                    player.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
                 }
             }
 
             // Stop adding velocity when button released
-            if (practiceIsJumping && !practiceMode.keys['w'] && !practiceMode.keys['ArrowUp']) {
+            if (practiceIsJumping && (!practiceMode.keys['w'] && !practiceMode.keys['ArrowUp'])) {
                 practiceIsJumping = false;
             }
 
@@ -3900,16 +3870,17 @@
             const maxFallSpeed = 8 * sizeScale;
             player.velocityY = Math.min(player.velocityY, maxFallSpeed);
 
-            // Limit horizontal speed
-            const maxSpeed = GROUND_MAX_SPEED;
-            player.velocityX = Math.max(-maxSpeed, Math.min(maxSpeed, player.velocityX));
+            // Limit horizontal speed (scaled by size)
+            const scaledMaxSpeed = GROUND_MAX_SPEED * sizeScale;
+            player.velocityX = Math.max(-scaledMaxSpeed, Math.min(scaledMaxSpeed, player.velocityX));
 
-            // Handle input (acceleration-based movement)
+            // Handle input (acceleration-based movement, scaled by size)
+            const scaledMoveSpeed = MOVE_SPEED * sizeScale;
             if (raceState.keys['a'] || raceState.keys['ArrowLeft']) {
-                player.velocityX -= MOVE_SPEED * deltaTime;
+                player.velocityX -= scaledMoveSpeed * deltaTime;
             }
             if (raceState.keys['d'] || raceState.keys['ArrowRight']) {
-                player.velocityX += MOVE_SPEED * deltaTime;
+                player.velocityX += scaledMoveSpeed * deltaTime;
             }
 
             // Old action-based particle system
@@ -3993,36 +3964,27 @@
 
             // Jump with variable height based on hold time (W or Up only, NOT space)
             if ((raceState.keys['w'] || raceState.keys['ArrowUp']) && isGrounded && !raceIsJumping) {
-                // Start jump IMMEDIATELY with minimum velocity
-                player.velocityY = -MIN_JUMP_VELOCITY;
+                // Start jump immediately with strong initial velocity
+                player.velocityY = -1.5 * sizeScale; // Strong initial jump
                 raceIsJumping = true;
                 player.jumpHoldTime = 0;
-
                 // White jump particles
                 spawnParticles(player.x + player.width / 2, player.y + player.height, 12, 'rgb(255, 255, 255)', player.currentSize);
             }
 
-            // Continue adding upward velocity while holding button (makes jump higher)
+            // Continue adding upward velocity while holding button (extends jump height)
             if (raceIsJumping && (raceState.keys['w'] || raceState.keys['ArrowUp']) && player.velocityY < 0) {
                 player.jumpHoldTime += deltaTime;
-                const maxJumpVelocity = getMaxJumpVelocity(player.currentSize);
 
-                // Only add velocity if under max time AND under max velocity
-                if (player.jumpHoldTime < MAX_JUMP_HOLD_TIME && Math.abs(player.velocityY) < maxJumpVelocity) {
-                    // Add velocity to reach max height (slower charge rate to prevent overshoot)
-                    const addVelocity = 0.12 * deltaTime;
-                    player.velocityY -= addVelocity;
-
-                    // Cap at max velocity
-                    if (Math.abs(player.velocityY) >= maxJumpVelocity) {
-                        player.velocityY = -maxJumpVelocity;
-                        raceIsJumping = false; // Stop charging once max reached
-                    }
+                // Add upward acceleration while holding (max height = 4x playerSize + 1px)
+                const maxJumpVelocity = JUMP_POWER * sizeScale;
+                if (Math.abs(player.velocityY) < maxJumpVelocity) {
+                    player.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
                 }
             }
 
             // Stop adding velocity when button released
-            if (raceIsJumping && !raceState.keys['w'] && !raceState.keys['ArrowUp']) {
+            if (raceIsJumping && (!raceState.keys['w'] && !raceState.keys['ArrowUp'])) {
                 raceIsJumping = false;
             }
 
@@ -4586,19 +4548,21 @@
                 }
             }
 
-            // Apply gravity
+            // Apply gravity (scaled by size)
+            const sizeScale = basePlayer.currentSize / 40;
             if ((baseKeys['s'] || baseKeys['ArrowDown']) && !isGrounded && basePlayer.velocityY > 0) {
-                basePlayer.velocityY += GRAVITY * FAST_FALL_MULTIPLIER * deltaTime;
+                basePlayer.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
             } else {
-                basePlayer.velocityY += GRAVITY * deltaTime;
+                basePlayer.velocityY += GRAVITY * sizeScale * deltaTime;
             }
 
-            // Movement
+            // Movement (scaled by size)
+            const scaledMoveSpeed = MOVE_SPEED * sizeScale;
             if (baseKeys['a'] || baseKeys['ArrowLeft']) {
-                basePlayer.velocityX -= MOVE_SPEED * deltaTime;
+                basePlayer.velocityX -= scaledMoveSpeed * deltaTime;
             }
             if (baseKeys['d'] || baseKeys['ArrowRight']) {
-                basePlayer.velocityX += MOVE_SPEED * deltaTime;
+                basePlayer.velocityX += scaledMoveSpeed * deltaTime;
             }
 
             // Old action-based particle system
@@ -4631,36 +4595,29 @@
 
             // Jump with variable height based on hold time (W or Up only, NOT space)
             if ((baseKeys['w'] || baseKeys['ArrowUp']) && isGrounded && !baseIsJumping) {
-                // Start jump IMMEDIATELY with minimum velocity
-                basePlayer.velocityY = -MIN_JUMP_VELOCITY;
+                // Start jump immediately with strong initial velocity
+                const sizeScale = basePlayer.currentSize / 40;
+                basePlayer.velocityY = -1.5 * sizeScale; // Strong initial jump
                 baseIsJumping = true;
                 basePlayer.jumpHoldTime = 0;
-
                 // White jump particles
                 spawnParticles(basePlayer.x + basePlayer.width / 2, basePlayer.y + basePlayer.height, 12, 'rgb(255, 255, 255)', basePlayer.currentSize);
             }
 
-            // Continue adding upward velocity while holding button (makes jump higher)
+            // Continue adding upward velocity while holding button (extends jump height)
             if (baseIsJumping && (baseKeys['w'] || baseKeys['ArrowUp']) && basePlayer.velocityY < 0) {
+                const sizeScale = basePlayer.currentSize / 40;
                 basePlayer.jumpHoldTime += deltaTime;
-                const maxJumpVelocity = getMaxJumpVelocity(basePlayer.currentSize);
 
-                // Only add velocity if under max time AND under max velocity
-                if (basePlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME && Math.abs(basePlayer.velocityY) < maxJumpVelocity) {
-                    // Add velocity to reach max height (slower charge rate to prevent overshoot)
-                    const addVelocity = 0.12 * deltaTime;
-                    basePlayer.velocityY -= addVelocity;
-
-                    // Cap at max velocity
-                    if (Math.abs(basePlayer.velocityY) >= maxJumpVelocity) {
-                        basePlayer.velocityY = -maxJumpVelocity;
-                        baseIsJumping = false; // Stop charging once max reached
-                    }
+                // Add upward acceleration while holding (max height = 4x playerSize + 1px)
+                const maxJumpVelocity = JUMP_POWER * sizeScale;
+                if (Math.abs(basePlayer.velocityY) < maxJumpVelocity) {
+                    basePlayer.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
                 }
             }
 
             // Stop adding velocity when button released
-            if (baseIsJumping && !baseKeys['w'] && !baseKeys['ArrowUp']) {
+            if (baseIsJumping && (!baseKeys['w'] && !baseKeys['ArrowUp'])) {
                 baseIsJumping = false;
             }
 
@@ -4671,8 +4628,9 @@
                 basePlayer.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
             }
 
-            // Limit speed
-            basePlayer.velocityX = Math.max(-GROUND_MAX_SPEED, Math.min(GROUND_MAX_SPEED, basePlayer.velocityX));
+            // Limit speed (scaled by size)
+            const scaledMaxSpeed = GROUND_MAX_SPEED * sizeScale;
+            basePlayer.velocityX = Math.max(-scaledMaxSpeed, Math.min(scaledMaxSpeed, basePlayer.velocityX));
 
             // Update X position, check X collisions
             basePlayer.x += basePlayer.velocityX * deltaTime;
@@ -5042,8 +5000,13 @@
         function updateLeaderboardPlayer(deltaTime) {
             if (!leaderboardPlayer) return;
 
-            // Apply gravity
-            leaderboardPlayer.velocityY += GRAVITY * deltaTime;
+            // Apply gravity (scaled by size)
+            const sizeScale = leaderboardPlayer.currentSize / 40;
+            if ((leaderboardKeys['s'] || leaderboardKeys['ArrowDown']) && !leaderboardPlayer.wasGrounded) {
+                leaderboardPlayer.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
+            } else {
+                leaderboardPlayer.velocityY += GRAVITY * sizeScale * deltaTime;
+            }
 
             // Apply friction
             if (leaderboardPlayer.wasGrounded) {
@@ -5052,16 +5015,18 @@
                 leaderboardPlayer.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
             }
 
-            // Cap velocities
-            leaderboardPlayer.velocityY = Math.min(leaderboardPlayer.velocityY, 8);
-            leaderboardPlayer.velocityX = Math.max(-GROUND_MAX_SPEED, Math.min(GROUND_MAX_SPEED, leaderboardPlayer.velocityX));
+            // Cap velocities (scaled by size)
+            leaderboardPlayer.velocityY = Math.min(leaderboardPlayer.velocityY, 8 * sizeScale);
+            const scaledMaxSpeed = GROUND_MAX_SPEED * sizeScale;
+            leaderboardPlayer.velocityX = Math.max(-scaledMaxSpeed, Math.min(scaledMaxSpeed, leaderboardPlayer.velocityX));
 
-            // Handle movement
+            // Handle movement (scaled by size)
+            const scaledMoveSpeed = MOVE_SPEED * sizeScale;
             if (leaderboardKeys['a'] || leaderboardKeys['ArrowLeft']) {
-                leaderboardPlayer.velocityX -= MOVE_SPEED * deltaTime;
+                leaderboardPlayer.velocityX -= scaledMoveSpeed * deltaTime;
             }
             if (leaderboardKeys['d'] || leaderboardKeys['ArrowRight']) {
-                leaderboardPlayer.velocityX += MOVE_SPEED * deltaTime;
+                leaderboardPlayer.velocityX += scaledMoveSpeed * deltaTime;
             }
 
             // Old action-based particle system
@@ -5154,36 +5119,29 @@
 
             // Jump with variable height based on hold time (W or Up only, NOT space)
             if ((leaderboardKeys['w'] || leaderboardKeys['ArrowUp']) && isGrounded && !leaderboardIsJumping) {
-                // Start jump IMMEDIATELY with minimum velocity
-                leaderboardPlayer.velocityY = -MIN_JUMP_VELOCITY;
+                // Start jump immediately with strong initial velocity
+                const sizeScale = leaderboardPlayer.currentSize / 40;
+                leaderboardPlayer.velocityY = -1.5 * sizeScale; // Strong initial jump
                 leaderboardIsJumping = true;
                 leaderboardPlayer.jumpHoldTime = 0;
-
                 // White jump particles
                 spawnParticles(leaderboardPlayer.x + leaderboardPlayer.width / 2, leaderboardPlayer.y + leaderboardPlayer.height, 12, 'rgb(255, 255, 255)', leaderboardPlayer.currentSize);
             }
 
-            // Continue adding upward velocity while holding button (makes jump higher)
+            // Continue adding upward velocity while holding button (extends jump height)
             if (leaderboardIsJumping && (leaderboardKeys['w'] || leaderboardKeys['ArrowUp']) && leaderboardPlayer.velocityY < 0) {
+                const sizeScale = leaderboardPlayer.currentSize / 40;
                 leaderboardPlayer.jumpHoldTime += deltaTime;
-                const maxJumpVelocity = getMaxJumpVelocity(leaderboardPlayer.currentSize);
 
-                // Only add velocity if under max time AND under max velocity
-                if (leaderboardPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME && Math.abs(leaderboardPlayer.velocityY) < maxJumpVelocity) {
-                    // Add velocity to reach max height (slower charge rate to prevent overshoot)
-                    const addVelocity = 0.12 * deltaTime;
-                    leaderboardPlayer.velocityY -= addVelocity;
-
-                    // Cap at max velocity
-                    if (Math.abs(leaderboardPlayer.velocityY) >= maxJumpVelocity) {
-                        leaderboardPlayer.velocityY = -maxJumpVelocity;
-                        leaderboardIsJumping = false; // Stop charging once max reached
-                    }
+                // Add upward acceleration while holding (max height = 4x playerSize + 1px)
+                const maxJumpVelocity = JUMP_POWER * sizeScale;
+                if (Math.abs(leaderboardPlayer.velocityY) < maxJumpVelocity) {
+                    leaderboardPlayer.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
                 }
             }
 
             // Stop adding velocity when button released
-            if (leaderboardIsJumping && !leaderboardKeys['w'] && !leaderboardKeys['ArrowUp']) {
+            if (leaderboardIsJumping && (!leaderboardKeys['w'] && !leaderboardKeys['ArrowUp'])) {
                 leaderboardIsJumping = false;
             }
 

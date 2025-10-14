@@ -1325,19 +1325,21 @@
                 }
             }
 
-            // Apply gravity with fast fall
+            // Apply gravity with fast fall (scaled by size)
+            const sizeScale = menuPlayer.currentSize / 40;
             if ((menuKeys['s'] || menuKeys['ArrowDown']) && !isGrounded) {
-                menuPlayer.velocityY += GRAVITY * FAST_FALL_MULTIPLIER * deltaTime;
+                menuPlayer.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
             } else {
-                menuPlayer.velocityY += GRAVITY * deltaTime;
+                menuPlayer.velocityY += GRAVITY * sizeScale * deltaTime;
             }
 
-            // Handle input
+            // Handle input (movement scaled by size)
+            const scaledMoveSpeed = MOVE_SPEED * sizeScale;
             if (menuKeys['a'] || menuKeys['ArrowLeft']) {
-                menuPlayer.velocityX -= MOVE_SPEED * deltaTime;
+                menuPlayer.velocityX -= scaledMoveSpeed * deltaTime;
             }
             if (menuKeys['d'] || menuKeys['ArrowRight']) {
-                menuPlayer.velocityX += MOVE_SPEED * deltaTime;
+                menuPlayer.velocityX += scaledMoveSpeed * deltaTime;
             }
 
             // Old action-based particle system
@@ -1416,8 +1418,9 @@
                 menuPlayer.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
             }
 
-            // Limit speed
-            menuPlayer.velocityX = Math.max(-GROUND_MAX_SPEED, Math.min(GROUND_MAX_SPEED, menuPlayer.velocityX));
+            // Limit speed (scaled by size)
+            const scaledMaxSpeed = GROUND_MAX_SPEED * sizeScale;
+            menuPlayer.velocityX = Math.max(-scaledMaxSpeed, Math.min(scaledMaxSpeed, menuPlayer.velocityX));
 
             // Update position HORIZONTALLY first, then check X collisions
             menuPlayer.x += menuPlayer.velocityX * deltaTime;
@@ -1673,11 +1676,12 @@
                 }
             }
 
-            // Apply gravity with fast fall
+            // Apply gravity with fast fall (scaled by size)
+            const sizeScale = levelSelectPlayer.currentSize / 40;
             if ((levelSelectKeys['s'] || levelSelectKeys['ArrowDown']) && !isGrounded) {
-                levelSelectPlayer.velocityY += GRAVITY * FAST_FALL_MULTIPLIER * deltaTime;
+                levelSelectPlayer.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
             } else {
-                levelSelectPlayer.velocityY += GRAVITY * deltaTime;
+                levelSelectPlayer.velocityY += GRAVITY * sizeScale * deltaTime;
             }
 
             // Apply friction (use previous frame's grounded state)
@@ -1687,20 +1691,21 @@
                 levelSelectPlayer.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
             }
 
-            // Cap vertical velocity to prevent tunneling
-            const maxFallSpeed = 8;
+            // Cap vertical velocity to prevent tunneling (scaled by size)
+            const maxFallSpeed = 8 * sizeScale;
             levelSelectPlayer.velocityY = Math.min(levelSelectPlayer.velocityY, maxFallSpeed);
 
-            // Limit horizontal speed
-            const maxSpeed = GROUND_MAX_SPEED;
-            levelSelectPlayer.velocityX = Math.max(-maxSpeed, Math.min(maxSpeed, levelSelectPlayer.velocityX));
+            // Limit horizontal speed (scaled by size)
+            const scaledMaxSpeed = GROUND_MAX_SPEED * sizeScale;
+            levelSelectPlayer.velocityX = Math.max(-scaledMaxSpeed, Math.min(scaledMaxSpeed, levelSelectPlayer.velocityX));
 
-            // Handle movement
+            // Handle movement (scaled by size)
+            const scaledMoveSpeed = MOVE_SPEED * sizeScale;
             if (levelSelectKeys['a'] || levelSelectKeys['ArrowLeft']) {
-                levelSelectPlayer.velocityX -= MOVE_SPEED * deltaTime;
+                levelSelectPlayer.velocityX -= scaledMoveSpeed * deltaTime;
             }
             if (levelSelectKeys['d'] || levelSelectKeys['ArrowRight']) {
-                levelSelectPlayer.velocityX += MOVE_SPEED * deltaTime;
+                levelSelectPlayer.velocityX += scaledMoveSpeed * deltaTime;
             }
 
             // Old action-based particle system
@@ -3865,16 +3870,17 @@
             const maxFallSpeed = 8 * sizeScale;
             player.velocityY = Math.min(player.velocityY, maxFallSpeed);
 
-            // Limit horizontal speed
-            const maxSpeed = GROUND_MAX_SPEED;
-            player.velocityX = Math.max(-maxSpeed, Math.min(maxSpeed, player.velocityX));
+            // Limit horizontal speed (scaled by size)
+            const scaledMaxSpeed = GROUND_MAX_SPEED * sizeScale;
+            player.velocityX = Math.max(-scaledMaxSpeed, Math.min(scaledMaxSpeed, player.velocityX));
 
-            // Handle input (acceleration-based movement)
+            // Handle input (acceleration-based movement, scaled by size)
+            const scaledMoveSpeed = MOVE_SPEED * sizeScale;
             if (raceState.keys['a'] || raceState.keys['ArrowLeft']) {
-                player.velocityX -= MOVE_SPEED * deltaTime;
+                player.velocityX -= scaledMoveSpeed * deltaTime;
             }
             if (raceState.keys['d'] || raceState.keys['ArrowRight']) {
-                player.velocityX += MOVE_SPEED * deltaTime;
+                player.velocityX += scaledMoveSpeed * deltaTime;
             }
 
             // Old action-based particle system
@@ -4542,19 +4548,21 @@
                 }
             }
 
-            // Apply gravity
+            // Apply gravity (scaled by size)
+            const sizeScale = basePlayer.currentSize / 40;
             if ((baseKeys['s'] || baseKeys['ArrowDown']) && !isGrounded && basePlayer.velocityY > 0) {
-                basePlayer.velocityY += GRAVITY * FAST_FALL_MULTIPLIER * deltaTime;
+                basePlayer.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
             } else {
-                basePlayer.velocityY += GRAVITY * deltaTime;
+                basePlayer.velocityY += GRAVITY * sizeScale * deltaTime;
             }
 
-            // Movement
+            // Movement (scaled by size)
+            const scaledMoveSpeed = MOVE_SPEED * sizeScale;
             if (baseKeys['a'] || baseKeys['ArrowLeft']) {
-                basePlayer.velocityX -= MOVE_SPEED * deltaTime;
+                basePlayer.velocityX -= scaledMoveSpeed * deltaTime;
             }
             if (baseKeys['d'] || baseKeys['ArrowRight']) {
-                basePlayer.velocityX += MOVE_SPEED * deltaTime;
+                basePlayer.velocityX += scaledMoveSpeed * deltaTime;
             }
 
             // Old action-based particle system
@@ -4620,8 +4628,9 @@
                 basePlayer.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
             }
 
-            // Limit speed
-            basePlayer.velocityX = Math.max(-GROUND_MAX_SPEED, Math.min(GROUND_MAX_SPEED, basePlayer.velocityX));
+            // Limit speed (scaled by size)
+            const scaledMaxSpeed = GROUND_MAX_SPEED * sizeScale;
+            basePlayer.velocityX = Math.max(-scaledMaxSpeed, Math.min(scaledMaxSpeed, basePlayer.velocityX));
 
             // Update X position, check X collisions
             basePlayer.x += basePlayer.velocityX * deltaTime;
@@ -4991,8 +5000,13 @@
         function updateLeaderboardPlayer(deltaTime) {
             if (!leaderboardPlayer) return;
 
-            // Apply gravity
-            leaderboardPlayer.velocityY += GRAVITY * deltaTime;
+            // Apply gravity (scaled by size)
+            const sizeScale = leaderboardPlayer.currentSize / 40;
+            if ((leaderboardKeys['s'] || leaderboardKeys['ArrowDown']) && !leaderboardPlayer.wasGrounded) {
+                leaderboardPlayer.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
+            } else {
+                leaderboardPlayer.velocityY += GRAVITY * sizeScale * deltaTime;
+            }
 
             // Apply friction
             if (leaderboardPlayer.wasGrounded) {
@@ -5001,16 +5015,18 @@
                 leaderboardPlayer.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
             }
 
-            // Cap velocities
-            leaderboardPlayer.velocityY = Math.min(leaderboardPlayer.velocityY, 8);
-            leaderboardPlayer.velocityX = Math.max(-GROUND_MAX_SPEED, Math.min(GROUND_MAX_SPEED, leaderboardPlayer.velocityX));
+            // Cap velocities (scaled by size)
+            leaderboardPlayer.velocityY = Math.min(leaderboardPlayer.velocityY, 8 * sizeScale);
+            const scaledMaxSpeed = GROUND_MAX_SPEED * sizeScale;
+            leaderboardPlayer.velocityX = Math.max(-scaledMaxSpeed, Math.min(scaledMaxSpeed, leaderboardPlayer.velocityX));
 
-            // Handle movement
+            // Handle movement (scaled by size)
+            const scaledMoveSpeed = MOVE_SPEED * sizeScale;
             if (leaderboardKeys['a'] || leaderboardKeys['ArrowLeft']) {
-                leaderboardPlayer.velocityX -= MOVE_SPEED * deltaTime;
+                leaderboardPlayer.velocityX -= scaledMoveSpeed * deltaTime;
             }
             if (leaderboardKeys['d'] || leaderboardKeys['ArrowRight']) {
-                leaderboardPlayer.velocityX += MOVE_SPEED * deltaTime;
+                leaderboardPlayer.velocityX += scaledMoveSpeed * deltaTime;
             }
 
             // Old action-based particle system
