@@ -1398,7 +1398,7 @@
             }
 
             // Apply jump velocity when button is released OR max hold time reached
-            if (menuIsJumping && menuPlayer.jumpStarted && ((menuKeys['w'] === false && menuKeys['ArrowUp'] === false) || menuPlayer.jumpHoldTime >= MAX_JUMP_HOLD_TIME)) {
+            if (menuIsJumping && menuPlayer.jumpStarted && ((!menuKeys['w'] && !menuKeys['ArrowUp']) || menuPlayer.jumpHoldTime >= MAX_JUMP_HOLD_TIME)) {
                 // Calculate jump strength based on hold time (0 to 1)
                 const holdRatio = Math.min(menuPlayer.jumpHoldTime / MAX_JUMP_HOLD_TIME, 1);
 
@@ -1843,7 +1843,7 @@
             }
 
             // Apply jump velocity when button is released OR max hold time reached
-            if (levelSelectIsJumping && levelSelectPlayer.jumpStarted && ((levelSelectKeys['w'] === false && levelSelectKeys['ArrowUp'] === false) || levelSelectPlayer.jumpHoldTime >= MAX_JUMP_HOLD_TIME)) {
+            if (levelSelectIsJumping && levelSelectPlayer.jumpStarted && ((!levelSelectKeys['w'] && !levelSelectKeys['ArrowUp']) || levelSelectPlayer.jumpHoldTime >= MAX_JUMP_HOLD_TIME)) {
                 // Calculate jump strength based on hold time (0 to 1)
                 const holdRatio = Math.min(levelSelectPlayer.jumpHoldTime / MAX_JUMP_HOLD_TIME, 1);
 
@@ -3007,7 +3007,7 @@
             }
 
             // Apply jump velocity when button is released OR max hold time reached
-            if (practiceIsJumping && player.jumpStarted && ((practiceMode.keys['w'] === false && practiceMode.keys['ArrowUp'] === false) || player.jumpHoldTime >= MAX_JUMP_HOLD_TIME)) {
+            if (practiceIsJumping && player.jumpStarted && ((!practiceMode.keys['w'] && !practiceMode.keys['ArrowUp']) || player.jumpHoldTime >= MAX_JUMP_HOLD_TIME)) {
                 // Calculate jump strength based on hold time (0 to 1)
                 const holdRatio = Math.min(player.jumpHoldTime / MAX_JUMP_HOLD_TIME, 1);
 
@@ -4015,7 +4015,7 @@
             }
 
             // Apply jump velocity when button is released OR max hold time reached
-            if (raceIsJumping && player.jumpStarted && ((raceState.keys['w'] === false && raceState.keys['ArrowUp'] === false) || player.jumpHoldTime >= MAX_JUMP_HOLD_TIME)) {
+            if (raceIsJumping && player.jumpStarted && ((!raceState.keys['w'] && !raceState.keys['ArrowUp']) || player.jumpHoldTime >= MAX_JUMP_HOLD_TIME)) {
                 // Calculate jump strength based on hold time (0 to 1)
                 const holdRatio = Math.min(player.jumpHoldTime / MAX_JUMP_HOLD_TIME, 1);
 
@@ -4655,7 +4655,7 @@
             }
 
             // Apply jump velocity when button is released OR max hold time reached
-            if (baseIsJumping && basePlayer.jumpStarted && ((baseKeys['w'] === false && baseKeys['ArrowUp'] === false) || basePlayer.jumpHoldTime >= MAX_JUMP_HOLD_TIME)) {
+            if (baseIsJumping && basePlayer.jumpStarted && ((!baseKeys['w'] && !baseKeys['ArrowUp']) || basePlayer.jumpHoldTime >= MAX_JUMP_HOLD_TIME)) {
                 // Calculate jump strength based on hold time (0 to 1)
                 const holdRatio = Math.min(basePlayer.jumpHoldTime / MAX_JUMP_HOLD_TIME, 1);
 
@@ -5180,7 +5180,7 @@
             }
 
             // Apply jump velocity when button is released OR max hold time reached
-            if (leaderboardIsJumping && leaderboardPlayer.jumpStarted && ((leaderboardKeys['w'] === false && leaderboardKeys['ArrowUp'] === false) || leaderboardPlayer.jumpHoldTime >= MAX_JUMP_HOLD_TIME)) {
+            if (leaderboardIsJumping && leaderboardPlayer.jumpStarted && ((!leaderboardKeys['w'] && !leaderboardKeys['ArrowUp']) || leaderboardPlayer.jumpHoldTime >= MAX_JUMP_HOLD_TIME)) {
                 // Calculate jump strength based on hold time (0 to 1)
                 const holdRatio = Math.min(leaderboardPlayer.jumpHoldTime / MAX_JUMP_HOLD_TIME, 1);
 
