@@ -1398,8 +1398,8 @@
                 if (menuPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
                     const maxJumpVelocity = getMaxJumpVelocity(menuPlayer.currentSize);
 
-                    // Add velocity gradually to reach max height
-                    const addVelocity = ((maxJumpVelocity - MIN_JUMP_VELOCITY) / MAX_JUMP_HOLD_TIME) * deltaTime;
+                    // Add velocity to reach max height quickly (charge rate per frame)
+                    const addVelocity = 0.15 * deltaTime; // Much faster charge rate
                     menuPlayer.velocityY -= addVelocity;
 
                     // Cap at max velocity
@@ -1842,7 +1842,7 @@
                     const maxJumpVelocity = getMaxJumpVelocity(levelSelectPlayer.currentSize);
 
                     // Add velocity gradually to reach max height
-                    const addVelocity = ((maxJumpVelocity - MIN_JUMP_VELOCITY) / MAX_JUMP_HOLD_TIME) * deltaTime;
+                    const addVelocity = 0.15 * deltaTime; // Much faster charge rate
                     levelSelectPlayer.velocityY -= addVelocity;
 
                     // Cap at max velocity
@@ -3004,7 +3004,7 @@
                     const maxJumpVelocity = getMaxJumpVelocity(player.currentSize);
 
                     // Add velocity gradually to reach max height
-                    const addVelocity = ((maxJumpVelocity - MIN_JUMP_VELOCITY) / MAX_JUMP_HOLD_TIME) * deltaTime;
+                    const addVelocity = 0.15 * deltaTime; // Much faster charge rate
                     player.velocityY -= addVelocity;
 
                     // Cap at max velocity
@@ -4010,7 +4010,7 @@
                     const maxJumpVelocity = getMaxJumpVelocity(player.currentSize);
 
                     // Add velocity gradually to reach max height
-                    const addVelocity = ((maxJumpVelocity - MIN_JUMP_VELOCITY) / MAX_JUMP_HOLD_TIME) * deltaTime;
+                    const addVelocity = 0.15 * deltaTime; // Much faster charge rate
                     player.velocityY -= addVelocity;
 
                     // Cap at max velocity
@@ -4648,7 +4648,7 @@
                     const maxJumpVelocity = getMaxJumpVelocity(basePlayer.currentSize);
 
                     // Add velocity gradually to reach max height
-                    const addVelocity = ((maxJumpVelocity - MIN_JUMP_VELOCITY) / MAX_JUMP_HOLD_TIME) * deltaTime;
+                    const addVelocity = 0.15 * deltaTime; // Much faster charge rate
                     basePlayer.velocityY -= addVelocity;
 
                     // Cap at max velocity
@@ -5171,7 +5171,7 @@
                     const maxJumpVelocity = getMaxJumpVelocity(leaderboardPlayer.currentSize);
 
                     // Add velocity gradually to reach max height
-                    const addVelocity = ((maxJumpVelocity - MIN_JUMP_VELOCITY) / MAX_JUMP_HOLD_TIME) * deltaTime;
+                    const addVelocity = 0.15 * deltaTime; // Much faster charge rate
                     leaderboardPlayer.velocityY -= addVelocity;
 
                     // Cap at max velocity
