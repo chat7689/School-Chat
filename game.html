@@ -3012,9 +3012,9 @@
             const maxFallSpeed = 8 * sizeScale;
             player.velocityY = Math.min(player.velocityY, maxFallSpeed);
 
-            // Limit horizontal speed
-            const maxSpeed = GROUND_MAX_SPEED;
-            player.velocityX = Math.max(-maxSpeed, Math.min(maxSpeed, player.velocityX));
+            // Limit horizontal speed (scaled by size)
+            const scaledMaxSpeed = GROUND_MAX_SPEED * sizeScale;
+            player.velocityX = Math.max(-scaledMaxSpeed, Math.min(scaledMaxSpeed, player.velocityX));
 
             // Update position
             player.x += player.velocityX * deltaTime;
