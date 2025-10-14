@@ -598,8 +598,8 @@
         // So: velocity = sqrt(2 * gravity * height)
         function getMaxJumpVelocity(playerSize) {
             const maxJumpHeight = playerSize * 4 + 1; // Player can jump 4x their height + 1px (161px for 40px player)
-            // Adjusted by 0.897 multiplier to account for variable jump system behavior
-            return Math.sqrt(2 * GRAVITY * maxJumpHeight) * 0.897;
+            // Adjusted by 0.865 multiplier to account for variable jump system behavior
+            return Math.sqrt(2 * GRAVITY * maxJumpHeight) * 0.865;
         }
 
         // Particle system
