@@ -1393,18 +1393,18 @@
             // Continue adding upward velocity while holding button (makes jump higher)
             if (menuIsJumping && (menuKeys['w'] || menuKeys['ArrowUp']) && menuPlayer.velocityY < 0) {
                 menuPlayer.jumpHoldTime += deltaTime;
+                const maxJumpVelocity = getMaxJumpVelocity(menuPlayer.currentSize);
 
-                // Only add velocity if under max time
-                if (menuPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
-                    const maxJumpVelocity = getMaxJumpVelocity(menuPlayer.currentSize);
-
+                // Only add velocity if under max time AND under max velocity
+                if (menuPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME && Math.abs(menuPlayer.velocityY) < maxJumpVelocity) {
                     // Add velocity to reach max height quickly (charge rate per frame)
-                    const addVelocity = 0.15 * deltaTime; // Much faster charge rate
+                    const addVelocity = 0.15 * deltaTime;
                     menuPlayer.velocityY -= addVelocity;
 
                     // Cap at max velocity
-                    if (Math.abs(menuPlayer.velocityY) > maxJumpVelocity) {
+                    if (Math.abs(menuPlayer.velocityY) >= maxJumpVelocity) {
                         menuPlayer.velocityY = -maxJumpVelocity;
+                        menuIsJumping = false; // Stop charging once max reached
                     }
                 }
             }
@@ -1836,18 +1836,18 @@
             // Continue adding upward velocity while holding button (makes jump higher)
             if (levelSelectIsJumping && (levelSelectKeys['w'] || levelSelectKeys['ArrowUp']) && levelSelectPlayer.velocityY < 0) {
                 levelSelectPlayer.jumpHoldTime += deltaTime;
+                const maxJumpVelocity = getMaxJumpVelocity(levelSelectPlayer.currentSize);
 
-                // Only add velocity if under max time
-                if (levelSelectPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
-                    const maxJumpVelocity = getMaxJumpVelocity(levelSelectPlayer.currentSize);
-
-                    // Add velocity gradually to reach max height
-                    const addVelocity = 0.15 * deltaTime; // Much faster charge rate
+                // Only add velocity if under max time AND under max velocity
+                if (levelSelectPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME && Math.abs(levelSelectPlayer.velocityY) < maxJumpVelocity) {
+                    // Add velocity to reach max height quickly (charge rate per frame)
+                    const addVelocity = 0.15 * deltaTime;
                     levelSelectPlayer.velocityY -= addVelocity;
 
                     // Cap at max velocity
-                    if (Math.abs(levelSelectPlayer.velocityY) > maxJumpVelocity) {
+                    if (Math.abs(levelSelectPlayer.velocityY) >= maxJumpVelocity) {
                         levelSelectPlayer.velocityY = -maxJumpVelocity;
+                        levelSelectIsJumping = false; // Stop charging once max reached
                     }
                 }
             }
@@ -2998,18 +2998,18 @@
             // Continue adding upward velocity while holding button (makes jump higher)
             if (practiceIsJumping && (practiceMode.keys['w'] || practiceMode.keys['ArrowUp']) && player.velocityY < 0) {
                 player.jumpHoldTime += deltaTime;
+                const maxJumpVelocity = getMaxJumpVelocity(player.currentSize);
 
-                // Only add velocity if under max time
-                if (player.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
-                    const maxJumpVelocity = getMaxJumpVelocity(player.currentSize);
-
-                    // Add velocity gradually to reach max height
-                    const addVelocity = 0.15 * deltaTime; // Much faster charge rate
+                // Only add velocity if under max time AND under max velocity
+                if (player.jumpHoldTime < MAX_JUMP_HOLD_TIME && Math.abs(player.velocityY) < maxJumpVelocity) {
+                    // Add velocity to reach max height quickly (charge rate per frame)
+                    const addVelocity = 0.15 * deltaTime;
                     player.velocityY -= addVelocity;
 
                     // Cap at max velocity
-                    if (Math.abs(player.velocityY) > maxJumpVelocity) {
+                    if (Math.abs(player.velocityY) >= maxJumpVelocity) {
                         player.velocityY = -maxJumpVelocity;
+                        practiceIsJumping = false; // Stop charging once max reached
                     }
                 }
             }
@@ -4004,18 +4004,18 @@
             // Continue adding upward velocity while holding button (makes jump higher)
             if (raceIsJumping && (raceState.keys['w'] || raceState.keys['ArrowUp']) && player.velocityY < 0) {
                 player.jumpHoldTime += deltaTime;
+                const maxJumpVelocity = getMaxJumpVelocity(player.currentSize);
 
-                // Only add velocity if under max time
-                if (player.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
-                    const maxJumpVelocity = getMaxJumpVelocity(player.currentSize);
-
-                    // Add velocity gradually to reach max height
-                    const addVelocity = 0.15 * deltaTime; // Much faster charge rate
+                // Only add velocity if under max time AND under max velocity
+                if (player.jumpHoldTime < MAX_JUMP_HOLD_TIME && Math.abs(player.velocityY) < maxJumpVelocity) {
+                    // Add velocity to reach max height quickly (charge rate per frame)
+                    const addVelocity = 0.15 * deltaTime;
                     player.velocityY -= addVelocity;
 
                     // Cap at max velocity
-                    if (Math.abs(player.velocityY) > maxJumpVelocity) {
+                    if (Math.abs(player.velocityY) >= maxJumpVelocity) {
                         player.velocityY = -maxJumpVelocity;
+                        raceIsJumping = false; // Stop charging once max reached
                     }
                 }
             }
@@ -4642,18 +4642,18 @@
             // Continue adding upward velocity while holding button (makes jump higher)
             if (baseIsJumping && (baseKeys['w'] || baseKeys['ArrowUp']) && basePlayer.velocityY < 0) {
                 basePlayer.jumpHoldTime += deltaTime;
+                const maxJumpVelocity = getMaxJumpVelocity(basePlayer.currentSize);
 
-                // Only add velocity if under max time
-                if (basePlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
-                    const maxJumpVelocity = getMaxJumpVelocity(basePlayer.currentSize);
-
-                    // Add velocity gradually to reach max height
-                    const addVelocity = 0.15 * deltaTime; // Much faster charge rate
+                // Only add velocity if under max time AND under max velocity
+                if (basePlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME && Math.abs(basePlayer.velocityY) < maxJumpVelocity) {
+                    // Add velocity to reach max height quickly (charge rate per frame)
+                    const addVelocity = 0.15 * deltaTime;
                     basePlayer.velocityY -= addVelocity;
 
                     // Cap at max velocity
-                    if (Math.abs(basePlayer.velocityY) > maxJumpVelocity) {
+                    if (Math.abs(basePlayer.velocityY) >= maxJumpVelocity) {
                         basePlayer.velocityY = -maxJumpVelocity;
+                        baseIsJumping = false; // Stop charging once max reached
                     }
                 }
             }
@@ -5165,18 +5165,18 @@
             // Continue adding upward velocity while holding button (makes jump higher)
             if (leaderboardIsJumping && (leaderboardKeys['w'] || leaderboardKeys['ArrowUp']) && leaderboardPlayer.velocityY < 0) {
                 leaderboardPlayer.jumpHoldTime += deltaTime;
+                const maxJumpVelocity = getMaxJumpVelocity(leaderboardPlayer.currentSize);
 
-                // Only add velocity if under max time
-                if (leaderboardPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
-                    const maxJumpVelocity = getMaxJumpVelocity(leaderboardPlayer.currentSize);
-
-                    // Add velocity gradually to reach max height
-                    const addVelocity = 0.15 * deltaTime; // Much faster charge rate
+                // Only add velocity if under max time AND under max velocity
+                if (leaderboardPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME && Math.abs(leaderboardPlayer.velocityY) < maxJumpVelocity) {
+                    // Add velocity to reach max height quickly (charge rate per frame)
+                    const addVelocity = 0.15 * deltaTime;
                     leaderboardPlayer.velocityY -= addVelocity;
 
                     // Cap at max velocity
-                    if (Math.abs(leaderboardPlayer.velocityY) > maxJumpVelocity) {
+                    if (Math.abs(leaderboardPlayer.velocityY) >= maxJumpVelocity) {
                         leaderboardPlayer.velocityY = -maxJumpVelocity;
+                        leaderboardIsJumping = false; // Stop charging once max reached
                     }
                 }
             }
