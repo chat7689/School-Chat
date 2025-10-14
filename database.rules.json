@@ -32,8 +32,8 @@
     },
 
     "players": {
+      ".read": true,
       "$uid": {
-        ".read": true,
         ".write": "auth != null && auth.uid == $uid",
         ".validate": "newData.hasChildren(['username'])",
 
