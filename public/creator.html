@@ -1,0 +1,3312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Level Creator - Speedrun Game</title>
+    <link rel="icon" type="image/png" id="favicon">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: #2c3e50;
+            font-family: 'Arial', sans-serif;
+        }
+
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 250px;
+            background: #87CEEB;
+            cursor: crosshair;
+            pointer-events: auto;
+        }
+
+        #sidebar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 250px;
+            height: 100vh;
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 20px;
+            overflow-y: auto;
+            z-index: 100;
+            pointer-events: auto;
+        }
+
+        #topbar {
+            position: absolute;
+            top: 0;
+            left: 250px;
+            right: 0;
+            height: 60px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 15px;
+            z-index: 100;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section h3 {
+            color: #4facfe;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .slider-group {
+            margin-bottom: 15px;
+        }
+
+        .slider-group label {
+            display: block;
+            font-size: 12px;
+            margin-bottom: 5px;
+            color: #ccc;
+        }
+
+        .slider-group input[type="range"] {
+            width: 100%;
+        }
+
+        .slider-group .value {
+            color: #4facfe;
+            font-weight: bold;
+            float: right;
+        }
+
+        .tool-button {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 8px;
+            background: rgba(79, 172, 254, 0.2);
+            color: white;
+            border: 2px solid #4facfe;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .tool-button:hover {
+            background: rgba(79, 172, 254, 0.4);
+        }
+
+        .tool-button.active {
+            background: #4facfe;
+            color: black;
+        }
+
+        .tool-button.delete {
+            background: rgba(255, 68, 68, 0.2);
+            border-color: #ff4444;
+        }
+
+        .tool-button.delete:hover {
+            background: rgba(255, 68, 68, 0.4);
+        }
+
+        .tool-button.delete.active {
+            background: #ff4444;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        button.secondary {
+            background: #666;
+        }
+
+        button.secondary:hover {
+            background: #555;
+        }
+
+        input[type="number"] {
+            width: 80px;
+            padding: 5px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid #4facfe;
+            border-radius: 3px;
+        }
+
+        .info-text {
+            font-size: 11px;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        #levelData, #importData {
+            width: 100%;
+            height: 150px;
+            background: rgba(0,0,0,0.5);
+            color: #4facfe;
+            border: 1px solid #4facfe;
+            border-radius: 5px;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            resize: none;
+            pointer-events: auto;
+            position: relative;
+            z-index: 200;
+        }
+
+        #importData:focus, #levelData:focus {
+            outline: none;
+            border-color: #FFC107;
+            background: rgba(0,0,0,0.7);
+        }
+
+        .stats {
+            font-size: 12px;
+            color: #ccc;
+        }
+
+        .controls-info {
+            background: rgba(79, 172, 254, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 11px;
+            line-height: 1.6;
+        }
+
+        #importModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #importModal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #1a1a1a;
+            padding: 30px;
+            border-radius: 10px;
+            border: 2px solid #4facfe;
+            width: 90%;
+            max-width: 600px;
+        }
+
+        .modal-content h2 {
+            color: #4facfe;
+            margin-bottom: 20px;
+        }
+
+        .modal-content textarea {
+            width: 100%;
+            height: 300px;
+            background: rgba(0,0,0,0.5);
+            color: #4facfe;
+            border: 1px solid #4facfe;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            resize: none;
+        }
+
+        .modal-content textarea:focus {
+            outline: none;
+            border-color: #FFC107;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-buttons button {
+            flex: 1;
+        }
+        .comment-box {
+            position: absolute;
+            background: rgba(255, 255, 150, 0.95);
+            border: 2px solid #FFD700;
+            border-radius: 8px;
+            padding: 8px;
+            min-width: 200px;
+            max-width: 300px;
+            cursor: move;
+            z-index: 500;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .comment-box textarea {
+            width: 100%;
+            min-height: 60px;
+            background: rgba(255,255,255,0.9);
+            border: 1px solid #DAA520;
+            border-radius: 4px;
+            padding: 5px;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            resize: vertical;
+            color: #333;
+        }
+
+        .comment-box textarea:focus {
+            outline: none;
+            border-color: #FFD700;
+        }
+
+        .comment-delete {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 20px;
+            height: 20px;
+            background: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            line-height: 20px;
+            text-align: center;
+            padding: 0;
+        }
+
+        .comment-delete:hover {
+            background: #cc0000;
+        }
+    </style>
+</head>
+<body>
+    <div id="topbar">
+        <button onclick="testLevel()">▶ Test Level</button>
+        <button onclick="stopTest()" class="secondary">⏹ Stop Test</button>
+        <button onclick="undo()" title="Undo (Ctrl+Z)">↶ Undo</button>
+        <button onclick="redo()" title="Redo (Ctrl+Y)">↷ Redo</button>
+        <button onclick="clearAutoSave()" class="secondary">🗑 New Level</button>
+        <button onclick="copyLevelData()">📋 Copy Level Data</button>
+        <button onclick="showImportDialog()" style="background: #9b59b6;">📥 Import Level</button>
+        <span style="margin-left: auto; font-size: 12px; color: #999;" id="saveStatus">No auto-save</span>
+        <span style="font-size: 12px; margin-left: 15px;" id="cameraInfo">Camera: 0, 0 | Zoom: 1.0x</span>
+    </div>
+
+    <div id="sidebar">
+        <h2 style="color: #4facfe; margin-bottom: 20px;">Level Creator</h2>
+
+        <div class="section">
+            <h3>Tools <span style="font-size: 10px; color: #999;">(or press 1-6)</span></h3>
+            <button class="tool-button active" onclick="setTool('platform')">🟦 Platform <span style="float:right;color:#999;">1</span></button>
+            <button class="tool-button" onclick="setTool('hazard')">🟥 Hazard <span style="float:right;color:#999;">2</span></button>
+            <button class="tool-button" onclick="setTool('shrinker')">🟪 Small Size (20px) <span style="float:right;color:#999;">3</span></button>
+            <button class="tool-button" onclick="setTool('default')">🟨 Default Size (40px) <span style="float:right;color:#999;">4</span></button>
+            <button class="tool-button" onclick="setTool('grower')">🟩 Large Size (80px)</button>
+            <button class="tool-button" onclick="setTool('background')">🔲 Background</button>
+            <button class="tool-button" onclick="setTool('foreground')">⬜ Foreground</button>
+            <button class="tool-button" onclick="setTool('trigger')" style="background: rgba(255,100,255,0.3);">⚡ Trigger Block</button>
+            <button class="tool-button" onclick="setTool('start')">🟢 Start Position</button>
+            <button class="tool-button" onclick="setTool('finish')">🏁 Finish Line</button>
+            <button class="tool-button" onclick="setTool('player')">👤 Preview Player</button>
+            <button class="tool-button" onclick="setTool('comment')">💬 Add Comment</button>
+            <button class="tool-button" onclick="setTool('select')">✋ Select/Move <span style="float:right;color:#999;">5</span></button>
+            <button class="tool-button" onclick="setTool('resize')">↔️ Resize <span style="float:right;color:#999;">6</span></button>
+            <button class="tool-button delete" onclick="setTool('delete')">🗑 Delete <span style="float:right;color:#999;">7</span></button>
+            <button class="tool-button" onclick="mergeSelected()" style="background: rgba(150,100,255,0.7);">🔗 Merge Selected</button>
+            <button class="tool-button" id="unmergeButton" onclick="unmergeSelected()" style="background: rgba(255,100,150,0.7); display: none;">🔓 Unmerge</button>
+            <button class="tool-button" onclick="setTool('void')" style="background: rgba(0,0,0,0.5);">⬛ Void (Cut)</button>
+            <button class="tool-button" onclick="setTool('movement')" style="background: rgba(100,150,255,0.7);">🔄 Add Movement</button>
+            <button class="tool-button" onclick="setTool('editmovement')" style="background: rgba(255,150,100,0.7);">⏱️ Edit Movement Time</button>
+        </div>
+
+
+        <div class="section">
+            <h3>Elements <span style="font-size: 10px; color: #999;">(click to jump)</span></h3>
+            <div id="elementsList" style="max-height: 300px; overflow-y: auto; font-size: 11px;">
+                <!-- Elements will be populated here -->
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Grid Settings</h3>
+            <div class="slider-group">
+                <label>Grid Size: <span class="value" id="gridValue">20</span>px</label>
+                <select id="gridSize" onchange="updateGrid()" style="width: 100%; padding: 8px; background: #2a2a3e; color: white; border: 1px solid #444; border-radius: 5px; margin-top: 5px;">
+                    <option value="5">5px</option>
+                    <option value="10">10px</option>
+                    <option value="20" selected>20px</option>
+                    <option value="40">40px</option>
+                    <option value="80">80px</option>
+                    <option value="160">160px</option>
+                </select>
+            </div>
+            <div class="stats">Blocks: <span id="blockCount">0</span> | Hazards: <span id="hazardCount">0</span></div>
+        </div>
+
+        <div class="section">
+            <h3>Camera Navigation</h3>
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <div style="flex: 1;">
+                    <label style="font-size: 12px; color: #ccc; display: block; margin-bottom: 5px;">X:</label>
+                    <input type="number" id="camX" value="0" placeholder="X">
+                </div>
+                <div style="flex: 1;">
+                    <label style="font-size: 12px; color: #ccc; display: block; margin-bottom: 5px;">Y:</label>
+                    <input type="number" id="camY" value="0" placeholder="Y">
+                </div>
+            </div>
+            <button onclick="goToCoordinates()" style="width: 100%; padding: 8px; font-size: 12px;">Go to Coordinates</button>
+        </div>
+
+        <div class="section">
+            <h3>Physics Info</h3>
+            <div class="stats" style="line-height: 1.8;">
+                <div>Gravity: <span style="color: #4facfe;">0.042</span></div>
+                <div>Move Accel: <span style="color: #4facfe;">0.28</span></div>
+                <div>Jump Power: <span style="color: #4facfe;">3.70</span></div>
+                <div>Max Speed: <span style="color: #4facfe;">3.5</span></div>
+                <div>Ground Friction: <span style="color: #4facfe;">0.94</span></div>
+                <div>Air Resistance: <span style="color: #4facfe;">0.88</span></div>
+                <div style="margin-top: 10px; color: #FFC107;">Jump Height: ~162px (size×4+2)</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Keyboard Shortcuts</h3>
+            <div class="controls-info" style="font-size: 11px; line-height: 1.6;">
+                <strong>Tools:</strong><br>
+                • 1-7: Select tools<br>
+                • G: Toggle grid<br>
+                <br>
+                <strong>Editing:</strong><br>
+                • Ctrl+Z: Undo<br>
+                • Ctrl+Y: Redo<br>
+                • Ctrl+C: Copy block<br>
+                • Ctrl+V: Paste block<br>
+                • Delete: Delete selected<br>
+                <br>
+                <strong>Camera:</strong><br>
+                • WASD: Pan camera<br>
+                • Scroll: Zoom in/out<br>
+                <br>
+                <strong>Test Mode:</strong><br>
+                • R: Restart<br>
+                • ESC: Exit test
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Export Level</h3>
+            <textarea id="levelData" readonly></textarea>
+            <p class="info-text">Level data will appear here. Click "Copy Level Data" to copy.</p>
+        </div>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <!-- Import Modal -->
+    <div id="importModal">
+        <div class="modal-content">
+            <h2>📥 Import Level</h2>
+            <textarea id="importModalText" placeholder="Paste your level JSON here..."></textarea>
+            <div class="modal-buttons">
+                <button onclick="doImport()">Import</button>
+                <button onclick="closeImportModal()" class="secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="movementModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;">
+        <div class="modal-content" style="width: 400px;">
+            <h2>⏱️ Movement Settings</h2>
+            <div style="margin: 20px 0;">
+                <div style="font-size: 14px; color: #aaa; margin-bottom: 10px;" id="movementModalBlockInfo"></div>
+                <div class="slider-group">
+                    <label>Cycle Time: <span class="value" id="movementModalValue">5</span>s</label>
+                    <input type="range" min="1" max="30" value="5" id="movementModalSlider" oninput="updateMovementModalSlider()" style="width: 100%;">
+                    <div style="margin-top: 10px;">
+                        <label style="font-size: 12px; color: #888;">Or enter exact value (seconds):</label>
+                        <input type="number" min="0.1" max="100" step="0.1" value="5" id="movementCycleInput" oninput="updateMovementFromInput()" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.5); color: white; border: 1px solid #4facfe; border-radius: 3px; margin-top: 5px;">
+                    </div>
+                </div>
+                <div class="slider-group" style="margin-top: 15px;">
+                    <label>Start Delay: <span class="value" id="movementDelayValue">0</span>s</label>
+                    <input type="range" min="0" max="30" step="0.5" value="0" id="movementDelaySlider" oninput="updateMovementDelaySlider()" style="width: 100%;">
+                    <div style="margin-top: 10px;">
+                        <label style="font-size: 12px; color: #888;">Or enter exact value (seconds):</label>
+                        <input type="number" min="0" max="100" step="0.1" value="0" id="movementDelayInput" oninput="updateDelayFromInput()" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.5); color: white; border: 1px solid #4facfe; border-radius: 3px; margin-top: 5px;">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button onclick="saveMovementTime()">Save</button>
+                <button onclick="closeMovementModal()" class="secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Create favicon with orange square character
+        const faviconCanvas = document.createElement('canvas');
+        faviconCanvas.width = 32;
+        faviconCanvas.height = 32;
+        const faviconCtx = faviconCanvas.getContext('2d');
+
+        // Draw orange square character
+        faviconCtx.fillStyle = '#FF8C42';
+        faviconCtx.fillRect(6, 6, 20, 20);
+        faviconCtx.strokeStyle = '#333';
+        faviconCtx.lineWidth = 2;
+        faviconCtx.strokeRect(6, 6, 20, 20);
+
+        // Set favicon
+        const favicon = document.getElementById('favicon');
+        favicon.href = faviconCanvas.toDataURL('image/png');
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Canvas size
+        canvas.width = window.innerWidth - 250;
+        canvas.height = window.innerHeight;
+
+        // Level data
+        let platforms = [];
+        let hazards = [];
+        let growers = [];  // Large size blocks (80px)
+        let shrinkers = [];  // Small size blocks (20px)
+        let defaultSizeBlocks = [];  // Default size blocks (40px)
+        let backgroundBlocks = [];  // Visual only, no collision
+        let foregroundBlocks = [];  // Visual only, rendered on top
+        let triggers = [];  // Invisible trigger blocks with IDs
+        let nextTriggerId = 1;  // Auto-increment trigger IDs
+        let comments = [];  // Comments for level understanding (not shown in gameplay)
+        let startPos = { x: 40, y: 520, width: 40, height: 40 };  // 40x40 grid
+        let finishPos = { x: 700, y: 480, width: 40, height: 40 };  // Drag-able finish (40x40)
+
+        // Tool state
+        let currentTool = 'platform';
+        let gridSize = 20;
+        let startGrid = 40;  // Grid size for start/finish placement
+        let isDrawing = false;
+        let dragStart = null;
+        let currentRect = null;
+        let selectedBlock = null;
+        let selectedBlocks = [];  // Multiple selected blocks
+        let isMultiSelecting = false;  // Dragging selection box
+        let selectionStart = null;
+        let selectionBox = null;
+        let isDraggingBlock = false;
+        let dragOffset = { x: 0, y: 0 };
+        let playerPreview = { x: 0, y: 0, visible: false };
+        let isResizing = false;
+        let resizeEdge = null;  // 'left', 'right', 'top', 'bottom'
+        let resizeStartPos = { x: 0, y: 0 };
+        let resizeOriginal = null;
+        let isDeleting = false;  // Track if currently in delete-drag mode
+
+        // Clipboard for copy/paste
+        let clipboard = [];
+        let isPasting = false;
+        let pastePreview = [];
+        let pasteOffset = { x: 0, y: 0 };
+
+        // Camera
+        let cameraX = 0;
+        let cameraY = 0;
+        let zoom = 1;
+
+        // Physics settings (fixed values matching main game)
+        const physics = {
+            gravity: 0.042,  // 150% of 0.028
+            moveSpeed: 0.28,  // Faster ground movement: 0.21 * 1.33 ≈ 0.28
+            jumpPower: 3.70,  // Allows jumping height × 4 + 2px for each size
+            maxSpeed: 3.5,  // Faster max speed: 2.625 * 1.33 ≈ 3.5
+            friction: 0.94,  // Less friction, more slippery (was 0.80)
+            airRes: 0.88,  // Higher air resistance (was 0.92)
+            fastFallMultiplier: 2.0  // Down arrow fall speed (was 1.75)
+        };
+
+        // Test mode
+        let testMode = false;
+        let player = { x: 0, y: 0, width: 40, height: 40, velocityX: 0, velocityY: 0, baseSize: 40, currentSize: 40 };
+        let keys = {};
+        let isGrounded = false;
+        let sizeTransitioning = false;
+        let sizeTransitionProgress = 0;
+        let targetSize = 40;
+        let isJumping = false;
+
+        // Undo/Redo system
+        let undoStack = [];
+        let redoStack = [];
+        const MAX_UNDO_STEPS = 50;
+
+        function saveState() {
+            const state = {
+                platforms: JSON.parse(JSON.stringify(platforms)),
+                hazards: JSON.parse(JSON.stringify(hazards)),
+                growers: JSON.parse(JSON.stringify(growers)),
+                shrinkers: JSON.parse(JSON.stringify(shrinkers)),
+                defaultSizeBlocks: JSON.parse(JSON.stringify(defaultSizeBlocks)),
+                backgroundBlocks: JSON.parse(JSON.stringify(backgroundBlocks)),
+                foregroundBlocks: JSON.parse(JSON.stringify(foregroundBlocks)),
+                triggers: JSON.parse(JSON.stringify(triggers)),
+                comments: JSON.parse(JSON.stringify(comments)),
+                startPos: JSON.parse(JSON.stringify(startPos)),
+                finishPos: JSON.parse(JSON.stringify(finishPos))
+            };
+            undoStack.push(state);
+            if (undoStack.length > MAX_UNDO_STEPS) {
+                undoStack.shift();
+            }
+            redoStack = []; // Clear redo stack on new action
+        }
+
+        function undo() {
+            if (undoStack.length > 0) {
+                const currentState = {
+                    platforms: JSON.parse(JSON.stringify(platforms)),
+                    hazards: JSON.parse(JSON.stringify(hazards)),
+                    growers: JSON.parse(JSON.stringify(growers)),
+                    shrinkers: JSON.parse(JSON.stringify(shrinkers)),
+                    defaultSizeBlocks: JSON.parse(JSON.stringify(defaultSizeBlocks)),
+                    backgroundBlocks: JSON.parse(JSON.stringify(backgroundBlocks)),
+                    foregroundBlocks: JSON.parse(JSON.stringify(foregroundBlocks)),
+                    triggers: JSON.parse(JSON.stringify(triggers)),
+                    comments: JSON.parse(JSON.stringify(comments)),
+                    startPos: JSON.parse(JSON.stringify(startPos)),
+                    finishPos: JSON.parse(JSON.stringify(finishPos))
+                };
+                redoStack.push(currentState);
+
+                const state = undoStack.pop();
+                platforms = state.platforms;
+                hazards = state.hazards;
+                growers = state.growers;
+                shrinkers = state.shrinkers;
+                defaultSizeBlocks = state.defaultSizeBlocks || [];
+                backgroundBlocks = state.backgroundBlocks;
+                foregroundBlocks = state.foregroundBlocks;
+                triggers = state.triggers || [];
+                comments = state.comments || [];
+                startPos = state.startPos;
+                finishPos = state.finishPos;
+
+                loadComments();  // Reload comment DOM elements
+                updateStats();
+                updateLevelData();
+                draw();
+            }
+        }
+
+        function redo() {
+            if (redoStack.length > 0) {
+                const currentState = {
+                    platforms: JSON.parse(JSON.stringify(platforms)),
+                    hazards: JSON.parse(JSON.stringify(hazards)),
+                    growers: JSON.parse(JSON.stringify(growers)),
+                    shrinkers: JSON.parse(JSON.stringify(shrinkers)),
+                    defaultSizeBlocks: JSON.parse(JSON.stringify(defaultSizeBlocks)),
+                    backgroundBlocks: JSON.parse(JSON.stringify(backgroundBlocks)),
+                    foregroundBlocks: JSON.parse(JSON.stringify(foregroundBlocks)),
+                    triggers: JSON.parse(JSON.stringify(triggers)),
+                    comments: JSON.parse(JSON.stringify(comments)),
+                    startPos: JSON.parse(JSON.stringify(startPos)),
+                    finishPos: JSON.parse(JSON.stringify(finishPos))
+                };
+                undoStack.push(currentState);
+
+                const state = redoStack.pop();
+                platforms = state.platforms;
+                hazards = state.hazards;
+                growers = state.growers;
+                shrinkers = state.shrinkers;
+                defaultSizeBlocks = state.defaultSizeBlocks || [];
+                backgroundBlocks = state.backgroundBlocks;
+                foregroundBlocks = state.foregroundBlocks;
+                triggers = state.triggers || [];
+                comments = state.comments || [];
+                startPos = state.startPos;
+                finishPos = state.finishPos;
+
+                loadComments();  // Reload comment DOM elements
+                updateStats();
+                updateLevelData();
+                draw();
+            }
+        }
+
+        function setTool(tool) {
+            currentTool = tool;
+            document.querySelectorAll('.tool-button').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function setToolByName(toolName) {
+            currentTool = toolName;
+            document.querySelectorAll('.tool-button').forEach(btn => btn.classList.remove('active'));
+            const buttons = document.querySelectorAll('.tool-button');
+            buttons.forEach(btn => {
+                if (btn.onclick && btn.onclick.toString().includes(`'${toolName}'`)) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+        // Grid toggle
+        let gridVisible = true;
+        function toggleGrid() {
+            gridVisible = !gridVisible;
+            draw();
+        }
+
+        function updateGrid() {
+            gridSize = parseInt(document.getElementById('gridSize').value);
+            document.getElementById('gridValue').textContent = gridSize;
+            draw();
+        }
+
+        // Movement system
+        let movementCycleTime = 5;
+        let movementSelectedBlock = null;
+        let movementStep = 0; // 0 = select block, 1 = set point 1, 2 = set point 2
+        let movementPoint1 = null;
+        let movementPoint2 = null;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+        let isDraggingMovementNode = false;
+        let draggingNodeBlock = null;
+        let draggingNodeType = null; // 'point1' or 'point2'
+        let selectedMovementPath = null; // For editing existing movement paths
+        let editingMovementBlock = null; // Block being edited in modal
+
+        function openMovementModal(block) {
+            editingMovementBlock = block;
+            const blockType = platforms.includes(block) ? 'Platform' : 'Hazard';
+            const blockIndex = platforms.includes(block) ? platforms.indexOf(block) + 1 : hazards.indexOf(block) + 1;
+
+            document.getElementById('movementModalBlockInfo').textContent = `${blockType} #${blockIndex}`;
+
+            const cycleTime = block.movement.cycleTime;
+            document.getElementById('movementModalSlider').value = Math.min(cycleTime, 30);
+            document.getElementById('movementModalValue').textContent = cycleTime;
+            document.getElementById('movementCycleInput').value = cycleTime;
+
+            const delay = block.movement.delay || 0;
+            document.getElementById('movementDelaySlider').value = Math.min(delay, 30);
+            document.getElementById('movementDelayValue').textContent = delay;
+            document.getElementById('movementDelayInput').value = delay;
+
+            document.getElementById('movementModal').style.display = 'flex';
+        }
+
+        function closeMovementModal() {
+            document.getElementById('movementModal').style.display = 'none';
+            editingMovementBlock = null;
+        }
+
+        function updateMovementModalSlider() {
+            const value = document.getElementById('movementModalSlider').value;
+            document.getElementById('movementModalValue').textContent = value;
+            document.getElementById('movementCycleInput').value = value;
+        }
+
+        function updateMovementDelaySlider() {
+            const value = document.getElementById('movementDelaySlider').value;
+            document.getElementById('movementDelayValue').textContent = value;
+            document.getElementById('movementDelayInput').value = value;
+        }
+
+        function updateMovementFromInput() {
+            const value = parseFloat(document.getElementById('movementCycleInput').value);
+            if (value && value > 0) {
+                document.getElementById('movementModalValue').textContent = value;
+                if (value <= 30) {
+                    document.getElementById('movementModalSlider').value = value;
+                }
+            }
+        }
+
+        function updateDelayFromInput() {
+            const value = parseFloat(document.getElementById('movementDelayInput').value);
+            if (value >= 0) {
+                document.getElementById('movementDelayValue').textContent = value;
+                if (value <= 30) {
+                    document.getElementById('movementDelaySlider').value = value;
+                }
+            }
+        }
+
+        function saveMovementTime() {
+            if (editingMovementBlock) {
+                const newTime = parseFloat(document.getElementById('movementCycleInput').value);
+                const newDelay = parseFloat(document.getElementById('movementDelayInput').value);
+
+                if (newTime && newTime > 0) {
+                    editingMovementBlock.movement.cycleTime = newTime;
+                }
+                if (newDelay >= 0) {
+                    editingMovementBlock.movement.delay = newDelay;
+                }
+
+                updateLevelData();
+                updateElementsList();
+            }
+            closeMovementModal();
+        }
+
+        function updateElementsList() {
+            const list = document.getElementById('elementsList');
+            list.innerHTML = '';
+
+            const elements = [];
+
+            // Add platforms
+            platforms.forEach((p, i) => {
+                elements.push({
+                    type: 'Platform',
+                    index: i + 1,
+                    obj: p,
+                    color: '#4A90E2',
+                    icon: '🟦',
+                    hasMovement: !!p.movement
+                });
+            });
+
+            // Add hazards
+            hazards.forEach((h, i) => {
+                elements.push({
+                    type: 'Hazard',
+                    index: i + 1,
+                    obj: h,
+                    color: '#E74C3C',
+                    icon: '🟥',
+                    hasMovement: !!h.movement
+                });
+            });
+
+            // Add size blocks
+            shrinkers.forEach((s, i) => {
+                elements.push({
+                    type: 'Small Size',
+                    index: i + 1,
+                    obj: s,
+                    color: '#9B59B6',
+                    icon: '🟪'
+                });
+            });
+
+            defaultSizeBlocks.forEach((d, i) => {
+                elements.push({
+                    type: 'Default Size',
+                    index: i + 1,
+                    obj: d,
+                    color: '#FFC107',
+                    icon: '🟨'
+                });
+            });
+
+            growers.forEach((g, i) => {
+                elements.push({
+                    type: 'Large Size',
+                    index: i + 1,
+                    obj: g,
+                    color: '#4CAF50',
+                    icon: '🟩'
+                });
+            });
+
+            // Add background blocks
+            backgroundBlocks.forEach((b, i) => {
+                elements.push({
+                    type: 'Background',
+                    index: i + 1,
+                    obj: b,
+                    color: '#666',
+                    icon: '🔲'
+                });
+            });
+
+            // Add foreground blocks
+            foregroundBlocks.forEach((f, i) => {
+                elements.push({
+                    type: 'Foreground',
+                    index: i + 1,
+                    obj: f,
+                    color: '#999',
+                    icon: '⬜'
+                });
+            });
+
+            // Add start and finish
+            elements.push({
+                type: 'Start',
+                index: 1,
+                obj: startPos,
+                color: '#4CAF50',
+                icon: '🟢'
+            });
+
+            elements.push({
+                type: 'Finish',
+                index: 1,
+                obj: finishPos,
+                color: '#FFC107',
+                icon: '🏁'
+            });
+
+            if (elements.length === 0) {
+                list.innerHTML = '<div style="color: #666; padding: 10px;">No elements yet</div>';
+                return;
+            }
+
+            elements.forEach(elem => {
+                const div = document.createElement('div');
+                div.style.cssText = `
+                    padding: 8px;
+                    margin: 4px 0;
+                    background: rgba(255,255,255,0.05);
+                    border-left: 3px solid ${elem.color};
+                    border-radius: 3px;
+                    cursor: pointer;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                `;
+                div.innerHTML = `
+                    <span>${elem.icon} ${elem.type} #${elem.index}</span>
+                    ${elem.hasMovement ? '<span style="color: #6496FF;">🔄</span>' : ''}
+                `;
+                div.onclick = () => {
+                    cameraX = elem.obj.x - canvas.width / (2 * zoom);
+                    cameraY = elem.obj.y - canvas.height / (2 * zoom);
+                    document.getElementById('cameraInfo').textContent =
+                        `Camera: ${Math.round(cameraX)}, ${Math.round(cameraY)} | Zoom: ${zoom.toFixed(1)}x`;
+
+                    // If it has movement, open the movement modal
+                    if (elem.hasMovement) {
+                        selectMovementPath(elem.obj);
+                        openMovementModal(elem.obj);
+                    }
+
+                    draw();
+                };
+                list.appendChild(div);
+            });
+        }
+
+        // Physics are now fixed, no need for update function
+
+        function pointToLineDistance(px, py, x1, y1, x2, y2) {
+            const A = px - x1;
+            const B = py - y1;
+            const C = x2 - x1;
+            const D = y2 - y1;
+
+            const dot = A * C + B * D;
+            const lenSq = C * C + D * D;
+            let param = -1;
+
+            if (lenSq !== 0) {
+                param = dot / lenSq;
+            }
+
+            let xx, yy;
+
+            if (param < 0) {
+                xx = x1;
+                yy = y1;
+            } else if (param > 1) {
+                xx = x2;
+                yy = y2;
+            } else {
+                xx = x1 + param * C;
+                yy = y1 + param * D;
+            }
+
+            const dx = px - xx;
+            const dy = py - yy;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function snapToGrid(value, grid = gridSize) {
+            return Math.floor(value / grid) * grid;
+        }
+
+        function screenToWorld(x, y) {
+            return {
+                x: (x / zoom) + cameraX,
+                y: (y / zoom) + cameraY
+            };
+        }
+
+        function getEdgeNearMouse(block, mouseX, mouseY, threshold = 10) {
+            // Check if mouse is near any edge of the block
+            const left = Math.abs(mouseX - block.x) < threshold && mouseY >= block.y && mouseY <= block.y + block.height;
+            const right = Math.abs(mouseX - (block.x + block.width)) < threshold && mouseY >= block.y && mouseY <= block.y + block.height;
+            const top = Math.abs(mouseY - block.y) < threshold && mouseX >= block.x && mouseX <= block.x + block.width;
+            const bottom = Math.abs(mouseY - (block.y + block.height)) < threshold && mouseX >= block.x && mouseX <= block.x + block.width;
+
+            if (left) return 'left';
+            if (right) return 'right';
+            if (top) return 'top';
+            if (bottom) return 'bottom';
+            return null;
+        }
+
+        function worldToScreen(x, y) {
+            return {
+                x: (x - cameraX) * zoom,
+                y: (y - cameraY) * zoom
+            };
+        }
+
+        canvas.addEventListener('mousedown', (e) => {
+            if (testMode) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const worldPos = screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
+
+            // Handle paste mode - click to place
+            if (isPasting && pastePreview.length > 0) {
+                saveState();
+
+                // Place all pasted blocks
+                for (const block of pastePreview) {
+                    const newBlock = JSON.parse(JSON.stringify(block.obj));
+
+                    if (block.type === 'platform') platforms.push(newBlock);
+                    else if (block.type === 'hazard') hazards.push(newBlock);
+                    else if (block.type === 'grower') growers.push(newBlock);
+                    else if (block.type === 'shrinker') shrinkers.push(newBlock);
+                    else if (block.type === 'default') defaultSizeBlocks.push(newBlock);
+                    else if (block.type === 'background') backgroundBlocks.push(newBlock);
+                    else if (block.type === 'foreground') foregroundBlocks.push(newBlock);
+                }
+
+                isPasting = false;
+                pastePreview = [];
+                updateStats();
+                updateLevelData();
+                draw();
+                return;
+            }
+
+            if (currentTool === 'select') {
+                // Check if clicking on an existing block
+                selectedBlock = null;
+                isResizing = false;
+                resizeEdge = null;
+
+                // Check all blocks (select tool doesn't resize anymore)
+                const allBlocks = [
+                    ...platforms.map((p, i) => ({ type: 'platform', index: i, obj: p, grid: gridSize })),
+                    ...hazards.map((h, i) => ({ type: 'hazard', index: i, obj: h, grid: gridSize })),
+                    ...growers.map((g, i) => ({ type: 'grower', index: i, obj: g, grid: gridSize })),
+                    ...shrinkers.map((s, i) => ({ type: 'shrinker', index: i, obj: s, grid: gridSize })),
+                    ...defaultSizeBlocks.map((d, i) => ({ type: 'default', index: i, obj: d, grid: gridSize })),
+                    ...backgroundBlocks.map((b, i) => ({ type: 'background', index: i, obj: b, grid: gridSize })),
+                    ...foregroundBlocks.map((f, i) => ({ type: 'foreground', index: i, obj: f, grid: gridSize }))
+                ];
+
+                // Check for movement nodes first, then regular dragging
+                {
+                    // Check if clicking on a movement node
+                    const nodeRadius = 10 / zoom;
+                    let foundNode = false;
+
+                    for (const block of [...platforms, ...hazards]) {
+                        if (block.movement) {
+                            const { point1, point2 } = block.movement;
+
+                            // Check point1
+                            const dist1 = Math.sqrt(Math.pow(worldPos.x - point1.x, 2) + Math.pow(worldPos.y - point1.y, 2));
+                            if (dist1 <= nodeRadius * 3) {
+                                isDraggingMovementNode = true;
+                                draggingNodeBlock = block;
+                                draggingNodeType = 'point1';
+                                foundNode = true;
+                                break;
+                            }
+
+                            // Check point2
+                            const dist2 = Math.sqrt(Math.pow(worldPos.x - point2.x, 2) + Math.pow(worldPos.y - point2.y, 2));
+                            if (dist2 <= nodeRadius * 3) {
+                                isDraggingMovementNode = true;
+                                draggingNodeBlock = block;
+                                draggingNodeType = 'point2';
+                                foundNode = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    // If no movement node clicked, check for clicking movement paths
+                    if (!foundNode) {
+                        for (const block of [...platforms, ...hazards]) {
+                            if (block.movement) {
+                                const { point1, point2 } = block.movement;
+
+                                // Check if clicking near the movement line
+                                const lineDistThreshold = 15 / zoom;
+                                const dist = pointToLineDistance(worldPos.x, worldPos.y, point1.x, point1.y, point2.x, point2.y);
+
+                                if (dist <= lineDistThreshold) {
+                                    selectMovementPath(block);
+                                    foundNode = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    // If no movement node or path clicked, check for regular dragging
+                    if (!foundNode) {
+                        let clickedBlock = false;
+
+                        // Check finish block
+                        if (worldPos.x >= finishPos.x && worldPos.x <= finishPos.x + finishPos.width &&
+                            worldPos.y >= finishPos.y && worldPos.y <= finishPos.y + finishPos.height) {
+                            selectedBlock = { type: 'finish', obj: finishPos, grid: startGrid };
+                            isDraggingBlock = true;
+                            clickedBlock = true;
+                            selectedBlocks = [];  // Clear multi-selection
+                            document.getElementById('unmergeButton').style.display = 'none'; // Hide unmerge button
+                        } else {
+                            // Check if clicking on a block in the current selection
+                            let clickedSelectedBlock = false;
+                            if (selectedBlocks.length > 0) {
+                                for (const block of selectedBlocks) {
+                                    if (isPointInBlock(worldPos.x, worldPos.y, block.obj)) {
+                                        isDraggingBlock = true;
+                                        clickedBlock = true;
+                                        clickedSelectedBlock = true;
+                                        selectionStart = { x: worldPos.x, y: worldPos.y };
+                                        break;
+                                    }
+                                }
+                            }
+
+                            // If not clicking on selected block, check other blocks for dragging
+                            if (!clickedSelectedBlock) {
+                                for (const block of allBlocks) {
+                                    if (isPointInBlock(worldPos.x, worldPos.y, block.obj)) {
+
+                                        // If block has movement, open modal instead of dragging
+                                        if (block.obj.movement && (block.type === 'platform' || block.type === 'hazard')) {
+                                            openMovementModal(block.obj);
+                                            clickedBlock = true;
+                                            return; // Don't start dragging
+                                        }
+
+                                        selectedBlock = block;
+                                        isDraggingBlock = true;
+                                        clickedBlock = true;
+                                        selectedBlocks = [];  // Clear multi-selection
+
+                                        // Show unmerge button if merged block selected
+                                        const unmergeBtn = document.getElementById('unmergeButton');
+                                        if (block.obj.merged) {
+                                            unmergeBtn.style.display = 'inline-block';
+                                        } else {
+                                            unmergeBtn.style.display = 'none';
+                                        }
+
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        // If clicked on empty space, start multi-selection box and deselect movement paths
+                        if (!clickedBlock) {
+                            isMultiSelecting = true;
+                            selectionStart = { x: worldPos.x, y: worldPos.y };
+                            selectionBox = { x: worldPos.x, y: worldPos.y, width: 0, height: 0 };
+                            selectedBlock = null;
+                            selectedBlocks = [];
+                            draggingNodeBlock = null; // Deselect movement path
+                            document.getElementById('unmergeButton').style.display = 'none'; // Hide unmerge button
+                            selectedMovementPath = null;
+                        }
+                    }
+                }
+            } else if (currentTool === 'editmovement') {
+                // Edit Movement tool - click on a block with movement to edit cycle time
+                const movableBlocks = [
+                    ...platforms.map((p, i) => ({ type: 'platform', index: i, obj: p })),
+                    ...hazards.map((h, i) => ({ type: 'hazard', index: i, obj: h }))
+                ];
+
+                for (const block of movableBlocks) {
+                    if (isPointInBlock(worldPos.x, worldPos.y, block.obj)) {
+                        if (block.obj.movement) {
+                            openMovementModal(block.obj);
+                        } else {
+                            alert('This block has no movement path. Use "Add Movement" tool first.');
+                        }
+                        break;
+                    }
+                }
+            } else if (currentTool === 'movement') {
+                // Movement tool - 3 step process: click block center, click start square, click end square
+                if (movementStep === 0) {
+                    // Step 1: Select a block and set its center as reference point
+                    const movableBlocks = [
+                        ...platforms.map((p, i) => ({ type: 'platform', index: i, obj: p })),
+                        ...hazards.map((h, i) => ({ type: 'hazard', index: i, obj: h }))
+                    ];
+
+                    for (const block of movableBlocks) {
+                        if (isPointInBlock(worldPos.x, worldPos.y, block.obj)) {
+                            movementSelectedBlock = block;
+
+                            // Calculate center of the grid square that was clicked
+                            const clickedGridX = Math.floor(worldPos.x / gridSize) * gridSize + gridSize / 2;
+                            const clickedGridY = Math.floor(worldPos.y / gridSize) * gridSize + gridSize / 2;
+
+                            // Store the block's center offset from the clicked square
+                            movementSelectedBlock.centerOffset = {
+                                x: clickedGridX,
+                                y: clickedGridY
+                            };
+
+                            movementStep = 1;
+                            movementPoint1 = null;
+                            movementPoint2 = null;
+                            draw();
+                            break;
+                        }
+                    }
+                } else if (movementStep === 1) {
+                    // Step 2: Set starting point (snap to grid intersections for clear placement)
+                    const clickedGridX = Math.round(worldPos.x / gridSize) * gridSize;
+                    const clickedGridY = Math.round(worldPos.y / gridSize) * gridSize;
+
+                    movementPoint1 = {
+                        x: clickedGridX,
+                        y: clickedGridY
+                    };
+                    movementStep = 2;
+                    draw();
+                } else if (movementStep === 2) {
+                    // Step 3: Set ending point (snap to grid intersections for clear placement)
+                    const clickedGridX = Math.round(worldPos.x / gridSize) * gridSize;
+                    const clickedGridY = Math.round(worldPos.y / gridSize) * gridSize;
+
+                    movementPoint2 = {
+                        x: clickedGridX,
+                        y: clickedGridY
+                    };
+
+                    // Save the movement data to the block
+                    movementSelectedBlock.obj.movement = {
+                        point1: movementPoint1,
+                        point2: movementPoint2,
+                        cycleTime: movementCycleTime,
+                        delay: 0  // Default delay, can be edited in modal
+                    };
+
+                    // Reset movement tool state
+                    movementSelectedBlock = null;
+                    movementStep = 0;
+                    movementPoint1 = null;
+                    movementPoint2 = null;
+                    updateLevelData();
+                    draw();
+                }
+            } else if (currentTool === 'resize') {
+                // Resize tool - check for edges and start resizing
+                selectedBlock = null;
+                isResizing = false;
+                resizeEdge = null;
+
+                const allBlocks = [
+                    ...platforms.map((p, i) => ({ type: 'platform', index: i, obj: p, grid: gridSize })),
+                    ...hazards.map((h, i) => ({ type: 'hazard', index: i, obj: h, grid: gridSize })),
+                    ...growers.map((g, i) => ({ type: 'grower', index: i, obj: g, grid: gridSize })),
+                    ...shrinkers.map((s, i) => ({ type: 'shrinker', index: i, obj: s, grid: gridSize })),
+                    ...defaultSizeBlocks.map((d, i) => ({ type: 'default', index: i, obj: d, grid: gridSize })),
+                    ...backgroundBlocks.map((b, i) => ({ type: 'background', index: i, obj: b, grid: gridSize })),
+                    ...foregroundBlocks.map((f, i) => ({ type: 'foreground', index: i, obj: f, grid: gridSize }))
+                ];
+
+                // Check for edge resizing
+                for (const block of allBlocks) {
+                    const edge = getEdgeNearMouse(block.obj, worldPos.x, worldPos.y);
+                    if (edge) {
+                        selectedBlock = block;
+                        isResizing = true;
+                        resizeEdge = edge;
+                        resizeStartPos = { x: worldPos.x, y: worldPos.y };
+                        resizeOriginal = {
+                            x: block.obj.x,
+                            y: block.obj.y,
+                            width: block.obj.width,
+                            height: block.obj.height
+                        };
+                        break;
+                    }
+                }
+            } else if (currentTool === 'delete') {
+                deleteAtPosition(worldPos.x, worldPos.y);
+                isDeleting = true;  // Enable drag-delete
+            } else if (currentTool === 'void') {
+                // Start void dragging
+                isDrawing = true;
+                dragStart = {
+                    x: snapToGrid(worldPos.x),
+                    y: snapToGrid(worldPos.y)
+                };
+            } else if (currentTool === 'start') {
+                startPos.x = snapToGrid(worldPos.x, startGrid);
+                startPos.y = snapToGrid(worldPos.y, startGrid);
+                draw();
+            } else if (currentTool === 'finish') {
+                // Finish is now drag-able, so start dragging
+                isDrawing = true;
+                dragStart = {
+                    x: snapToGrid(worldPos.x, startGrid),
+                    y: snapToGrid(worldPos.y, startGrid)
+                };
+            } else if (currentTool === 'player') {
+                playerPreview.x = snapToGrid(worldPos.x);
+                playerPreview.y = snapToGrid(worldPos.y);
+                playerPreview.visible = true;
+                draw();
+            } else if (currentTool === 'comment') {
+                // Find which block was clicked (in world coordinates)
+                const clickedBlock = findBlockAtPosition(worldPos.x, worldPos.y);
+                // Create a new comment at the world position, connected to the clicked block
+                const commentWorldX = snapToGrid(worldPos.x);
+                const commentWorldY = snapToGrid(worldPos.y);
+                createComment(commentWorldX, commentWorldY, clickedBlock);
+                saveState();
+                draw();
+            } else {
+                // For drawing tools, allow both click-to-place and drag-to-draw
+                isDrawing = true;
+                dragStart = {
+                    x: snapToGrid(worldPos.x),
+                    y: snapToGrid(worldPos.y)
+                };
+
+                // Immediately create a single grid-sized block at click position
+                const clickBlock = {
+                    x: dragStart.x,
+                    y: dragStart.y,
+                    width: gridSize,
+                    height: gridSize
+                };
+
+                // Show preview immediately
+                currentRect = clickBlock;
+                draw();
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (testMode) return;
+
+            const rect = canvas.getBoundingClientRect();
+            lastMouseX = e.clientX - rect.left;
+            lastMouseY = e.clientY - rect.top;
+            const worldPos = screenToWorld(lastMouseX, lastMouseY);
+
+            if (isDeleting) {
+                // Continuously delete blocks while dragging
+                deleteAtPosition(worldPos.x, worldPos.y);
+            } else if (isResizing && selectedBlock) {
+                // Handle resizing
+                const grid = selectedBlock.grid || gridSize;
+                const snappedX = snapToGrid(worldPos.x, grid);
+                const snappedY = snapToGrid(worldPos.y, grid);
+
+                if (resizeEdge === 'left') {
+                    const newWidth = resizeOriginal.x + resizeOriginal.width - snappedX;
+                    if (newWidth > grid) {
+                        selectedBlock.obj.x = snappedX;
+                        selectedBlock.obj.width = newWidth;
+                    }
+                } else if (resizeEdge === 'right') {
+                    const newWidth = snappedX - selectedBlock.obj.x;
+                    if (newWidth > grid) {
+                        selectedBlock.obj.width = newWidth;
+                    }
+                } else if (resizeEdge === 'top') {
+                    const newHeight = resizeOriginal.y + resizeOriginal.height - snappedY;
+                    if (newHeight > grid) {
+                        selectedBlock.obj.y = snappedY;
+                        selectedBlock.obj.height = newHeight;
+                    }
+                } else if (resizeEdge === 'bottom') {
+                    const newHeight = snappedY - selectedBlock.obj.y;
+                    if (newHeight > grid) {
+                        selectedBlock.obj.height = newHeight;
+                    }
+                }
+                draw();
+            } else if (isDraggingMovementNode && draggingNodeBlock) {
+                // Drag movement node - snap to grid intersections
+                if (draggingNodeType === 'point1') {
+                    draggingNodeBlock.movement.point1.x = Math.round(worldPos.x / gridSize) * gridSize;
+                    draggingNodeBlock.movement.point1.y = Math.round(worldPos.y / gridSize) * gridSize;
+                } else if (draggingNodeType === 'point2') {
+                    draggingNodeBlock.movement.point2.x = Math.round(worldPos.x / gridSize) * gridSize;
+                    draggingNodeBlock.movement.point2.y = Math.round(worldPos.y / gridSize) * gridSize;
+                }
+                draw();
+            } else if (isMultiSelecting) {
+                // Update selection box
+                const minX = Math.min(selectionStart.x, worldPos.x);
+                const minY = Math.min(selectionStart.y, worldPos.y);
+                const maxX = Math.max(selectionStart.x, worldPos.x);
+                const maxY = Math.max(selectionStart.y, worldPos.y);
+
+                selectionBox = {
+                    x: minX,
+                    y: minY,
+                    width: maxX - minX,
+                    height: maxY - minY
+                };
+                draw();
+            } else if (isDraggingBlock && selectedBlocks.length > 0) {
+                // Drag multiple selected blocks
+                const deltaX = snapToGrid(worldPos.x) - snapToGrid(selectionStart.x);
+                const deltaY = snapToGrid(worldPos.y) - snapToGrid(selectionStart.y);
+
+                if (deltaX !== 0 || deltaY !== 0) {
+                    for (const block of selectedBlocks) {
+                        block.obj.x += deltaX;
+                        block.obj.y += deltaY;
+
+                        // Update movement points if present
+                        if (block.obj.movement) {
+                            block.obj.movement.point1.x += deltaX;
+                            block.obj.movement.point1.y += deltaY;
+                            block.obj.movement.point2.x += deltaX;
+                            block.obj.movement.point2.y += deltaY;
+                        }
+                    }
+                    selectionStart = { x: worldPos.x, y: worldPos.y };
+                    draw();
+                }
+            } else if (isDraggingBlock && selectedBlock) {
+                // Snap mouse position directly to grid
+                const grid = selectedBlock.grid || gridSize;
+                const oldX = selectedBlock.obj.x;
+                const oldY = selectedBlock.obj.y;
+                selectedBlock.obj.x = snapToGrid(worldPos.x, grid);
+                selectedBlock.obj.y = snapToGrid(worldPos.y, grid);
+
+                // If this block has movement, update its movement points
+                if (selectedBlock.obj.movement) {
+                    const deltaX = selectedBlock.obj.x - oldX;
+                    const deltaY = selectedBlock.obj.y - oldY;
+                    selectedBlock.obj.movement.point1.x += deltaX;
+                    selectedBlock.obj.movement.point1.y += deltaY;
+                    selectedBlock.obj.movement.point2.x += deltaX;
+                    selectedBlock.obj.movement.point2.y += deltaY;
+                }
+                draw();
+            } else if (isDrawing) {
+                // Use appropriate grid based on tool
+                const grid = currentTool === 'finish' ? startGrid : gridSize;
+
+                // Calculate the raw drag rectangle (before snapping)
+                const rawMinX = Math.min(dragStart.x, worldPos.x);
+                const rawMaxX = Math.max(dragStart.x, worldPos.x);
+                const rawMinY = Math.min(dragStart.y, worldPos.y);
+                const rawMaxY = Math.max(dragStart.y, worldPos.y);
+
+                // Find all grid cells that the raw rectangle touches
+                const startCellX = Math.floor(rawMinX / grid) * grid;
+                const endCellX = Math.floor(rawMaxX / grid) * grid;
+                const startCellY = Math.floor(rawMinY / grid) * grid;
+                const endCellY = Math.floor(rawMaxY / grid) * grid;
+
+                // Create rectangle covering all touched cells
+                currentRect = {
+                    x: startCellX,
+                    y: startCellY,
+                    width: endCellX - startCellX + grid,
+                    height: endCellY - startCellY + grid
+                };
+
+                draw();
+            }
+
+            // Update paste preview position
+            if (isPasting && pastePreview.length > 0) {
+                const snappedX = snapToGrid(worldPos.x);
+                const snappedY = snapToGrid(worldPos.y);
+                const deltaX = snappedX - pasteOffset.x;
+                const deltaY = snappedY - pasteOffset.y;
+
+                for (const block of pastePreview) {
+                    const originalBlock = clipboard.find(b => b.type === block.type);
+                    if (originalBlock) {
+                        block.obj.x = originalBlock.obj.x + deltaX;
+                        block.obj.y = originalBlock.obj.y + deltaY;
+
+                        // Update movement points if present
+                        if (block.obj.movement && originalBlock.obj.movement) {
+                            block.obj.movement.point1.x = originalBlock.obj.movement.point1.x + deltaX;
+                            block.obj.movement.point1.y = originalBlock.obj.movement.point1.y + deltaY;
+                            block.obj.movement.point2.x = originalBlock.obj.movement.point2.x + deltaX;
+                            block.obj.movement.point2.y = originalBlock.obj.movement.point2.y + deltaY;
+                        }
+                    }
+                }
+                draw();
+            }
+        });
+
+        canvas.addEventListener('mouseup', (e) => {
+            if (isDeleting) {
+                isDeleting = false;
+            }
+
+            if (isResizing) {
+                isResizing = false;
+                resizeEdge = null;
+                selectedBlock = null;
+                updateLevelData();
+            }
+
+            if (isMultiSelecting) {
+                // Finalize multi-selection
+                isMultiSelecting = false;
+
+                if (selectionBox && (selectionBox.width > 0 || selectionBox.height > 0)) {
+                    // Find all blocks within selection box
+                    const allBlocks = [
+                        ...platforms.map((p, i) => ({ type: 'platform', index: i, obj: p, grid: gridSize })),
+                        ...hazards.map((h, i) => ({ type: 'hazard', index: i, obj: h, grid: gridSize })),
+                        ...growers.map((g, i) => ({ type: 'grower', index: i, obj: g, grid: gridSize })),
+                        ...shrinkers.map((s, i) => ({ type: 'shrinker', index: i, obj: s, grid: gridSize })),
+                        ...defaultSizeBlocks.map((d, i) => ({ type: 'default', index: i, obj: d, grid: gridSize })),
+                        ...backgroundBlocks.map((b, i) => ({ type: 'background', index: i, obj: b, grid: gridSize })),
+                        ...foregroundBlocks.map((f, i) => ({ type: 'foreground', index: i, obj: f, grid: gridSize }))
+                    ];
+
+                    selectedBlocks = allBlocks.filter(block => {
+                        return block.obj.x < selectionBox.x + selectionBox.width &&
+                               block.obj.x + block.obj.width > selectionBox.x &&
+                               block.obj.y < selectionBox.y + selectionBox.height &&
+                               block.obj.y + block.obj.height > selectionBox.y;
+                    });
+
+                    // If we have selected blocks, prepare for dragging
+                    if (selectedBlocks.length > 0) {
+                        selectionStart = screenToWorld(lastMouseX, lastMouseY);
+                    }
+                }
+
+                selectionBox = null;
+                draw();
+            }
+
+            if (isDraggingBlock) {
+                isDraggingBlock = false;
+                if (selectedBlocks.length === 0) {
+                    selectedBlock = null;
+                }
+                updateLevelData();
+            }
+
+            if (isDraggingMovementNode) {
+                isDraggingMovementNode = false;
+                // Keep draggingNodeBlock selected so it stays locked until manually deselected
+                draggingNodeType = null;
+                updateLevelData();
+            }
+
+            if (!isDrawing || testMode) return;
+
+            if (currentRect && currentRect.width > 0 && currentRect.height > 0) {
+                saveState(); // Save for undo
+                if (currentTool === 'void') {
+                    // Cut out the void area from all blocks
+                    cutVoid(currentRect);
+                } else if (currentTool === 'platform') {
+                    platforms.push({...currentRect});
+                } else if (currentTool === 'hazard') {
+                    hazards.push({...currentRect});
+                } else if (currentTool === 'shrinker') {
+                    shrinkers.push({...currentRect});
+                } else if (currentTool === 'default') {
+                    defaultSizeBlocks.push({...currentRect});
+                } else if (currentTool === 'grower') {
+                    growers.push({...currentRect});
+                } else if (currentTool === 'background') {
+                    backgroundBlocks.push({...currentRect});
+                } else if (currentTool === 'foreground') {
+                    foregroundBlocks.push({...currentRect});
+                } else if (currentTool === 'trigger') {
+                    triggers.push({...currentRect, triggerId: nextTriggerId++});
+                } else if (currentTool === 'finish') {
+                    // Replace finish position with new drag-created one
+                    finishPos.x = currentRect.x;
+                    finishPos.y = currentRect.y;
+                    finishPos.width = currentRect.width;
+                    finishPos.height = currentRect.height;
+                }
+                updateStats();
+                updateLevelData();
+            }
+
+            isDrawing = false;
+            currentRect = null;
+            draw();
+        });
+
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+
+            // Get mouse position before zoom
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            const worldPosBefore = screenToWorld(mouseX, mouseY);
+
+            // Apply zoom
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            const newZoom = Math.max(0.1, Math.min(3, zoom * delta));
+
+            // Adjust camera to keep mouse position fixed
+            const zoomRatio = newZoom / zoom;
+            cameraX = worldPosBefore.x - (mouseX / newZoom);
+            cameraY = worldPosBefore.y - (mouseY / newZoom);
+
+            zoom = newZoom;
+
+            document.getElementById('cameraInfo').textContent =
+                `Camera: ${Math.round(cameraX)}, ${Math.round(cameraY)} | Zoom: ${zoom.toFixed(1)}x`;
+            draw();
+        });
+
+        function deleteAtPosition(x, y) {
+            saveState(); // Save for undo
+            platforms = platforms.filter(p => !isPointInBlock(x, y, p));
+            hazards = hazards.filter(h => !isPointInBlock(x, y, h));
+            growers = growers.filter(g => !isPointInBlock(x, y, g));
+            shrinkers = shrinkers.filter(s => !isPointInBlock(x, y, s));
+            defaultSizeBlocks = defaultSizeBlocks.filter(d => !isPointInBlock(x, y, d));
+            backgroundBlocks = backgroundBlocks.filter(b => !isPointInBlock(x, y, b));
+            foregroundBlocks = foregroundBlocks.filter(f => !isPointInBlock(x, y, f));
+            triggers = triggers.filter(t => !isPointInBlock(x, y, t));
+            updateStats();
+            updateLevelData();
+            draw();
+        }
+
+        function cutVoid(voidRect) {
+            // Cut void from all block types
+            platforms = cutVoidFromBlocks(platforms, voidRect);
+            hazards = cutVoidFromBlocks(hazards, voidRect);
+            growers = cutVoidFromBlocks(growers, voidRect);
+            shrinkers = cutVoidFromBlocks(shrinkers, voidRect);
+            defaultSizeBlocks = cutVoidFromBlocks(defaultSizeBlocks, voidRect);
+            backgroundBlocks = cutVoidFromBlocks(backgroundBlocks, voidRect);
+            foregroundBlocks = cutVoidFromBlocks(foregroundBlocks, voidRect);
+        }
+
+        function cutVoidFromBlocks(blocks, voidRect) {
+            const newBlocks = [];
+
+            for (let block of blocks) {
+                // Check if void overlaps with block
+                if (!(block.x + block.width <= voidRect.x ||
+                      voidRect.x + voidRect.width <= block.x ||
+                      block.y + block.height <= voidRect.y ||
+                      voidRect.y + voidRect.height <= block.y)) {
+
+                    // Void overlaps - split the block into up to 4 pieces
+
+                    // Top piece (above void)
+                    if (block.y < voidRect.y) {
+                        newBlocks.push({
+                            x: block.x,
+                            y: block.y,
+                            width: block.width,
+                            height: voidRect.y - block.y
+                        });
+                    }
+
+                    // Bottom piece (below void)
+                    if (block.y + block.height > voidRect.y + voidRect.height) {
+                        newBlocks.push({
+                            x: block.x,
+                            y: voidRect.y + voidRect.height,
+                            width: block.width,
+                            height: (block.y + block.height) - (voidRect.y + voidRect.height)
+                        });
+                    }
+
+                    // Left piece (left of void)
+                    if (block.x < voidRect.x) {
+                        const topY = Math.max(block.y, voidRect.y);
+                        const bottomY = Math.min(block.y + block.height, voidRect.y + voidRect.height);
+                        newBlocks.push({
+                            x: block.x,
+                            y: topY,
+                            width: voidRect.x - block.x,
+                            height: bottomY - topY
+                        });
+                    }
+
+                    // Right piece (right of void)
+                    if (block.x + block.width > voidRect.x + voidRect.width) {
+                        const topY = Math.max(block.y, voidRect.y);
+                        const bottomY = Math.min(block.y + block.height, voidRect.y + voidRect.height);
+                        newBlocks.push({
+                            x: voidRect.x + voidRect.width,
+                            y: topY,
+                            width: (block.x + block.width) - (voidRect.x + voidRect.width),
+                            height: bottomY - topY
+                        });
+                    }
+                } else {
+                    // No overlap - keep block as is
+                    newBlocks.push(block);
+                }
+            }
+
+            return newBlocks;
+        }
+
+
+        // Helper function to check if a point is inside a block (including merged blocks)
+        function isPointInBlock(x, y, block) {
+            if (block.merged && block.parts) {
+                // Check if point is in any part of merged block
+                return block.parts.some(part =>
+                    x >= part.x && x <= part.x + part.width &&
+                    y >= part.y && y <= part.y + part.height
+                );
+            } else {
+                // Normal block collision
+                return x >= block.x && x <= block.x + block.width &&
+                       y >= block.y && y <= block.y + block.height;
+            }
+        }
+
+        // Find block at position (returns block object or null)
+        function findBlockAtPosition(x, y) {
+            const allBlocks = [
+                ...platforms.map(p => ({...p, type: 'platform'})),
+                ...hazards.map(h => ({...h, type: 'hazard'})),
+                ...growers.map(g => ({...g, type: 'grower'})),
+                ...shrinkers.map(s => ({...s, type: 'shrinker'})),
+                ...defaultSizeBlocks.map(d => ({...d, type: 'defaultSize'})),
+                ...finishZones.map(f => ({...f, type: 'finish'}))
+            ];
+
+            for (const block of allBlocks) {
+                if (x >= block.x && x <= block.x + block.width &&
+                    y >= block.y && y <= block.y + block.height) {
+                    return block;
+                }
+            }
+            return null;
+        }
+
+        // Comment system functions
+        function createComment(screenX, screenY, connectedBlock = null) {
+            const commentId = 'comment-' + Date.now();
+            const commentData = {
+                id: commentId,
+                x: screenX,
+                y: screenY,
+                text: '',
+                connectedBlock: connectedBlock  // Store the connected block
+            };
+            comments.push(commentData);
+
+            // Create DOM element for comment
+            const commentBox = document.createElement('div');
+            commentBox.className = 'comment-box';
+            commentBox.id = commentId;
+            commentBox.style.left = screenX + 'px';
+            commentBox.style.top = screenY + 'px';
+
+            const textarea = document.createElement('textarea');
+            textarea.placeholder = 'Add your comment here...';
+            textarea.value = commentData.text;
+            textarea.addEventListener('input', (e) => {
+                const comment = comments.find(c => c.id === commentId);
+                if (comment) comment.text = e.target.value;
+                updateLevelData();
+            });
+            textarea.addEventListener('mousedown', (e) => e.stopPropagation());
+            textarea.addEventListener('click', (e) => e.stopPropagation());
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'comment-delete';
+            deleteBtn.textContent = '×';
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                deleteComment(commentId);
+            });
+
+            commentBox.appendChild(deleteBtn);
+            commentBox.appendChild(textarea);
+
+            // Make draggable
+            let isDragging = false;
+            let dragOffsetX = 0;
+            let dragOffsetY = 0;
+
+            commentBox.addEventListener('mousedown', (e) => {
+                if (e.target === textarea || e.target === deleteBtn) return;
+                isDragging = true;
+                dragOffsetX = e.clientX - commentBox.offsetLeft;
+                dragOffsetY = e.clientY - commentBox.offsetTop;
+                commentBox.style.cursor = 'grabbing';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                const newX = e.clientX - dragOffsetX;
+                const newY = e.clientY - dragOffsetY;
+                commentBox.style.left = newX + 'px';
+                commentBox.style.top = newY + 'px';
+
+                const comment = comments.find(c => c.id === commentId);
+                if (comment) {
+                    comment.x = newX;
+                    comment.y = newY;
+                    updateLevelData();
+                    drawCommentLines(); // Update lines while dragging
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    commentBox.style.cursor = 'move';
+                }
+            });
+
+            document.body.appendChild(commentBox);
+            textarea.focus();
+            updateLevelData();
+        }
+
+        function deleteComment(commentId) {
+            const index = comments.findIndex(c => c.id === commentId);
+            if (index !== -1) {
+                comments.splice(index, 1);
+                const element = document.getElementById(commentId);
+                if (element) element.remove();
+                updateLevelData();
+            }
+        }
+
+        function loadComments() {
+            // Remove all existing comment DOM elements
+            document.querySelectorAll('.comment-box').forEach(el => el.remove());
+
+            // Recreate comment boxes from data
+            for (const commentData of comments) {
+                const commentId = commentData.id;
+
+                const commentBox = document.createElement('div');
+                commentBox.className = 'comment-box';
+                commentBox.id = commentId;
+                commentBox.style.left = commentData.x + 'px';
+                commentBox.style.top = commentData.y + 'px';
+
+                const textarea = document.createElement('textarea');
+                textarea.value = commentData.text;
+                textarea.addEventListener('input', (e) => {
+                    const comment = comments.find(c => c.id === commentId);
+                    if (comment) comment.text = e.target.value;
+                    updateLevelData();
+                });
+                textarea.addEventListener('mousedown', (e) => e.stopPropagation());
+                textarea.addEventListener('click', (e) => e.stopPropagation());
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'comment-delete';
+                deleteBtn.textContent = '×';
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteComment(commentId);
+                });
+
+                commentBox.appendChild(deleteBtn);
+                commentBox.appendChild(textarea);
+
+                // Make draggable
+                let isDragging = false;
+                let dragOffsetX = 0;
+                let dragOffsetY = 0;
+
+                commentBox.addEventListener('mousedown', (e) => {
+                    if (e.target === textarea || e.target === deleteBtn) return;
+                    isDragging = true;
+                    dragOffsetX = e.clientX - commentBox.offsetLeft;
+                    dragOffsetY = e.clientY - commentBox.offsetTop;
+                    commentBox.style.cursor = 'grabbing';
+                    e.preventDefault();
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (!isDragging) return;
+                    const newX = e.clientX - dragOffsetX;
+                    const newY = e.clientY - dragOffsetY;
+                    commentBox.style.left = newX + 'px';
+                    commentBox.style.top = newY + 'px';
+
+                    const comment = comments.find(c => c.id === commentId);
+                    if (comment) {
+                        comment.x = newX;
+                        comment.y = newY;
+                        updateLevelData();
+                    }
+                });
+
+                document.addEventListener('mouseup', () => {
+                    if (isDragging) {
+                        isDragging = false;
+                        commentBox.style.cursor = 'move';
+                    }
+                });
+
+                document.body.appendChild(commentBox);
+            }
+
+            // Update comment lines after loading comments
+            drawCommentLines();
+        }
+
+        function drawCommentLines() {
+            const svg = document.getElementById('comment-lines-svg');
+            svg.innerHTML = ''; // Clear existing lines
+
+            const canvas = document.getElementById('canvas');
+            const rect = canvas.getBoundingClientRect();
+
+            for (const comment of comments) {
+                if (!comment.connectedBlock) continue;
+
+                // Get comment box position
+                const commentBox = document.getElementById(comment.id);
+                if (!commentBox) continue;
+
+                const commentRect = commentBox.getBoundingClientRect();
+                const commentCenterX = commentRect.left + commentRect.width / 2 - rect.left;
+                const commentCenterY = commentRect.top + commentRect.height / 2 - rect.top;
+
+                // Get block position in world coordinates, convert to screen coordinates
+                const block = comment.connectedBlock;
+                const blockCenterX = block.x + block.width / 2 - cameraX;
+                const blockCenterY = block.y + block.height / 2 - cameraY;
+
+                // Create line element
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', commentCenterX);
+                line.setAttribute('y1', commentCenterY);
+                line.setAttribute('x2', blockCenterX);
+                line.setAttribute('y2', blockCenterY);
+                line.setAttribute('stroke', '#FFD700');
+                line.setAttribute('stroke-width', '2');
+                line.setAttribute('stroke-dasharray', '5,5');
+                line.setAttribute('opacity', '0.7');
+                svg.appendChild(line);
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('blockCount').textContent = platforms.length;
+            document.getElementById('hazardCount').textContent = hazards.length;
+            updateElementsList();
+        }
+
+        // Merge selected blocks into a single merged block
+        function mergeSelected() {
+            if (selectedBlocks.length < 2) {
+                alert('Please select at least 2 blocks to merge');
+                return;
+            }
+
+            // Check if all selected blocks are of the same type
+            const types = [...new Set(selectedBlocks.map(b => b.type))];
+            if (types.length > 1) {
+                alert('Can only merge blocks of the same type');
+                return;
+            }
+
+            const blockType = types[0];
+
+            // Check if any selected blocks have movement
+            const hasMovement = selectedBlocks.some(b => b.obj.movement);
+            if (hasMovement) {
+                alert('Cannot merge blocks with movement. Remove movement first.');
+                return;
+            }
+
+            saveState();
+
+            // Create merged block with multiple rectangles
+            const mergedBlock = {
+                merged: true,
+                parts: selectedBlocks.map(b => ({
+                    x: b.obj.x,
+                    y: b.obj.y,
+                    width: b.obj.width,
+                    height: b.obj.height
+                }))
+            };
+
+            // Add merged block to appropriate array
+            let targetArray;
+            if (blockType === 'platform') targetArray = platforms;
+            else if (blockType === 'hazard') targetArray = hazards;
+            else if (blockType === 'grower') targetArray = growers;
+            else if (blockType === 'shrinker') targetArray = shrinkers;
+            else if (blockType === 'default') targetArray = defaultSizeBlocks;
+            else if (blockType === 'background') targetArray = backgroundBlocks;
+            else if (blockType === 'foreground') targetArray = foregroundBlocks;
+
+            if (targetArray) {
+                // Remove original blocks from array
+                for (const block of selectedBlocks) {
+                    const idx = targetArray.indexOf(block.obj);
+                    if (idx > -1) {
+                        targetArray.splice(idx, 1);
+                    }
+                }
+
+                // Add merged block
+                targetArray.push(mergedBlock);
+            }
+
+            // Clear selection
+            selectedBlocks = [];
+            selectedBlock = null;
+
+            updateStats();
+            updateLevelData();
+            draw();
+        }
+
+        function unmergeSelected() {
+            if (!selectedBlock || !selectedBlock.obj.merged) {
+                alert('Please select a merged block to unmerge');
+                return;
+            }
+
+            saveState();
+
+            const mergedBlock = selectedBlock.obj;
+            const blockType = selectedBlock.type;
+
+            // Get target array
+            let targetArray;
+            if (blockType === 'platform') targetArray = platforms;
+            else if (blockType === 'hazard') targetArray = hazards;
+            else if (blockType === 'grower') targetArray = growers;
+            else if (blockType === 'shrinker') targetArray = shrinkers;
+            else if (blockType === 'default') targetArray = defaultSizeBlocks;
+            else if (blockType === 'background') targetArray = backgroundBlocks;
+            else if (blockType === 'foreground') targetArray = foregroundBlocks;
+
+            if (targetArray) {
+                // Remove merged block
+                const idx = targetArray.indexOf(mergedBlock);
+                if (idx > -1) {
+                    targetArray.splice(idx, 1);
+                }
+
+                // Add back individual blocks
+                for (const part of mergedBlock.parts) {
+                    targetArray.push({
+                        x: part.x,
+                        y: part.y,
+                        width: part.width,
+                        height: part.height
+                    });
+                }
+            }
+
+            // Clear selection and hide unmerge button
+            selectedBlock = null;
+            document.getElementById('unmergeButton').style.display = 'none';
+
+            updateStats();
+            updateLevelData();
+            draw();
+        }
+
+        function updateLevelData() {
+            const data = {
+                platforms: platforms,
+                hazards: hazards,
+                growers: growers,
+                shrinkers: shrinkers,
+                defaultSizeBlocks: defaultSizeBlocks,
+                backgroundBlocks: backgroundBlocks,
+                foregroundBlocks: foregroundBlocks,
+                triggers: triggers,
+                comments: comments,  // Include comments in level data
+                start: startPos,
+                finish: finishPos,
+                physics: physics
+            };
+            document.getElementById('levelData').value = JSON.stringify(data, null, 2);
+            // Auto-save to localStorage
+            autoSave();
+        }
+
+        // Auto-save system
+        function autoSave() {
+            const data = {
+                platforms: platforms,
+                hazards: hazards,
+                growers: growers,
+                shrinkers: shrinkers,
+                defaultSizeBlocks: defaultSizeBlocks,
+                backgroundBlocks: backgroundBlocks,
+                foregroundBlocks: foregroundBlocks,
+                triggers: triggers,
+                comments: comments,  // Save comments in auto-save
+                start: startPos,
+                finish: finishPos,
+                physics: physics,
+                camera: { x: cameraX, y: cameraY, zoom: zoom }
+            };
+            localStorage.setItem('levelCreator_autoSave', JSON.stringify(data));
+            localStorage.setItem('levelCreator_lastSaved', new Date().toISOString());
+            updateSaveStatus();
+        }
+
+        function updateSaveStatus() {
+            const lastSaved = localStorage.getItem('levelCreator_lastSaved');
+            if (lastSaved) {
+                const date = new Date(lastSaved);
+                const timeStr = date.toLocaleTimeString();
+                document.getElementById('saveStatus').textContent = `Auto-saved at ${timeStr}`;
+                document.getElementById('saveStatus').style.color = '#4facfe';
+            }
+        }
+
+        function loadAutoSave() {
+            const saved = localStorage.getItem('levelCreator_autoSave');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    platforms = data.platforms || [];
+                    hazards = data.hazards || [];
+                    growers = data.growers || [];
+                    shrinkers = data.shrinkers || [];
+                    defaultSizeBlocks = data.defaultSizeBlocks || [];
+                    backgroundBlocks = data.backgroundBlocks || [];
+                    foregroundBlocks = data.foregroundBlocks || [];
+                    triggers = data.triggers || [];
+                    startPos = data.start || { x: 40, y: 520, width: 40, height: 40 };
+                    finishPos = data.finish || { x: 700, y: 480, width: 40, height: 40 };
+                    if (data.camera) {
+                        cameraX = data.camera.x;
+                        cameraY = data.camera.y;
+                        zoom = data.camera.zoom;
+                    }
+                    updateStats();
+                    updateLevelData();
+                    updateSaveStatus();
+                    draw();
+                    return true;
+                } catch (e) {
+                    console.error('Failed to load auto-save:', e);
+                }
+            }
+            return false;
+        }
+
+        function clearAutoSave() {
+            if (confirm('Clear auto-saved level and start fresh?')) {
+                localStorage.removeItem('levelCreator_autoSave');
+                localStorage.removeItem('levelCreator_lastSaved');
+                platforms = [];
+                hazards = [];
+                growers = [];
+                shrinkers = [];
+                defaultSizeBlocks = [];
+                backgroundBlocks = [];
+                foregroundBlocks = [];
+                startPos = { x: 40, y: 520, width: 40, height: 40 };
+                finishPos = { x: 700, y: 480, width: 40, height: 40 };
+                cameraX = 0;
+                cameraY = 0;
+                zoom = 1;
+                updateStats();
+                updateLevelData();
+                document.getElementById('saveStatus').textContent = 'No auto-save';
+                document.getElementById('saveStatus').style.color = '#999';
+                draw();
+            }
+        }
+
+        function copyLevelData() {
+            const textarea = document.getElementById('levelData');
+            textarea.select();
+            document.execCommand('copy');
+            alert('Level data copied to clipboard!');
+        }
+
+        function clearLevel() {
+            if (confirm('Are you sure you want to clear everything?')) {
+                platforms = [];
+                hazards = [];
+                updateStats();
+                updateLevelData();
+                draw();
+            }
+        }
+
+        function showImportDialog() {
+            document.getElementById('importModal').classList.add('show');
+            document.getElementById('importModalText').value = '';
+            document.getElementById('importModalText').focus();
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').classList.remove('show');
+        }
+
+        function doImport() {
+            const importText = document.getElementById('importModalText').value.trim();
+            if (!importText) {
+                alert('Please paste level data first');
+                return;
+            }
+
+            importLevel(importText);
+            closeImportModal();
+        }
+
+        function importLevel(importText) {
+            if (!importText) {
+                alert('Please paste level data first');
+                return;
+            }
+
+            try {
+                const data = JSON.parse(importText);
+
+                // Validate data structure
+                if (!data.platforms || !data.hazards || !data.start || !data.finish) {
+                    alert('Invalid level data format');
+                    return;
+                }
+
+                // Import the data
+                platforms = data.platforms || [];
+                hazards = data.hazards || [];
+                growers = data.growers || [];
+                shrinkers = data.shrinkers || [];
+                defaultSizeBlocks = data.defaultSizeBlocks || [];
+                backgroundBlocks = data.backgroundBlocks || [];
+                foregroundBlocks = data.foregroundBlocks || [];
+                comments = data.comments || [];  // Import comments
+                startPos = data.start || { x: 40, y: 520, width: 40, height: 40 };
+                finishPos = data.finish || { x: 700, y: 480, width: 40, height: 40 };
+
+                // Ensure start and finish have width/height
+                if (!startPos.width) startPos.width = 40;
+                if (!startPos.height) startPos.height = 40;
+                if (!finishPos.width) finishPos.width = 40;
+                if (!finishPos.height) finishPos.height = 40;
+
+                // Load comments into DOM
+                loadComments();
+
+                // Update UI
+                updateStats();
+                updateLevelData();
+                draw();
+
+                alert('Level imported successfully!');
+            } catch (error) {
+                alert('Error parsing level data. Please check your JSON format.');
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            ctx.scale(zoom, zoom);
+            ctx.translate(-cameraX, -cameraY);
+
+            // Coordinate plane axes
+            ctx.strokeStyle = 'rgba(79, 172, 254, 0.5)';
+            ctx.lineWidth = 2 / zoom;
+            // X-axis (y=0)
+            ctx.beginPath();
+            ctx.moveTo(cameraX, 0);
+            ctx.lineTo(cameraX + canvas.width / zoom, 0);
+            ctx.stroke();
+            // Y-axis (x=0)
+            ctx.beginPath();
+            ctx.moveTo(0, cameraY);
+            ctx.lineTo(0, cameraY + canvas.height / zoom);
+            ctx.stroke();
+
+            // Grid (toggle with G key)
+            if (gridVisible) {
+                ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                ctx.lineWidth = 1 / zoom;
+                const startGridX = Math.floor(cameraX / gridSize) * gridSize;
+                const startGridY = Math.floor(cameraY / gridSize) * gridSize;
+                const endGridX = startGridX + (canvas.width / zoom) + gridSize;
+                const endGridY = startGridY + (canvas.height / zoom) + gridSize;
+
+                for (let x = startGridX; x < endGridX; x += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, startGridY);
+                    ctx.lineTo(x, endGridY);
+                    ctx.stroke();
+                }
+
+                for (let y = startGridY; y < endGridY; y += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(startGridX, y);
+                    ctx.lineTo(endGridX, y);
+                    ctx.stroke();
+                }
+            }
+
+            // Coordinate labels
+            ctx.fillStyle = '#4facfe';
+            ctx.font = `${12 / zoom}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            // X-axis labels
+            for (let x = Math.ceil(cameraX / 100) * 100; x < cameraX + canvas.width / zoom; x += 100) {
+                ctx.fillText(x.toString(), x, 0 - 5 / zoom);
+            }
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            // Y-axis labels
+            for (let y = Math.ceil(cameraY / 100) * 100; y < cameraY + canvas.height / zoom; y += 100) {
+                ctx.fillText(y.toString(), 0 + 5 / zoom, y);
+            }
+
+            // Helper function to draw a block (handles merged blocks)
+            const drawBlock = (block, fillColor, strokeColor) => {
+                if (block.merged && block.parts) {
+                    // Draw each part of merged block as one continuous shape
+                    block.parts.forEach(part => {
+                        ctx.fillStyle = fillColor;
+                        ctx.fillRect(part.x, part.y, part.width, part.height);
+                        ctx.strokeStyle = strokeColor;
+                        ctx.lineWidth = 2 / zoom;
+                        ctx.strokeRect(part.x, part.y, part.width, part.height);
+                    });
+                } else {
+                    // Draw normal block
+                    ctx.fillStyle = fillColor;
+                    ctx.fillRect(block.x, block.y, block.width, block.height);
+                    ctx.strokeStyle = strokeColor;
+                    ctx.lineWidth = 2 / zoom;
+                    ctx.strokeRect(block.x, block.y, block.width, block.height);
+                }
+            };
+
+            // Background blocks (visual only, rendered first)
+            backgroundBlocks.forEach(b => {
+                drawBlock(b, 'rgba(100, 100, 100, 0.3)', 'rgba(80, 80, 80, 0.5)');
+            });
+
+            // Platforms
+            platforms.forEach(p => {
+                drawBlock(p, '#4CAF50', '#333');
+            });
+
+            // Hazards
+            hazards.forEach(h => {
+                drawBlock(h, '#FF3333', '#CC0000');
+            });
+
+            // Growers (green pads - 2x size)
+            growers.forEach(g => {
+                drawBlock(g, '#00FF88', '#00CC66');
+            });
+
+            // Shrinkers (purple pads - 0.5x size)
+            shrinkers.forEach(s => {
+                drawBlock(s, '#BB66FF', '#9944DD');
+            });
+
+            // Default size blocks (yellow/orange - default 40px size)
+            defaultSizeBlocks.forEach(d => {
+                drawBlock(d, '#FFB84D', '#FF8800');
+            });
+
+            // Trigger blocks (invisible in game, visible in editor)
+            triggers.forEach(t => {
+                ctx.fillStyle = 'rgba(255, 100, 255, 0.3)';
+                ctx.fillRect(t.x, t.y, t.width, t.height);
+                ctx.strokeStyle = '#FF64FF';
+                ctx.lineWidth = 2 / zoom;
+                ctx.setLineDash([5 / zoom, 5 / zoom]);
+                ctx.strokeRect(t.x, t.y, t.width, t.height);
+                ctx.setLineDash([]);
+
+                // Draw trigger ID
+                ctx.fillStyle = '#FF64FF';
+                ctx.font = `bold ${20 / zoom}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(`⚡${t.triggerId}`, t.x + t.width / 2, t.y + t.height / 2);
+            });
+
+            // Current drawing
+            if (currentRect) {
+                if (currentTool === 'platform') {
+                    ctx.fillStyle = 'rgba(76, 175, 80, 0.5)';
+                    ctx.strokeStyle = '#4CAF50';
+                } else if (currentTool === 'hazard') {
+                    ctx.fillStyle = 'rgba(255, 51, 51, 0.5)';
+                    ctx.strokeStyle = '#FF3333';
+                } else if (currentTool === 'grower') {
+                    ctx.fillStyle = 'rgba(0, 255, 136, 0.5)';
+                    ctx.strokeStyle = '#00FF88';
+                } else if (currentTool === 'shrinker') {
+                    ctx.fillStyle = 'rgba(187, 102, 255, 0.5)';
+                    ctx.strokeStyle = '#BB66FF';
+                } else if (currentTool === 'default') {
+                    ctx.fillStyle = 'rgba(255, 184, 77, 0.5)';
+                    ctx.strokeStyle = '#FFB84D';
+                } else if (currentTool === 'background') {
+                    ctx.fillStyle = 'rgba(100, 100, 100, 0.3)';
+                    ctx.strokeStyle = 'rgba(80, 80, 80, 0.5)';
+                } else if (currentTool === 'foreground') {
+                    ctx.fillStyle = 'rgba(200, 200, 200, 0.4)';
+                    ctx.strokeStyle = 'rgba(180, 180, 180, 0.6)';
+                } else if (currentTool === 'trigger') {
+                    ctx.fillStyle = 'rgba(255, 100, 255, 0.3)';
+                    ctx.strokeStyle = '#FF64FF';
+                } else if (currentTool === 'void') {
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                    ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
+                } else if (currentTool === 'finish') {
+                    ctx.fillStyle = 'rgba(255, 215, 0, 0.5)';
+                    ctx.strokeStyle = '#FFD700';
+                }
+                ctx.fillRect(currentRect.x, currentRect.y, currentRect.width, currentRect.height);
+                ctx.lineWidth = 2 / zoom;
+                ctx.strokeRect(currentRect.x, currentRect.y, currentRect.width, currentRect.height);
+            }
+
+            // Start position
+            ctx.fillStyle = '#00FF00';
+            ctx.fillRect(startPos.x, startPos.y, 40, 40);
+            ctx.strokeStyle = '#00AA00';
+            ctx.lineWidth = 2 / zoom;
+            ctx.strokeRect(startPos.x, startPos.y, 40, 40);
+
+            // Finish line
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(finishPos.x, finishPos.y, finishPos.width, finishPos.height);
+            ctx.strokeStyle = '#FFA500';
+            ctx.lineWidth = 2 / zoom;
+            ctx.strokeRect(finishPos.x, finishPos.y, finishPos.width, finishPos.height);
+
+            // Player preview (40x40 reference)
+            if (playerPreview.visible) {
+                ctx.fillStyle = 'rgba(255, 165, 0, 0.5)';
+                ctx.fillRect(playerPreview.x, playerPreview.y, 40, 40);
+                ctx.strokeStyle = '#FFA500';
+                ctx.lineWidth = 2 / zoom;
+                ctx.strokeRect(playerPreview.x, playerPreview.y, 40, 40);
+            }
+
+            // Multi-selection box
+            if (isMultiSelecting && selectionBox) {
+                ctx.strokeStyle = '#4facfe';
+                ctx.fillStyle = 'rgba(79, 172, 254, 0.1)';
+                ctx.lineWidth = 2 / zoom;
+                ctx.setLineDash([5 / zoom, 5 / zoom]);
+                ctx.fillRect(selectionBox.x, selectionBox.y, selectionBox.width, selectionBox.height);
+                ctx.strokeRect(selectionBox.x, selectionBox.y, selectionBox.width, selectionBox.height);
+                ctx.setLineDash([]);
+            }
+
+            // Selected blocks highlight
+            if (selectedBlocks.length > 0) {
+                ctx.strokeStyle = '#4facfe';
+                ctx.lineWidth = 3 / zoom;
+                ctx.setLineDash([10 / zoom, 5 / zoom]);
+                for (const block of selectedBlocks) {
+                    ctx.strokeRect(block.obj.x, block.obj.y, block.obj.width, block.obj.height);
+                }
+                ctx.setLineDash([]);
+            }
+
+            // Selected block highlight
+            if (selectedBlock && isDraggingBlock && selectedBlocks.length === 0) {
+                ctx.strokeStyle = '#FFD700';
+                ctx.lineWidth = 3 / zoom;
+                ctx.setLineDash([10 / zoom, 5 / zoom]);
+                ctx.strokeRect(selectedBlock.obj.x, selectedBlock.obj.y, selectedBlock.obj.width, selectedBlock.obj.height);
+                ctx.setLineDash([]);
+            }
+
+            // Player in test mode
+            if (testMode) {
+                ctx.fillStyle = '#FF5722';
+                ctx.fillRect(player.x, player.y, player.width, player.height);
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2 / zoom;
+                ctx.strokeRect(player.x, player.y, player.width, player.height);
+            }
+
+            // Draw movement paths for blocks with movement
+            [...platforms, ...hazards].forEach(block => {
+                if (block.movement) {
+                    const { point1, point2 } = block.movement;
+                    const isSelected = draggingNodeBlock === block;
+
+                    // Draw path line (brighter if selected)
+                    ctx.strokeStyle = isSelected ? 'rgba(100, 200, 255, 1.0)' : 'rgba(100, 150, 255, 0.6)';
+                    ctx.lineWidth = isSelected ? 5 / zoom : 3 / zoom;
+                    ctx.setLineDash([10 / zoom, 5 / zoom]);
+                    ctx.beginPath();
+                    ctx.moveTo(point1.x, point1.y);
+                    ctx.lineTo(point2.x, point2.y);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    // Draw point1 (starting point - blue circle, larger if selected)
+                    ctx.fillStyle = isSelected ? 'rgba(100, 200, 255, 1.0)' : 'rgba(100, 150, 255, 0.8)';
+                    ctx.beginPath();
+                    ctx.arc(point1.x, point1.y, isSelected ? 12 / zoom : 8 / zoom, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = isSelected ? '#4AC0FF' : '#6496FF';
+                    ctx.lineWidth = isSelected ? 3 / zoom : 2 / zoom;
+                    ctx.stroke();
+
+                    // Draw point2 (end point - cyan circle, larger if selected)
+                    ctx.fillStyle = isSelected ? 'rgba(0, 255, 255, 1.0)' : 'rgba(0, 255, 255, 0.8)';
+                    ctx.beginPath();
+                    ctx.arc(point2.x, point2.y, isSelected ? 12 / zoom : 8 / zoom, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = isSelected ? '#00FFFF' : '#00CCCC';
+                    ctx.lineWidth = isSelected ? 3 / zoom : 2 / zoom;
+                    ctx.stroke();
+                }
+            });
+
+            // Draw movement trails from last test run
+            if (movementTrails.length > 0 && !testMode) {
+                movementTrails.forEach(trail => {
+                    if (trail.points.length < 2) return;
+
+                    // Find max speed for color normalization
+                    const maxSpeed = Math.max(...trail.points.map(p => p.speed), 0.1);
+
+                    // Draw trail as connected line segments with color based on speed
+                    for (let i = 1; i < trail.points.length; i++) {
+                        const p1 = trail.points[i - 1];
+                        const p2 = trail.points[i];
+
+                        // Color gradient from blue (slow) to red (fast)
+                        const speedRatio = p2.speed / maxSpeed;
+                        const r = Math.floor(speedRatio * 255);
+                        const g = Math.floor((1 - speedRatio) * 100);
+                        const b = Math.floor((1 - speedRatio) * 255);
+
+                        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.7)`;
+                        ctx.lineWidth = 3 / zoom;
+                        ctx.beginPath();
+                        ctx.moveTo(p1.x, p1.y);
+                        ctx.lineTo(p2.x, p2.y);
+                        ctx.stroke();
+                    }
+                });
+            }
+
+            // Movement tool visualization
+            if (currentTool === 'movement') {
+                // Highlight selected block
+                if (movementSelectedBlock) {
+                    ctx.strokeStyle = '#6496FF';
+                    ctx.lineWidth = 4 / zoom;
+                    ctx.setLineDash([10 / zoom, 5 / zoom]);
+                    ctx.strokeRect(movementSelectedBlock.obj.x, movementSelectedBlock.obj.y,
+                        movementSelectedBlock.obj.width, movementSelectedBlock.obj.height);
+                    ctx.setLineDash([]);
+                }
+
+                // Show point 1 if set
+                if (movementPoint1) {
+                    ctx.fillStyle = 'rgba(100, 150, 255, 0.8)';
+                    ctx.beginPath();
+                    ctx.arc(movementPoint1.x, movementPoint1.y, 10 / zoom, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Show line to mouse if in step 2
+                if (movementStep === 2 && movementPoint1) {
+                    const mouseWorld = screenToWorld(lastMouseX || 0, lastMouseY || 0);
+                    ctx.strokeStyle = 'rgba(100, 150, 255, 0.4)';
+                    ctx.lineWidth = 2 / zoom;
+                    ctx.setLineDash([5 / zoom, 5 / zoom]);
+                    ctx.beginPath();
+                    ctx.moveTo(movementPoint1.x, movementPoint1.y);
+                    ctx.lineTo(mouseWorld.x, mouseWorld.y);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+            }
+
+            // Foreground blocks (visual only, rendered on top)
+            foregroundBlocks.forEach(f => {
+                ctx.fillStyle = 'rgba(200, 200, 200, 0.4)';
+                ctx.fillRect(f.x, f.y, f.width, f.height);
+                ctx.strokeStyle = 'rgba(180, 180, 180, 0.6)';
+                ctx.lineWidth = 2 / zoom;
+                ctx.strokeRect(f.x, f.y, f.width, f.height);
+            });
+
+            // Draw paste preview
+            if (isPasting && pastePreview.length > 0) {
+                for (const block of pastePreview) {
+                    const obj = block.obj;
+
+                    // Draw with transparency and dashed border
+                    ctx.globalAlpha = 0.5;
+
+                    if (block.type === 'platform') {
+                        ctx.fillStyle = '#4CAF50';
+                    } else if (block.type === 'hazard') {
+                        ctx.fillStyle = '#FF3333';
+                    } else if (block.type === 'grower') {
+                        ctx.fillStyle = '#00FF88';
+                    } else if (block.type === 'shrinker') {
+                        ctx.fillStyle = '#BB66FF';
+                    } else if (block.type === 'default') {
+                        ctx.fillStyle = '#FFB84D';
+                    } else if (block.type === 'background') {
+                        ctx.fillStyle = 'rgba(100, 100, 100, 0.3)';
+                    } else if (block.type === 'foreground') {
+                        ctx.fillStyle = 'rgba(50, 50, 50, 0.7)';
+                    }
+
+                    ctx.fillRect(obj.x, obj.y, obj.width, obj.height);
+
+                    // Dashed border
+                    ctx.setLineDash([10 / zoom, 5 / zoom]);
+                    ctx.strokeStyle = '#FFFFFF';
+                    ctx.lineWidth = 2 / zoom;
+                    ctx.strokeRect(obj.x, obj.y, obj.width, obj.height);
+                    ctx.setLineDash([]);
+
+                    ctx.globalAlpha = 1.0;
+                }
+            }
+
+            ctx.restore();
+
+            // Draw comment lines (outside of canvas transform)
+            drawCommentLines();
+        }
+
+        function goToCoordinates() {
+            const x = parseFloat(document.getElementById('camX').value) || 0;
+            const y = parseFloat(document.getElementById('camY').value) || 0;
+            cameraX = x;
+            cameraY = y;
+            document.getElementById('cameraInfo').textContent =
+                `Camera: ${Math.round(cameraX)}, ${Math.round(cameraY)} | Zoom: ${zoom.toFixed(1)}x`;
+            draw();
+        }
+
+        // Camera movement with WASD
+        let cameraMoveSpeed = 10;
+        setInterval(() => {
+            if (testMode) return;
+
+            if (keys['KeyW'] || keys['ArrowUp']) cameraY -= cameraMoveSpeed / zoom;
+            if (keys['KeyS'] || keys['ArrowDown']) cameraY += cameraMoveSpeed / zoom;
+            if (keys['KeyA'] || keys['ArrowLeft']) cameraX -= cameraMoveSpeed / zoom;
+            if (keys['KeyD'] || keys['ArrowRight']) cameraX += cameraMoveSpeed / zoom;
+
+            if (keys['KeyW'] || keys['KeyS'] || keys['KeyA'] || keys['KeyD'] ||
+                keys['ArrowUp'] || keys['ArrowDown'] || keys['ArrowLeft'] || keys['ArrowRight']) {
+                document.getElementById('cameraInfo').textContent =
+                    `Camera: ${Math.round(cameraX)}, ${Math.round(cameraY)} | Zoom: ${zoom.toFixed(1)}x`;
+                draw();
+            }
+        }, 16);
+
+        // Test mode functions
+        function testLevel() {
+            testMode = true;
+            zoom = 1; // Reset zoom to match actual game
+            player.x = startPos.x;
+            player.y = startPos.y;
+            player.velocityX = 0;
+            player.velocityY = 0;
+            player.width = 40;
+            player.height = 40;
+            player.currentSize = 40;
+            sizeTransitioning = false;
+            lastFrameTime = performance.now(); // Reset frame time for delta calculation
+            testStartTime = performance.now(); // Reset test start time for movement animations
+            movementTrails = []; // Clear previous trails when starting new test
+            requestAnimationFrame(gameLoop);
+        }
+
+        function stopTest() {
+            testMode = false;
+            draw();
+        }
+
+        let lastFrameTime = performance.now();
+        let testStartTime = 0;
+        let movementTrails = []; // Store trails for moving blocks: {blockId, points: [{x, y, speed}]}
+
+        function gameLoop(currentTime) {
+            if (!testMode) return;
+
+            // Calculate delta time (normalize to 60fps baseline)
+            const deltaTime = (currentTime - lastFrameTime) / 16.67;
+            lastFrameTime = currentTime;
+
+            // Update moving blocks
+            const elapsed = (currentTime - testStartTime) / 1000; // Convert to seconds
+            updateMovingBlocks(elapsed);
+
+            updatePlayer(deltaTime);
+            draw();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateMovingBlocks(elapsed) {
+            // Update platform positions based on movement paths
+            platforms.forEach((platform, index) => {
+                if (platform.movement) {
+                    const { point1, point2, cycleTime, delay = 0 } = platform.movement;
+
+                    // Store previous position for speed calculation
+                    const prevX = platform.x || point1.x - platform.width / 2;
+                    const prevY = platform.y || point1.y - platform.height / 2;
+
+                    // Apply delay - platform stays at start position until delay expires
+                    if (elapsed < delay) {
+                        // Stay at starting position (point1)
+                        platform.x = point1.x - platform.width / 2;
+                        platform.y = point1.y - platform.height / 2;
+                        return;
+                    }
+
+                    const adjustedElapsed = elapsed - delay;
+                    const progress = (adjustedElapsed % cycleTime) / cycleTime;
+
+                    // Ping-pong between point1 and point2
+                    let t;
+                    if (progress < 0.5) {
+                        t = progress * 2; // 0 to 1 (point1 to point2)
+                    } else {
+                        t = (1 - progress) * 2; // 1 to 0 (point2 to point1)
+                    }
+
+                    // Calculate center position
+                    const centerX = point1.x + (point2.x - point1.x) * t;
+                    const centerY = point1.y + (point2.y - point1.y) * t;
+
+                    // Set block position (accounting for block size)
+                    platform.x = centerX - platform.width / 2;
+                    platform.y = centerY - platform.height / 2;
+
+                    // Record trail if in test mode
+                    if (testMode) {
+                        // Calculate speed (distance moved)
+                        const dx = platform.x + platform.width / 2 - (prevX + platform.width / 2);
+                        const dy = platform.y + platform.height / 2 - (prevY + platform.height / 2);
+                        const speed = Math.sqrt(dx * dx + dy * dy);
+
+                        // Find or create trail for this platform
+                        const blockId = 'platform_' + index;
+                        let trail = movementTrails.find(t => t.blockId === blockId);
+                        if (!trail) {
+                            trail = { blockId, points: [] };
+                            movementTrails.push(trail);
+                        }
+
+                        // Add point to trail
+                        trail.points.push({
+                            x: platform.x + platform.width / 2,
+                            y: platform.y + platform.height / 2,
+                            speed: speed
+                        });
+                    }
+                }
+            });
+
+            // Update hazard positions
+            hazards.forEach((hazard, index) => {
+                if (hazard.movement) {
+                    const { point1, point2, cycleTime, delay = 0 } = hazard.movement;
+
+                    // Store previous position for speed calculation
+                    const prevX = hazard.x || point1.x - hazard.width / 2;
+                    const prevY = hazard.y || point1.y - hazard.height / 2;
+
+                    // Apply delay
+                    if (elapsed < delay) {
+                        hazard.x = point1.x - hazard.width / 2;
+                        hazard.y = point1.y - hazard.height / 2;
+                        return;
+                    }
+
+                    const adjustedElapsed = elapsed - delay;
+                    const progress = (adjustedElapsed % cycleTime) / cycleTime;
+
+                    let t;
+                    if (progress < 0.5) {
+                        t = progress * 2;
+                    } else {
+                        t = (1 - progress) * 2;
+                    }
+
+                    const centerX = point1.x + (point2.x - point1.x) * t;
+                    const centerY = point1.y + (point2.y - point1.y) * t;
+
+                    hazard.x = centerX - hazard.width / 2;
+                    hazard.y = centerY - hazard.height / 2;
+
+                    // Record trail if in test mode
+                    if (testMode) {
+                        const dx = hazard.x + hazard.width / 2 - (prevX + hazard.width / 2);
+                        const dy = hazard.y + hazard.height / 2 - (prevY + hazard.height / 2);
+                        const speed = Math.sqrt(dx * dx + dy * dy);
+
+                        const blockId = 'hazard_' + index;
+                        let trail = movementTrails.find(t => t.blockId === blockId);
+                        if (!trail) {
+                            trail = { blockId, points: [] };
+                            movementTrails.push(trail);
+                        }
+
+                        trail.points.push({
+                            x: hazard.x + hazard.width / 2,
+                            y: hazard.y + hazard.height / 2,
+                            speed: speed
+                        });
+                    }
+                }
+            });
+        }
+
+        function updatePlayer(deltaTime = 1) {
+            // Update size transition
+            updateSizeTransition(deltaTime);
+
+            // If size changed, check for collisions and adjust position if needed
+            if (sizeTransitioning) {
+                // Simple collision correction during size transition
+                for (let platform of platforms) {
+                    if (player.x + player.width > platform.x &&
+                        player.x < platform.x + platform.width &&
+                        player.y + player.height > platform.y &&
+                        player.y < platform.y + platform.height) {
+                        // Push player out of collision
+                        const overlapLeft = (player.x + player.width) - platform.x;
+                        const overlapRight = (platform.x + platform.width) - player.x;
+                        const overlapTop = (player.y + player.height) - platform.y;
+                        const overlapBottom = (platform.y + platform.height) - player.y;
+                        const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+
+                        if (minOverlap === overlapTop) {
+                            player.y = platform.y - player.height;
+                        } else if (minOverlap === overlapBottom) {
+                            player.y = platform.y + platform.height;
+                        } else if (minOverlap === overlapLeft) {
+                            player.x = platform.x - player.width;
+                        } else if (minOverlap === overlapRight) {
+                            player.x = platform.x + platform.width;
+                        }
+                    }
+                }
+            }
+
+            // Freeze movement during transition
+            if (!sizeTransitioning) {
+                // Scale factors based on player size (40 is base) - linear scaling
+                const sizeScale = player.currentSize / 40;
+
+                // Gravity (scaled by size for proportional physics)
+                if ((keys['KeyS'] || keys['ArrowDown']) && !isGrounded) {
+                    player.velocityY += physics.gravity * sizeScale * physics.fastFallMultiplier * deltaTime;  // Fall 1.75x faster
+                } else {
+                    player.velocityY += physics.gravity * sizeScale * deltaTime;
+                }
+
+                // Movement (scaled by size)
+                const moveSpeed = physics.moveSpeed * sizeScale;
+                if (keys['KeyA'] || keys['ArrowLeft']) {
+                    player.velocityX -= moveSpeed * deltaTime;
+                }
+                if (keys['KeyD'] || keys['ArrowRight']) {
+                    player.velocityX += moveSpeed * deltaTime;
+                }
+
+                // Jump - Variable height, scaled by size
+                if ((keys['KeyW'] || keys['ArrowUp'] || keys['Space']) && isGrounded) {
+                    player.velocityY = -physics.jumpPower * sizeScale;
+                    isJumping = true;
+                }
+
+                // Cut jump short if button released (variable jump height)
+                if (isJumping && !keys['KeyW'] && !keys['ArrowUp'] && !keys['Space']) {
+                    if (player.velocityY < 0) {
+                        player.velocityY *= 0.5;
+                    }
+                    isJumping = false;
+                }
+
+                // Reset jump state when grounded
+                if (isGrounded && player.velocityY >= 0) {
+                    isJumping = false;
+                }
+
+                // Apply friction (using exponential decay for frame-rate independence)
+                if (isGrounded) {
+                    player.velocityX *= Math.pow(physics.friction, deltaTime);
+                } else {
+                    player.velocityX *= Math.pow(physics.airRes, deltaTime);
+                }
+
+                player.velocityX = Math.max(-physics.maxSpeed * sizeScale, Math.min(physics.maxSpeed * sizeScale, player.velocityX));
+
+                // Cap vertical velocity to prevent tunneling through platforms
+                const maxFallSpeed = 8 * sizeScale; // Terminal velocity (reduced to prevent glitching)
+                player.velocityY = Math.min(player.velocityY, maxFallSpeed);
+
+                player.x += player.velocityX * deltaTime;
+                player.y += player.velocityY * deltaTime;
+            }
+
+            checkCollision();
+            checkHazards();
+            checkGrowers();
+            checkShrinkers();
+            checkDefaultSize();
+            checkFinish();
+
+            // Keep camera centered on player
+            cameraX = player.x - canvas.width / (2 * zoom);
+            cameraY = player.y - canvas.height / (2 * zoom);
+
+        }
+
+        function canFitInGap(x, y, width, height) {
+            // Add a small buffer (1px) to prevent phasing through tight gaps
+            const buffer = 1;
+
+            // Check if this position would collide with any platform
+            for (let platform of platforms) {
+                if (x + width - buffer > platform.x &&
+                    x + buffer < platform.x + platform.width &&
+                    y + height - buffer > platform.y &&
+                    y + buffer < platform.y + platform.height) {
+                    return false; // Collision found, can't fit
+                }
+            }
+            return true; // No collision, can fit
+        }
+
+        function checkCollision() {
+            isGrounded = false;
+
+            for (let platform of platforms) {
+                if (player.x + player.width > platform.x &&
+                    player.x < platform.x + platform.width &&
+                    player.y + player.height > platform.y &&
+                    player.y < platform.y + platform.height) {
+
+                    const overlapLeft = (player.x + player.width) - platform.x;
+                    const overlapRight = (platform.x + platform.width) - player.x;
+                    const overlapTop = (player.y + player.height) - platform.y;
+                    const overlapBottom = (platform.y + platform.height) - player.y;
+
+                    const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+
+                    // Floor collision (landing on top)
+                    // Extra check: if moving down fast, only treat as floor if top overlap is clearly smallest
+                    if ((minOverlap === overlapTop && player.velocityY >= 0) ||
+                        (player.velocityY > 0 && overlapTop < overlapBottom &&
+                         overlapTop < overlapLeft * 0.5 && overlapTop < overlapRight * 0.5)) {
+                        // Don't allow gap sliding - always stop at platform edges
+                        player.y = platform.y - player.height;
+                        player.velocityY = 0;
+                        isGrounded = true;
+                    }
+                    else if (minOverlap === overlapBottom && player.velocityY < 0) {
+                        player.y = platform.y + platform.height;
+                        player.velocityY = 0;
+                    }
+                    else if (minOverlap === overlapLeft) {
+                        player.x = platform.x - player.width;
+                        player.velocityX = 0;
+                    }
+                    else if (minOverlap === overlapRight) {
+                        player.x = platform.x + platform.width;
+                        player.velocityX = 0;
+                    }
+                }
+            }
+        }
+
+        function checkHazards() {
+            for (let hazard of hazards) {
+                if (player.x + player.width > hazard.x &&
+                    player.x < hazard.x + hazard.width &&
+                    player.y + player.height > hazard.y &&
+                    player.y < hazard.y + hazard.height) {
+                    player.x = startPos.x;
+                    player.y = startPos.y;
+                    player.velocityX = 0;
+                    player.velocityY = 0;
+                    player.currentSize = 40;
+                    player.width = 40;
+                    player.height = 40;
+                    testStartTime = performance.now(); // Reset moving platforms to starting position
+                    return;
+                }
+            }
+        }
+
+        function checkGrowers() {
+            for (let grower of growers) {
+                if (player.x + player.width > grower.x &&
+                    player.x < grower.x + grower.width &&
+                    player.y + player.height > grower.y &&
+                    player.y < grower.y + grower.height) {
+                    if (player.currentSize !== 80 && !sizeTransitioning) {
+                        startSizeTransition(80);
+                    }
+                    return;
+                }
+            }
+        }
+
+        function checkShrinkers() {
+            for (let shrinker of shrinkers) {
+                if (player.x + player.width > shrinker.x &&
+                    player.x < shrinker.x + shrinker.width &&
+                    player.y + player.height > shrinker.y &&
+                    player.y < shrinker.y + shrinker.height) {
+                    if (player.currentSize !== 20 && !sizeTransitioning) {
+                        startSizeTransition(20);
+                    }
+                    return;
+                }
+            }
+        }
+
+        function checkDefaultSize() {
+            for (let defaultBlock of defaultSizeBlocks) {
+                if (player.x + player.width > defaultBlock.x &&
+                    player.x < defaultBlock.x + defaultBlock.width &&
+                    player.y + player.height > defaultBlock.y &&
+                    player.y < defaultBlock.y + defaultBlock.height) {
+                    // Default size block - sets to 40
+                    if (player.currentSize !== 40 && !sizeTransitioning) {
+                        startSizeTransition(40);
+                    }
+                    return;
+                }
+            }
+        }
+
+        function startSizeTransition(newSize) {
+            sizeTransitioning = true;
+            targetSize = newSize;
+            sizeTransitionProgress = 0;
+        }
+
+        function updateSizeTransition(deltaTime) {
+            if (!sizeTransitioning) return;
+
+            sizeTransitionProgress += deltaTime * 0.1;  // Transition speed
+
+            if (sizeTransitionProgress >= 1) {
+                // Transition complete
+                sizeTransitioning = false;
+                player.currentSize = targetSize;
+                player.width = targetSize;
+                player.height = targetSize;
+            } else {
+                // Interpolate size from center
+                const startSize = player.currentSize;
+                const t = sizeTransitionProgress;
+                const newSize = startSize + (targetSize - startSize) * t;
+
+                // Calculate center point before resize
+                const centerX = player.x + player.width / 2;
+                const centerY = player.y + player.height / 2;
+
+                // Update size
+                player.width = newSize;
+                player.height = newSize;
+
+                // Reposition to keep center point fixed
+                player.x = centerX - player.width / 2;
+                player.y = centerY - player.height / 2;
+            }
+        }
+
+        function checkFinish() {
+            if (player.x + player.width > finishPos.x &&
+                player.x < finishPos.x + finishPos.width &&
+                player.y + player.height > finishPos.y &&
+                player.y < finishPos.y + finishPos.height) {
+                alert('Level Complete!');
+                stopTest();
+            }
+        }
+
+        // Copy/Paste for blocks
+        let copiedBlock = null;
+
+        // Keyboard events
+        document.addEventListener('keydown', (e) => {
+            // Don't capture keys when modal is open
+            const modalOpen = document.getElementById('importModal').classList.contains('show');
+            if (modalOpen) {
+                if (e.code === 'Escape') {
+                    closeImportModal();
+                    e.preventDefault();
+                }
+                return;
+            }
+
+            keys[e.code] = true;
+
+            // Undo/Redo shortcuts
+            if (e.ctrlKey && e.code === 'KeyZ' && !testMode) {
+                undo();
+                e.preventDefault();
+                return;
+            }
+            if (e.ctrlKey && e.code === 'KeyY' && !testMode) {
+                redo();
+                e.preventDefault();
+                return;
+            }
+
+            // Copy selected blocks
+            if (e.ctrlKey && e.code === 'KeyC' && !testMode) {
+                if (selectedBlocks.length > 0) {
+                    // Copy multiple selected blocks
+                    clipboard = selectedBlocks.map(block => ({
+                        type: block.type,
+                        obj: JSON.parse(JSON.stringify(block.obj))
+                    }));
+
+                    // Calculate center of selection for paste offset
+                    if (clipboard.length > 0) {
+                        const avgX = clipboard.reduce((sum, b) => sum + b.obj.x, 0) / clipboard.length;
+                        const avgY = clipboard.reduce((sum, b) => sum + b.obj.y, 0) / clipboard.length;
+                        pasteOffset.x = avgX;
+                        pasteOffset.y = avgY;
+                    }
+                } else if (selectedBlock) {
+                    // Copy single selected block
+                    clipboard = [{
+                        type: selectedBlock.type,
+                        obj: JSON.parse(JSON.stringify(selectedBlock.obj))
+                    }];
+                    pasteOffset.x = selectedBlock.obj.x;
+                    pasteOffset.y = selectedBlock.obj.y;
+                }
+                e.preventDefault();
+                return;
+            }
+
+            // Paste blocks (enter paste mode)
+            if (e.ctrlKey && e.code === 'KeyV' && clipboard.length > 0 && !testMode) {
+                isPasting = true;
+                pastePreview = clipboard.map(block => ({
+                    type: block.type,
+                    obj: JSON.parse(JSON.stringify(block.obj))
+                }));
+                e.preventDefault();
+                return;
+            }
+
+            // Cancel paste mode
+            if (e.code === 'Escape' && isPasting) {
+                isPasting = false;
+                pastePreview = [];
+                draw();
+                e.preventDefault();
+                return;
+            }
+
+            // Delete selected block(s)
+            if (e.code === 'Delete' && !testMode && (selectedBlock || selectedBlocks.length > 0)) {
+                saveState();
+
+                // Delete multiple selected blocks
+                if (selectedBlocks.length > 0) {
+                    for (const block of selectedBlocks) {
+                        if (block.type === 'platform') {
+                            const idx = platforms.indexOf(block.obj);
+                            if (idx > -1) platforms.splice(idx, 1);
+                        }
+                        else if (block.type === 'hazard') {
+                            const idx = hazards.indexOf(block.obj);
+                            if (idx > -1) hazards.splice(idx, 1);
+                        }
+                        else if (block.type === 'grower') {
+                            const idx = growers.indexOf(block.obj);
+                            if (idx > -1) growers.splice(idx, 1);
+                        }
+                        else if (block.type === 'shrinker') {
+                            const idx = shrinkers.indexOf(block.obj);
+                            if (idx > -1) shrinkers.splice(idx, 1);
+                        }
+                        else if (block.type === 'default') {
+                            const idx = defaultSizeBlocks.indexOf(block.obj);
+                            if (idx > -1) defaultSizeBlocks.splice(idx, 1);
+                        }
+                        else if (block.type === 'background') {
+                            const idx = backgroundBlocks.indexOf(block.obj);
+                            if (idx > -1) backgroundBlocks.splice(idx, 1);
+                        }
+                        else if (block.type === 'foreground') {
+                            const idx = foregroundBlocks.indexOf(block.obj);
+                            if (idx > -1) foregroundBlocks.splice(idx, 1);
+                        }
+                    }
+                    selectedBlocks = [];
+                }
+                // Delete single selected block
+                else if (selectedBlock) {
+                    if (selectedBlock.type === 'platform') platforms.splice(selectedBlock.index, 1);
+                    else if (selectedBlock.type === 'hazard') hazards.splice(selectedBlock.index, 1);
+                    else if (selectedBlock.type === 'grower') growers.splice(selectedBlock.index, 1);
+                    else if (selectedBlock.type === 'shrinker') shrinkers.splice(selectedBlock.index, 1);
+                    else if (selectedBlock.type === 'default') defaultSizeBlocks.splice(selectedBlock.index, 1);
+                    else if (selectedBlock.type === 'background') backgroundBlocks.splice(selectedBlock.index, 1);
+                    else if (selectedBlock.type === 'foreground') foregroundBlocks.splice(selectedBlock.index, 1);
+                    selectedBlock = null;
+                }
+
+                updateStats();
+                updateLevelData();
+                draw();
+                e.preventDefault();
+                return;
+            }
+
+            // Tool shortcuts (1-9 keys)
+            if (!testMode) {
+                if (e.code === 'Digit1') setToolByName('platform');
+                else if (e.code === 'Digit2') setToolByName('hazard');
+                else if (e.code === 'Digit3') setToolByName('grower');
+                else if (e.code === 'Digit4') setToolByName('shrinker');
+                else if (e.code === 'Digit5') setToolByName('select');
+                else if (e.code === 'Digit6') setToolByName('resize');
+                else if (e.code === 'Digit7') setToolByName('delete');
+                else if (e.code === 'KeyG') toggleGrid();
+            }
+
+            if (e.code === 'KeyR' && testMode) {
+                player.x = startPos.x;
+                player.y = startPos.y;
+                player.velocityX = 0;
+                player.velocityY = 0;
+                player.currentSize = 40;
+                player.width = 40;
+                player.height = 40;
+                testStartTime = performance.now(); // Reset moving platforms to starting position
+            }
+
+            if (e.code === 'Escape' && testMode) {
+                stopTest();
+            }
+
+            if (e.code === 'Space' && !testMode) {
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            // Don't capture keys when modal is open
+            const modalOpen = document.getElementById('importModal').classList.contains('show');
+            if (modalOpen) {
+                return;
+            }
+
+            keys[e.code] = false;
+            e.preventDefault();
+        });
+
+        // Stop event propagation for import modal textarea
+        const importTextarea = document.getElementById('importModalText');
+        importTextarea.addEventListener('keydown', (e) => {
+            e.stopPropagation();
+        });
+        importTextarea.addEventListener('keyup', (e) => {
+            e.stopPropagation();
+        });
+        importTextarea.addEventListener('keypress', (e) => {
+            e.stopPropagation();
+        });
+
+        // Window resize
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth - 250;
+            canvas.height = window.innerHeight;
+            draw();
+        });
+
+        // Initial setup
+        // Try to load auto-save on startup
+        const hasAutoSave = loadAutoSave();
+        if (!hasAutoSave) {
+            updateLevelData();
+            draw();
+        }
+    </script>
+</body>
+</html>

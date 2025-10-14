@@ -1,0 +1,181 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": "auth != null && auth.uid == $uid",
+        ".validate": "newData.hasChildren(['username', 'createdAt'])",
+        "username": {
+          ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 10"
+        },
+        "createdAt": {
+          ".validate": "newData.val() == now || !data.exists()"
+        }
+      }
+    },
+
+    "usernames": {
+      "$username": {
+        ".read": true,
+        ".write": "auth != null && !data.exists()",
+        ".validate": "newData.hasChildren(['uid', 'username', 'createdAt'])",
+        "uid": {
+          ".validate": "newData.val() == auth.uid"
+        },
+        "username": {
+          ".validate": "newData.val() == $username"
+        }
+      }
+    },
+
+    "players": {
+      "$uid": {
+        ".read": true,
+        ".write": "auth != null && auth.uid == $uid",
+        ".validate": "newData.hasChildren(['username'])",
+
+        "username": {
+          ".validate": "newData.isString() && newData.val().length >= 3 && newData.val().length <= 10"
+        },
+
+        "credits": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+
+        "secureCredits": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        },
+
+        "baseBlocks": {
+          ".validate": "newData.hasChildren()",
+          "$blockId": {
+            ".validate": "newData.hasChildren(['x', 'y', 'credits']) && newData.child('credits').val() >= 1 && newData.child('credits').val() <= 3"
+          }
+        },
+
+        "equippedCosmetics": {
+          ".validate": "newData.hasChildren()",
+          "skin": {
+            ".validate": "newData.isString()"
+          }
+        },
+
+        "ownedCosmetics": {
+          ".validate": "newData.hasChildren()",
+          "$cosmeticId": {
+            ".validate": "newData.val() === true"
+          }
+        }
+      }
+    },
+
+    "scores": {
+      ".read": true,
+      "$mapId": {
+        "$uid": {
+          ".write": "auth != null && auth.uid == $uid",
+          ".validate": "newData.hasChildren(['username', 'time', 'timestamp'])",
+          "time": {
+            ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() < 3600000"
+          },
+          "username": {
+            ".validate": "newData.isString()"
+          },
+          "timestamp": {
+            ".validate": "newData.isNumber()"
+          }
+        }
+      }
+    },
+
+    "times_history": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": "auth != null && auth.uid == $uid",
+        "$mapId": {
+          "$timeId": {
+            ".validate": "newData.hasChildren(['time', 'timestamp', 'username'])",
+            "time": {
+              ".validate": "newData.isNumber() && newData.val() > 0"
+            }
+          }
+        }
+      }
+    },
+
+    "levels": {
+      ".read": true,
+      "$levelId": {
+        ".write": "auth != null",
+        ".validate": "newData.hasChildren(['name', 'creator', 'createdAt', 'levelData'])",
+        "name": {
+          ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 50"
+        },
+        "creator": {
+          ".validate": "newData.isString()"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber()"
+        },
+        "levelData": {
+          ".validate": "newData.hasChildren(['platforms', 'hazards'])"
+        }
+      }
+    },
+
+    "parties": {
+      ".read": "auth != null",
+      "$partyId": {
+        ".write": "auth != null && (
+          !data.exists() ||
+          data.child('leader').val() == auth.uid ||
+          data.child('members').child(auth.uid).exists()
+        )",
+        ".validate": "newData.hasChildren(['leader', 'members', 'createdAt'])",
+
+        "leader": {
+          ".validate": "newData.isString()"
+        },
+
+        "members": {
+          "$uid": {
+            ".validate": "newData.hasChildren(['username', 'ready'])"
+          }
+        },
+
+        "currentMap": {
+          ".validate": "newData.isString()"
+        },
+
+        "inRace": {
+          ".validate": "newData.isBoolean()"
+        }
+      }
+    },
+
+    "invitations": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": "auth != null",
+        "$inviteId": {
+          ".validate": "newData.hasChildren(['from', 'partyId', 'timestamp'])"
+        }
+      }
+    },
+
+    "races": {
+      "$raceId": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "participants": {
+          "$uid": {
+            ".validate": "newData.hasChildren(['username', 'finished', 'time'])"
+          }
+        }
+      }
+    }
+  }
+}

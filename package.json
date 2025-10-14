@@ -1,0 +1,42 @@
+{
+  "name": "block-racers-online",
+  "version": "10.2.0",
+  "description": "Online multiplayer platformer speedrunning game with user-generated content, economy system, and competitive racing",
+  "main": "index.html",
+  "scripts": {
+    "dev": "npm run serve",
+    "serve": "npx http-server -p 8080 -c-1",
+    "build": "node scripts/build.js",
+    "deploy": "firebase deploy",
+    "deploy:hosting": "firebase deploy --only hosting",
+    "deploy:functions": "firebase deploy --only functions",
+    "deploy:rules": "firebase deploy --only database:rules",
+    "lint": "eslint src/**/*.js",
+    "format": "prettier --write \"src/**/*.{js,json,css,html}\"",
+    "validate-levels": "node scripts/validate-levels.js",
+    "backup-db": "node scripts/backup-database.js"
+  },
+  "keywords": [
+    "game",
+    "platformer",
+    "speedrun",
+    "multiplayer",
+    "canvas",
+    "firebase"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^8.50.0",
+    "prettier": "^3.0.3",
+    "http-server": "^14.1.1"
+  },
+  "dependencies": {
+    "firebase": "^9.22.1",
+    "firebase-admin": "^11.10.1",
+    "firebase-functions": "^4.4.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
