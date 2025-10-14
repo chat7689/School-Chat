@@ -1418,7 +1418,11 @@
                 menuPlayer.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
             }
 
-            // Limit speed (scaled by size)
+            // Cap vertical velocity to prevent tunneling (scaled by size)
+            const maxFallSpeed = 8 * sizeScale;
+            menuPlayer.velocityY = Math.min(menuPlayer.velocityY, maxFallSpeed);
+
+            // Limit horizontal speed (scaled by size)
             const scaledMaxSpeed = GROUND_MAX_SPEED * sizeScale;
             menuPlayer.velocityX = Math.max(-scaledMaxSpeed, Math.min(scaledMaxSpeed, menuPlayer.velocityX));
 
@@ -4632,7 +4636,11 @@
                 basePlayer.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
             }
 
-            // Limit speed (scaled by size)
+            // Cap vertical velocity to prevent tunneling (scaled by size)
+            const maxFallSpeed = 8 * sizeScale;
+            basePlayer.velocityY = Math.min(basePlayer.velocityY, maxFallSpeed);
+
+            // Limit horizontal speed (scaled by size)
             const scaledMaxSpeed = GROUND_MAX_SPEED * sizeScale;
             basePlayer.velocityX = Math.max(-scaledMaxSpeed, Math.min(scaledMaxSpeed, basePlayer.velocityX));
 
