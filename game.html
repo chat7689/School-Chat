@@ -1397,11 +1397,11 @@
 
                 // Only add velocity if under max time AND under max velocity
                 if (menuPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME && Math.abs(menuPlayer.velocityY) < maxJumpVelocity) {
-                    // Add velocity to reach max height quickly (charge rate per frame)
-                    const addVelocity = 0.15 * deltaTime;
+                    // Add velocity to reach max height (slower charge rate to prevent overshoot)
+                    const addVelocity = 0.12 * deltaTime;
                     menuPlayer.velocityY -= addVelocity;
 
-                    // Cap at max velocity
+                    // Cap at max velocity (use strict cap)
                     if (Math.abs(menuPlayer.velocityY) >= maxJumpVelocity) {
                         menuPlayer.velocityY = -maxJumpVelocity;
                         menuIsJumping = false; // Stop charging once max reached
@@ -1840,8 +1840,8 @@
 
                 // Only add velocity if under max time AND under max velocity
                 if (levelSelectPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME && Math.abs(levelSelectPlayer.velocityY) < maxJumpVelocity) {
-                    // Add velocity to reach max height quickly (charge rate per frame)
-                    const addVelocity = 0.15 * deltaTime;
+                    // Add velocity to reach max height (slower charge rate to prevent overshoot)
+                    const addVelocity = 0.12 * deltaTime;
                     levelSelectPlayer.velocityY -= addVelocity;
 
                     // Cap at max velocity
@@ -3002,8 +3002,8 @@
 
                 // Only add velocity if under max time AND under max velocity
                 if (player.jumpHoldTime < MAX_JUMP_HOLD_TIME && Math.abs(player.velocityY) < maxJumpVelocity) {
-                    // Add velocity to reach max height quickly (charge rate per frame)
-                    const addVelocity = 0.15 * deltaTime;
+                    // Add velocity to reach max height (slower charge rate to prevent overshoot)
+                    const addVelocity = 0.12 * deltaTime;
                     player.velocityY -= addVelocity;
 
                     // Cap at max velocity
@@ -4008,8 +4008,8 @@
 
                 // Only add velocity if under max time AND under max velocity
                 if (player.jumpHoldTime < MAX_JUMP_HOLD_TIME && Math.abs(player.velocityY) < maxJumpVelocity) {
-                    // Add velocity to reach max height quickly (charge rate per frame)
-                    const addVelocity = 0.15 * deltaTime;
+                    // Add velocity to reach max height (slower charge rate to prevent overshoot)
+                    const addVelocity = 0.12 * deltaTime;
                     player.velocityY -= addVelocity;
 
                     // Cap at max velocity
@@ -4646,8 +4646,8 @@
 
                 // Only add velocity if under max time AND under max velocity
                 if (basePlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME && Math.abs(basePlayer.velocityY) < maxJumpVelocity) {
-                    // Add velocity to reach max height quickly (charge rate per frame)
-                    const addVelocity = 0.15 * deltaTime;
+                    // Add velocity to reach max height (slower charge rate to prevent overshoot)
+                    const addVelocity = 0.12 * deltaTime;
                     basePlayer.velocityY -= addVelocity;
 
                     // Cap at max velocity
@@ -5169,8 +5169,8 @@
 
                 // Only add velocity if under max time AND under max velocity
                 if (leaderboardPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME && Math.abs(leaderboardPlayer.velocityY) < maxJumpVelocity) {
-                    // Add velocity to reach max height quickly (charge rate per frame)
-                    const addVelocity = 0.15 * deltaTime;
+                    // Add velocity to reach max height (slower charge rate to prevent overshoot)
+                    const addVelocity = 0.12 * deltaTime;
                     leaderboardPlayer.velocityY -= addVelocity;
 
                     // Cap at max velocity
