@@ -265,22 +265,31 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-functions-compat.js"></script>
 
     <!-- Secure Configuration System -->
     <script src="public/config-loader.js"></script>
 
     <script>
         // Initialize Firebase with secure configuration
-        let auth, database;
+        let auth, database, functions;
 
         (async function() {
             try {
                 const fb = await initializeFirebase();
                 auth = fb.auth;
                 database = fb.database;
+                functions = fb.functions;
+
+                // Check if already logged in
+                auth.onAuthStateChanged((user) => {
+                    if (user) {
+                        window.location.href = 'game.html';
+                    }
+                });
             } catch (error) {
                 console.error('Initialization error:', error);
-                showError('Failed to initialize app. Please refresh.', 'error');
+                // Don't show error UI here, just log it
             }
         })();
 
@@ -490,13 +499,6 @@
                 hideLoading();
             }
         }
-
-        // Check if already logged in
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                window.location.href = 'game.html';
-            }
-        });
     </script>
 </body>
 </html>

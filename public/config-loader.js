@@ -67,7 +67,7 @@ window.initializeFirebase = async function() {
       app: app,
       auth: firebase.auth(),
       database: firebase.database(),
-      functions: firebase.functions()
+      functions: firebase.functions ? firebase.functions() : null
     };
   } catch (error) {
     console.error('❌ Firebase initialization failed:', error);

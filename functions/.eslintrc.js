@@ -14,6 +14,7 @@ module.exports = {
     'prefer-arrow-callback': 'error',
     'quotes': ['error', 'single', { avoidEscape: true }],
     'no-unused-vars': 'warn',
+    'linebreak-style': 'off',
   },
   overrides: [
     {
