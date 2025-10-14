@@ -1391,15 +1391,18 @@
             }
 
             // Continue adding upward velocity while holding button (extends jump height)
-            if (menuIsJumping && (menuKeys['w'] || menuKeys['ArrowUp']) && menuPlayer.velocityY < 0) {
+            if (menuIsJumping && (menuKeys['w'] || menuKeys['ArrowUp'])) {
                 menuPlayer.jumpHoldTime += deltaTime;
 
-                // Add upward acceleration while holding (max height = playerSize * 4 + 1px)
-                if (menuPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
-                    const maxJumpVelocity = getMaxJumpVelocity(menuPlayer.currentSize);
-                    if (Math.abs(menuPlayer.velocityY) < maxJumpVelocity) {
-                        menuPlayer.velocityY -= JUMP_CHARGE_RATE * deltaTime;
-                    }
+                // Calculate max jump velocity for this player size
+                const maxJumpVelocity = getMaxJumpVelocity(menuPlayer.currentSize);
+
+                // Add upward acceleration while holding, but stop at max velocity or max time
+                if (menuPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME && Math.abs(menuPlayer.velocityY) < maxJumpVelocity) {
+                    menuPlayer.velocityY -= JUMP_CHARGE_RATE * deltaTime;
+                } else {
+                    // Max reached, stop charging
+                    menuIsJumping = false;
                 }
             }
 
@@ -1827,15 +1830,18 @@
             }
 
             // Continue adding upward velocity while holding button (extends jump height)
-            if (levelSelectIsJumping && (levelSelectKeys['w'] || levelSelectKeys['ArrowUp']) && levelSelectPlayer.velocityY < 0) {
+            if (levelSelectIsJumping && (levelSelectKeys['w'] || levelSelectKeys['ArrowUp'])) {
                 levelSelectPlayer.jumpHoldTime += deltaTime;
 
-                // Add upward acceleration while holding (max height = playerSize * 4 + 1px)
-                if (levelSelectPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
-                    const maxJumpVelocity = getMaxJumpVelocity(levelSelectPlayer.currentSize);
-                    if (Math.abs(levelSelectPlayer.velocityY) < maxJumpVelocity) {
-                        levelSelectPlayer.velocityY -= JUMP_CHARGE_RATE * deltaTime;
-                    }
+                // Calculate max jump velocity for this player size
+                const maxJumpVelocity = getMaxJumpVelocity(levelSelectPlayer.currentSize);
+
+                // Add upward acceleration while holding, but stop at max velocity or max time
+                if (levelSelectPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME && Math.abs(levelSelectPlayer.velocityY) < maxJumpVelocity) {
+                    levelSelectPlayer.velocityY -= JUMP_CHARGE_RATE * deltaTime;
+                } else {
+                    // Max reached, stop charging
+                    levelSelectIsJumping = false;
                 }
             }
 
@@ -2982,15 +2988,18 @@
             }
 
             // Continue adding upward velocity while holding button (extends jump height)
-            if (practiceIsJumping && (practiceMode.keys['w'] || practiceMode.keys['ArrowUp']) && player.velocityY < 0) {
+            if (practiceIsJumping && (practiceMode.keys['w'] || practiceMode.keys['ArrowUp'])) {
                 player.jumpHoldTime += deltaTime;
 
-                // Add upward acceleration while holding (max height = playerSize * 4 + 1px)
-                if (player.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
-                    const maxJumpVelocity = getMaxJumpVelocity(player.currentSize);
-                    if (Math.abs(player.velocityY) < maxJumpVelocity) {
-                        player.velocityY -= JUMP_CHARGE_RATE * deltaTime;
-                    }
+                // Calculate max jump velocity for this player size
+                const maxJumpVelocity = getMaxJumpVelocity(player.currentSize);
+
+                // Add upward acceleration while holding, but stop at max velocity or max time
+                if (player.jumpHoldTime < MAX_JUMP_HOLD_TIME && Math.abs(player.velocityY) < maxJumpVelocity) {
+                    player.velocityY -= JUMP_CHARGE_RATE * deltaTime;
+                } else {
+                    // Max reached, stop charging
+                    practiceIsJumping = false;
                 }
             }
 
@@ -3981,15 +3990,18 @@
             }
 
             // Continue adding upward velocity while holding button (extends jump height)
-            if (raceIsJumping && (raceState.keys['w'] || raceState.keys['ArrowUp']) && player.velocityY < 0) {
+            if (raceIsJumping && (raceState.keys['w'] || raceState.keys['ArrowUp'])) {
                 player.jumpHoldTime += deltaTime;
 
-                // Add upward acceleration while holding (max height = playerSize * 4 + 1px)
-                if (player.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
-                    const maxJumpVelocity = getMaxJumpVelocity(player.currentSize);
-                    if (Math.abs(player.velocityY) < maxJumpVelocity) {
-                        player.velocityY -= JUMP_CHARGE_RATE * deltaTime;
-                    }
+                // Calculate max jump velocity for this player size
+                const maxJumpVelocity = getMaxJumpVelocity(player.currentSize);
+
+                // Add upward acceleration while holding, but stop at max velocity or max time
+                if (player.jumpHoldTime < MAX_JUMP_HOLD_TIME && Math.abs(player.velocityY) < maxJumpVelocity) {
+                    player.velocityY -= JUMP_CHARGE_RATE * deltaTime;
+                } else {
+                    // Max reached, stop charging
+                    raceIsJumping = false;
                 }
             }
 
@@ -4612,15 +4624,18 @@
             }
 
             // Continue adding upward velocity while holding button (extends jump height)
-            if (baseIsJumping && (baseKeys['w'] || baseKeys['ArrowUp']) && basePlayer.velocityY < 0) {
+            if (baseIsJumping && (baseKeys['w'] || baseKeys['ArrowUp'])) {
                 basePlayer.jumpHoldTime += deltaTime;
 
-                // Add upward acceleration while holding (max height = playerSize * 4 + 1px)
-                if (basePlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
-                    const maxJumpVelocity = getMaxJumpVelocity(basePlayer.currentSize);
-                    if (Math.abs(basePlayer.velocityY) < maxJumpVelocity) {
-                        basePlayer.velocityY -= JUMP_CHARGE_RATE * deltaTime;
-                    }
+                // Calculate max jump velocity for this player size
+                const maxJumpVelocity = getMaxJumpVelocity(basePlayer.currentSize);
+
+                // Add upward acceleration while holding, but stop at max velocity or max time
+                if (basePlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME && Math.abs(basePlayer.velocityY) < maxJumpVelocity) {
+                    basePlayer.velocityY -= JUMP_CHARGE_RATE * deltaTime;
+                } else {
+                    // Max reached, stop charging
+                    baseIsJumping = false;
                 }
             }
 
@@ -5128,15 +5143,18 @@
             }
 
             // Continue adding upward velocity while holding button (extends jump height)
-            if (leaderboardIsJumping && (leaderboardKeys['w'] || leaderboardKeys['ArrowUp']) && leaderboardPlayer.velocityY < 0) {
+            if (leaderboardIsJumping && (leaderboardKeys['w'] || leaderboardKeys['ArrowUp'])) {
                 leaderboardPlayer.jumpHoldTime += deltaTime;
 
-                // Add upward acceleration while holding (max height = playerSize * 4 + 1px)
-                if (leaderboardPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
-                    const maxJumpVelocity = getMaxJumpVelocity(leaderboardPlayer.currentSize);
-                    if (Math.abs(leaderboardPlayer.velocityY) < maxJumpVelocity) {
-                        leaderboardPlayer.velocityY -= JUMP_CHARGE_RATE * deltaTime;
-                    }
+                // Calculate max jump velocity for this player size
+                const maxJumpVelocity = getMaxJumpVelocity(leaderboardPlayer.currentSize);
+
+                // Add upward acceleration while holding, but stop at max velocity or max time
+                if (leaderboardPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME && Math.abs(leaderboardPlayer.velocityY) < maxJumpVelocity) {
+                    leaderboardPlayer.velocityY -= JUMP_CHARGE_RATE * deltaTime;
+                } else {
+                    // Max reached, stop charging
+                    leaderboardIsJumping = false;
                 }
             }
 
