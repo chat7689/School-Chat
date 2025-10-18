@@ -1399,6 +1399,11 @@
                 menuIsJumping = false;
             }
 
+            // Stop jump when time limit exceeded
+            if (menuIsJumping && menuPlayer.jumpHoldTime >= MAX_JUMP_HOLD_TIME) {
+                menuIsJumping = false;
+            }
+
             // Reset jump state when grounded
             if (isGrounded && menuPlayer.velocityY >= 0) {
                 menuIsJumping = false;
@@ -1839,6 +1844,11 @@
 
             // Stop adding velocity when button released
             if (levelSelectIsJumping && (!levelSelectKeys['w'] && !levelSelectKeys['ArrowUp'])) {
+                levelSelectIsJumping = false;
+            }
+
+            // Stop jump when time limit exceeded
+            if (levelSelectIsJumping && levelSelectPlayer.jumpHoldTime >= MAX_JUMP_HOLD_TIME) {
                 levelSelectIsJumping = false;
             }
 
@@ -2995,6 +3005,11 @@
                 practiceIsJumping = false;
             }
 
+            // Stop jump when time limit exceeded
+            if (practiceIsJumping && player.jumpHoldTime >= MAX_JUMP_HOLD_TIME) {
+                practiceIsJumping = false;
+            }
+
             // Apply gravity scaled by size (from level creator)
             if ((practiceMode.keys['s'] || practiceMode.keys['ArrowDown']) && !player.wasGrounded && player.velocityY > 0) {
                 player.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
@@ -3997,6 +4012,11 @@
                 raceIsJumping = false;
             }
 
+            // Stop jump when time limit exceeded
+            if (raceIsJumping && player.jumpHoldTime >= MAX_JUMP_HOLD_TIME) {
+                raceIsJumping = false;
+            }
+
             // Reset jump state when grounded
             if (isGrounded && player.velocityY >= 0) {
                 raceIsJumping = false;
@@ -4630,6 +4650,11 @@
                 baseIsJumping = false;
             }
 
+            // Stop jump when time limit exceeded
+            if (baseIsJumping && basePlayer.jumpHoldTime >= MAX_JUMP_HOLD_TIME) {
+                baseIsJumping = false;
+            }
+
             // Friction
             if (isGrounded) {
                 basePlayer.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
@@ -5155,6 +5180,11 @@
 
             // Stop adding velocity when button released
             if (leaderboardIsJumping && (!leaderboardKeys['w'] && !leaderboardKeys['ArrowUp'])) {
+                leaderboardIsJumping = false;
+            }
+
+            // Stop jump when time limit exceeded
+            if (leaderboardIsJumping && leaderboardPlayer.jumpHoldTime >= MAX_JUMP_HOLD_TIME) {
                 leaderboardIsJumping = false;
             }
 
