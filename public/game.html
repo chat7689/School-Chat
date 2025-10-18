@@ -1171,7 +1171,13 @@
             document.getElementById('leaderboardPanel').style.display = 'block';
 
             // Show jump power slider panel
-            document.getElementById('jumpSliderPanel').style.display = 'block';
+            const sliderPanel = document.getElementById('jumpSliderPanel');
+            if (sliderPanel) {
+                sliderPanel.style.display = 'block';
+                console.log('Jump slider panel displayed:', sliderPanel);
+            } else {
+                console.error('Jump slider panel not found!');
+            }
 
             // Auto-refresh leaderboard every 5 seconds
             const leaderboardRefreshInterval = setInterval(() => {
