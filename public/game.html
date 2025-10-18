@@ -395,17 +395,9 @@
     <div id="creditPanel" style="display: none;"></div>
 
     <!-- Jump Power Slider Panel -->
-    <div id="jumpSliderPanel" style="display: none; position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.8); padding: 20px; border-radius: 12px; border: 2px solid #4facfe; z-index: 1000; width: 400px;">
-        <div style="font-family: 'Inter', Arial, sans-serif; color: #fff; text-align: center;">
-            <div style="font-size: 16px; font-weight: bold; margin-bottom: 15px; color: #4facfe;">Jump Power Tester</div>
-            <div style="margin-bottom: 10px;">
-                <label style="font-size: 14px; display: block; margin-bottom: 5px;">Jump Power: <span id="jumpPowerValue">2.71</span></label>
-                <input type="range" id="jumpPowerSlider" min="1.0" max="4.0" step="0.01" value="2.71" style="width: 100%; cursor: pointer;">
-            </div>
-            <div style="font-size: 12px; color: #aaa; margin-top: 10px;">
-                Adjust the slider and test jumps to find the perfect height!
-            </div>
-        </div>
+    <div id="jumpSliderPanel" style="display: none; position: fixed; top: 10px; left: 10px; background: yellow; padding: 10px; border: 3px solid red; z-index: 9999; font-size: 20px; color: black; font-weight: bold;">
+        Jump Power: <span id="jumpPowerValue">2.71</span><br>
+        <input type="range" id="jumpPowerSlider" min="1.0" max="4.0" step="0.01" value="2.71" style="width: 300px; height: 30px;">
     </div>
 
     <!-- Right Side Leaderboard Panel -->
