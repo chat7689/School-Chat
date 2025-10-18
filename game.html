@@ -2907,13 +2907,11 @@
             if (practiceMode.isDead) {
                 practiceMode.respawnCountdown -= deltaTime;
                 if (practiceMode.respawnCountdown <= 0) {
-                    // Respawn player at start of level
-                    player.x = 40;
-                    player.y = -40;
-                    player.velocityX = 0;
-                    player.velocityY = 0;
-                    practiceIsJumping = false;
-                    practiceMode.isDead = false;
+                    // Return to level select menu instead of respawning
+                    document.getElementById('practiceCanvas').style.display = 'none';
+                    document.getElementById('hud').style.display = 'none';
+                    document.getElementById('practiceBackBtn').style.display = 'none';
+                    showPracticeLevels(); // Go back to level select
                 }
                 // Skip physics while dead
                 return;

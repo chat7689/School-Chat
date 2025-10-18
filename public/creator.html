@@ -2685,6 +2685,7 @@
             player.width = 40;
             player.height = 40;
             player.currentSize = 40;
+            player.jumpHoldTime = 0;
             sizeTransitioning = false;
             lastFrameTime = performance.now(); // Reset frame time for delta calculation
             testStartTime = performance.now(); // Reset test start time for movement animations
@@ -2888,17 +2889,29 @@
                     player.velocityX += moveSpeed * deltaTime;
                 }
 
-                // Jump - Variable height, scaled by size
-                if ((keys['KeyW'] || keys['ArrowUp'] || keys['Space']) && isGrounded) {
-                    player.velocityY = -physics.jumpPower * sizeScale;
+                // Jump - Variable height based on hold time (matching main game)
+                if ((keys['KeyW'] || keys['ArrowUp'] || keys['Space']) && isGrounded && !isJumping) {
+                    player.velocityY = -1.5 * sizeScale; // Strong initial jump
                     isJumping = true;
+                    player.jumpHoldTime = 0;
                 }
 
-                // Cut jump short if button released (variable jump height)
-                if (isJumping && !keys['KeyW'] && !keys['ArrowUp'] && !keys['Space']) {
-                    if (player.velocityY < 0) {
-                        player.velocityY *= 0.5;
+                // Continue adding upward velocity while holding button
+                if (isJumping && (keys['KeyW'] || keys['ArrowUp'] || keys['Space']) && player.velocityY < 0 && player.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+                    player.jumpHoldTime += deltaTime;
+                    const maxJumpVelocity = physics.jumpPower * sizeScale;
+                    if (Math.abs(player.velocityY) < maxJumpVelocity && player.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+                        player.velocityY -= 0.25 * sizeScale * deltaTime; // JUMP_CHARGE_RATE
                     }
+                }
+
+                // Stop adding velocity when button released
+                if (isJumping && (!keys['KeyW'] && !keys['ArrowUp'] && !keys['Space'])) {
+                    isJumping = false;
+                }
+
+                // Stop jump when time limit exceeded
+                if (isJumping && player.jumpHoldTime >= MAX_JUMP_HOLD_TIME) {
                     isJumping = false;
                 }
 
