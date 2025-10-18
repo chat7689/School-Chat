@@ -2765,6 +2765,30 @@
                 ctx.fillStyle = '#87CEEB';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+                // Draw background 40x40px gridlines
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.lineWidth = 1;
+
+                // Vertical lines
+                const startX = Math.floor(practiceMode.cameraX / 40) * 40;
+                for (let x = startX; x < practiceMode.cameraX + canvas.width; x += 40) {
+                    const screenX = x - practiceMode.cameraX;
+                    ctx.beginPath();
+                    ctx.moveTo(screenX, 0);
+                    ctx.lineTo(screenX, canvas.height);
+                    ctx.stroke();
+                }
+
+                // Horizontal lines
+                const startY = Math.floor(practiceMode.cameraY / 40) * 40;
+                for (let y = startY; y < practiceMode.cameraY + canvas.height; y += 40) {
+                    const screenY = y - practiceMode.cameraY;
+                    ctx.beginPath();
+                    ctx.moveTo(0, screenY);
+                    ctx.lineTo(canvas.width, screenY);
+                    ctx.stroke();
+                }
+
                 // Draw death zone at bottom (red warning blocks)
                 ctx.fillStyle = '#FF0000';
                 const deathZoneY = 900 - practiceMode.cameraY;
@@ -2977,8 +3001,8 @@
             // Check if player is grounded (use previous frame state)
             const isGrounded = player.wasGrounded || false;
 
-            // Jump with variable height based on hold time (W or Up only, NOT space)
-            if ((practiceMode.keys['w'] || practiceMode.keys['ArrowUp']) && isGrounded && !practiceIsJumping) {
+            // Jump with variable height based on hold time
+            if ((practiceMode.keys['w'] || practiceMode.keys['ArrowUp'] || practiceMode.keys[' '] || practiceMode.keys['Space']) && isGrounded && !practiceIsJumping) {
                 // Start jump immediately with strong initial velocity
                 player.velocityY = -1.5 * sizeScale; // Strong initial jump
                 practiceIsJumping = true;
@@ -2988,7 +3012,7 @@
             }
 
             // Continue adding upward velocity while holding button (extends jump height)
-            if (practiceIsJumping && (practiceMode.keys['w'] || practiceMode.keys['ArrowUp']) && player.velocityY < 0 && player.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+            if (practiceIsJumping && (practiceMode.keys['w'] || practiceMode.keys['ArrowUp'] || practiceMode.keys[' '] || practiceMode.keys['Space']) && player.velocityY < 0 && player.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
                 player.jumpHoldTime += deltaTime;
 
                 // Add upward acceleration while holding (max height = 4x playerSize + 1px)
@@ -2999,7 +3023,7 @@
             }
 
             // Stop adding velocity when button released
-            if (practiceIsJumping && (!practiceMode.keys['w'] && !practiceMode.keys['ArrowUp'])) {
+            if (practiceIsJumping && (!practiceMode.keys['w'] && !practiceMode.keys['ArrowUp'] && !practiceMode.keys[' '] && !practiceMode.keys['Space'])) {
                 practiceIsJumping = false;
             }
 
