@@ -580,9 +580,10 @@
         const AIR_RESISTANCE = 0.88;
         const GROUND_FRICTION = 0.94;
         const GROUND_ACCELERATION = 0.15; // Gradual acceleration when grounded
-        const JUMP_POWER = 3.23; // Max jump: 4x player height + 1px = 161px for 40px player (adjusted for variable jump system)
+        const JUMP_POWER = 3.70; // Max jump: 4x player height + 1px = 161px for 40px player (adjusted for variable jump system)
         const FAST_FALL_MULTIPLIER = 3.5; // 1.75x stronger than before (was 2.0)
         const JUMP_CHARGE_RATE = 0.25; // How fast jump power builds per frame (faster for responsive jumps)
+        const MAX_JUMP_HOLD_TIME = 16.67; // Maximum time (ms) to hold jump button for max height
 
         // Game feel constants
         const COYOTE_TIME = 6; // Frames you can still jump after leaving platform
@@ -1382,13 +1383,13 @@
             }
 
             // Continue adding upward velocity while holding button (extends jump height)
-            if (menuIsJumping && (menuKeys['w'] || menuKeys['ArrowUp']) && menuPlayer.velocityY < 0) {
+            if (menuIsJumping && (menuKeys['w'] || menuKeys['ArrowUp']) && menuPlayer.velocityY < 0 && menuPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
                 const sizeScale = menuPlayer.currentSize / 40;
                 menuPlayer.jumpHoldTime += deltaTime;
 
                 // Add upward acceleration while holding (max height = 4x playerSize + 1px)
                 const maxJumpVelocity = JUMP_POWER * sizeScale;
-                if (Math.abs(menuPlayer.velocityY) < maxJumpVelocity) {
+                if (Math.abs(menuPlayer.velocityY) < maxJumpVelocity && menuPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
                     menuPlayer.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
                 }
             }
@@ -1825,13 +1826,13 @@
             }
 
             // Continue adding upward velocity while holding button (extends jump height)
-            if (levelSelectIsJumping && (levelSelectKeys['w'] || levelSelectKeys['ArrowUp']) && levelSelectPlayer.velocityY < 0) {
+            if (levelSelectIsJumping && (levelSelectKeys['w'] || levelSelectKeys['ArrowUp']) && levelSelectPlayer.velocityY < 0 && levelSelectPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
                 const sizeScale = levelSelectPlayer.currentSize / 40;
                 levelSelectPlayer.jumpHoldTime += deltaTime;
 
                 // Add upward acceleration while holding (max height = 4x playerSize + 1px)
                 const maxJumpVelocity = JUMP_POWER * sizeScale;
-                if (Math.abs(levelSelectPlayer.velocityY) < maxJumpVelocity) {
+                if (Math.abs(levelSelectPlayer.velocityY) < maxJumpVelocity && levelSelectPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
                     levelSelectPlayer.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
                 }
             }
@@ -2979,12 +2980,12 @@
             }
 
             // Continue adding upward velocity while holding button (extends jump height)
-            if (practiceIsJumping && (practiceMode.keys['w'] || practiceMode.keys['ArrowUp']) && player.velocityY < 0) {
+            if (practiceIsJumping && (practiceMode.keys['w'] || practiceMode.keys['ArrowUp']) && player.velocityY < 0 && player.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
                 player.jumpHoldTime += deltaTime;
 
                 // Add upward acceleration while holding (max height = 4x playerSize + 1px)
                 const maxJumpVelocity = JUMP_POWER * sizeScale;
-                if (Math.abs(player.velocityY) < maxJumpVelocity) {
+                if (Math.abs(player.velocityY) < maxJumpVelocity && player.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
                     player.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
                 }
             }
@@ -3981,12 +3982,12 @@
             }
 
             // Continue adding upward velocity while holding button (extends jump height)
-            if (raceIsJumping && (raceState.keys['w'] || raceState.keys['ArrowUp']) && player.velocityY < 0) {
+            if (raceIsJumping && (raceState.keys['w'] || raceState.keys['ArrowUp']) && player.velocityY < 0 && player.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
                 player.jumpHoldTime += deltaTime;
 
                 // Add upward acceleration while holding (max height = 4x playerSize + 1px)
                 const maxJumpVelocity = JUMP_POWER * sizeScale;
-                if (Math.abs(player.velocityY) < maxJumpVelocity) {
+                if (Math.abs(player.velocityY) < maxJumpVelocity && player.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
                     player.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
                 }
             }
@@ -4613,13 +4614,13 @@
             }
 
             // Continue adding upward velocity while holding button (extends jump height)
-            if (baseIsJumping && (baseKeys['w'] || baseKeys['ArrowUp']) && basePlayer.velocityY < 0) {
+            if (baseIsJumping && (baseKeys['w'] || baseKeys['ArrowUp']) && basePlayer.velocityY < 0 && basePlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
                 const sizeScale = basePlayer.currentSize / 40;
                 basePlayer.jumpHoldTime += deltaTime;
 
                 // Add upward acceleration while holding (max height = 4x playerSize + 1px)
                 const maxJumpVelocity = JUMP_POWER * sizeScale;
-                if (Math.abs(basePlayer.velocityY) < maxJumpVelocity) {
+                if (Math.abs(basePlayer.velocityY) < maxJumpVelocity && basePlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
                     basePlayer.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
                 }
             }
@@ -5141,13 +5142,13 @@
             }
 
             // Continue adding upward velocity while holding button (extends jump height)
-            if (leaderboardIsJumping && (leaderboardKeys['w'] || leaderboardKeys['ArrowUp']) && leaderboardPlayer.velocityY < 0) {
+            if (leaderboardIsJumping && (leaderboardKeys['w'] || leaderboardKeys['ArrowUp']) && leaderboardPlayer.velocityY < 0 && leaderboardPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
                 const sizeScale = leaderboardPlayer.currentSize / 40;
                 leaderboardPlayer.jumpHoldTime += deltaTime;
 
                 // Add upward acceleration while holding (max height = 4x playerSize + 1px)
                 const maxJumpVelocity = JUMP_POWER * sizeScale;
-                if (Math.abs(leaderboardPlayer.velocityY) < maxJumpVelocity) {
+                if (Math.abs(leaderboardPlayer.velocityY) < maxJumpVelocity && leaderboardPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
                     leaderboardPlayer.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
                 }
             }
