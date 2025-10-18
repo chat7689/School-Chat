@@ -1173,15 +1173,6 @@
             // Show jump power slider panel
             document.getElementById('jumpSliderPanel').style.display = 'block';
 
-            // Setup slider event listener
-            const slider = document.getElementById('jumpPowerSlider');
-            const valueDisplay = document.getElementById('jumpPowerValue');
-            slider.addEventListener('input', function() {
-                const newValue = parseFloat(this.value);
-                valueDisplay.textContent = newValue.toFixed(2);
-                JUMP_POWER = newValue; // Update the global JUMP_POWER constant
-            });
-
             // Auto-refresh leaderboard every 5 seconds
             const leaderboardRefreshInterval = setInterval(() => {
                 if (canvas.style.display !== 'none') {
