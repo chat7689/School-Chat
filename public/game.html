@@ -134,9 +134,9 @@
         #leaderboardPanel {
             position: absolute;
             top: 50%;
-            right: calc(50% - 600px - 180px); /* Match left panel positioning */
+            right: calc(50% - 600px - 280px); /* Extended further right */
             transform: translateY(-50%);
-            width: 160px;
+            width: 260px; /* Increased from 160px */
             height: 800px;
             background: linear-gradient(135deg, rgba(79, 172, 254, 0.3), rgba(79, 172, 254, 0.1));
             border: 3px solid #4facfe;
@@ -396,7 +396,7 @@
 
     <!-- Right Side Leaderboard Panel -->
     <div id="leaderboardPanel" style="display: none;">
-        <div style="font-family: 'Inter', Arial, sans-serif; font-size: 12px; color: #fff; margin-bottom: 10px; text-align: center; font-weight: bold;">
+        <div style="font-family: 'Inter', Arial, sans-serif; font-size: 18px; color: #fff; margin-bottom: 15px; text-align: center; font-weight: bold;">
             Credits Leaderboard
         </div>
         <div id="leaderboardList" style="font-family: 'Inter', Arial, sans-serif; font-size: 10px; color: #fff;">
@@ -1066,9 +1066,9 @@
                 for (let i = 0; i < players.length; i++) {
                     const player = players[i];
                     const isCurrentUser = player.username === currentUsername;
-                    html += `<div style="padding: 4px 0; ${isCurrentUser ? 'background: rgba(79, 172, 254, 0.3); border-radius: 5px; padding: 4px;' : ''}">
-                        <div style="font-size: 12px; font-weight: bold;">${i + 1}. ${player.username}</div>
-                        <div style="font-size: 10px; color: #FFD700;">${player.secureCredits}</div>
+                    html += `<div style="padding: 8px 4px; ${isCurrentUser ? 'background: rgba(79, 172, 254, 0.3); border-radius: 5px;' : ''} display: flex; justify-content: space-between; align-items: center;">
+                        <div style="font-size: 16px; font-weight: bold;">${i + 1}. ${player.username}</div>
+                        <div style="font-size: 16px; color: #FFD700; font-weight: bold;">${player.secureCredits}</div>
                     </div>`;
                 }
 
