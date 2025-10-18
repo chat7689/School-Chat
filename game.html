@@ -3767,6 +3767,30 @@
                 ctx.fillStyle = '#87CEEB';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+                // Draw background 40x40px gridlines
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.lineWidth = 1;
+
+                // Vertical lines
+                const startX = Math.floor(raceState.cameraX / 40) * 40;
+                for (let x = startX; x < raceState.cameraX + canvas.width; x += 40) {
+                    const screenX = x - raceState.cameraX;
+                    ctx.beginPath();
+                    ctx.moveTo(screenX, 0);
+                    ctx.lineTo(screenX, canvas.height);
+                    ctx.stroke();
+                }
+
+                // Horizontal lines
+                const startY = Math.floor(raceState.cameraY / 40) * 40;
+                for (let y = startY; y < raceState.cameraY + canvas.height; y += 40) {
+                    const screenY = y - raceState.cameraY;
+                    ctx.beginPath();
+                    ctx.moveTo(0, screenY);
+                    ctx.lineTo(canvas.width, screenY);
+                    ctx.stroke();
+                }
+
                 // Draw platforms - standardized
                 for (const platform of raceState.platforms) {
                     const screenX = platform.x - raceState.cameraX;
@@ -4579,6 +4603,11 @@
             const sizeScale = basePlayer.currentSize / 40;
             if ((baseKeys['s'] || baseKeys['ArrowDown']) && !isGrounded && basePlayer.velocityY > 0) {
                 basePlayer.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
+
+                // Fast-fall particles (white) - spawn when holding down/S in air
+                if (Math.random() < 0.3) { // 30% chance each frame for smooth particle trail
+                    spawnParticles(basePlayer.x + basePlayer.width / 2, basePlayer.y, 3, 'rgb(255, 255, 255)', basePlayer.currentSize);
+                }
             } else {
                 basePlayer.velocityY += GRAVITY * sizeScale * deltaTime;
             }
@@ -5040,6 +5069,11 @@
             const sizeScale = leaderboardPlayer.currentSize / 40;
             if ((leaderboardKeys['s'] || leaderboardKeys['ArrowDown']) && !leaderboardPlayer.wasGrounded) {
                 leaderboardPlayer.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
+
+                // Fast-fall particles (white) - spawn when holding down/S in air
+                if (leaderboardPlayer.velocityY > 0 && Math.random() < 0.3) { // 30% chance each frame for smooth particle trail
+                    spawnParticles(leaderboardPlayer.x + leaderboardPlayer.width / 2, leaderboardPlayer.y, 3, 'rgb(255, 255, 255)', leaderboardPlayer.currentSize);
+                }
             } else {
                 leaderboardPlayer.velocityY += GRAVITY * sizeScale * deltaTime;
             }
