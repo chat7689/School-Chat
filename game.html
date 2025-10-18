@@ -386,6 +386,13 @@
     </style>
 </head>
 <body>
+    <!-- JUMP POWER SLIDER - ALWAYS VISIBLE -->
+    <div style="display: block !important; position: fixed; top: 0; left: 0; background: red; padding: 20px; border: 10px solid yellow; z-index: 999999; font-size: 30px; color: white; font-weight: bold; width: 500px;">
+        JUMP TEST SLIDER<br>
+        Value: <span id="jumpPowerValue">2.71</span><br>
+        <input type="range" id="jumpPowerSlider" min="1.0" max="4.0" step="0.01" value="2.71" style="width: 400px; height: 50px;">
+    </div>
+
     <!-- Main Menu Canvas (Interactive Platformer) -->
     <canvas id="menuCanvas" width="1200" height="800"></canvas>
     <div class="menu-hud" id="menuHUD" style="display: none;">
