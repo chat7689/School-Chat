@@ -2765,13 +2765,6 @@
                         <div style="font-size: 72px; font-weight: bold; color: #FFD700; text-align: center; margin-top: 200px; text-shadow: 3px 3px 6px rgba(0,0,0,0.5);">${countdownNum}</div>
                         <div style="font-size: 24px; font-weight: bold; text-align: center; margin-top: 20px;">GET READY!</div>
                     `;
-                } else if (practiceMode.isDead) {
-                    const respawnNum = Math.ceil(practiceMode.respawnCountdown / 60);
-                    hudContent = `
-                        <div style="font-size: 48px; font-weight: bold; color: #FF0000; text-align: center; margin-top: 200px; text-shadow: 3px 3px 6px rgba(0,0,0,0.5);">DEAD!</div>
-                        <div style="font-size: 36px; font-weight: bold; color: #FFD700; text-align: center; margin-top: 20px;">${respawnNum}</div>
-                        <div style="font-size: 18px; text-align: center; margin-top: 10px;">Respawning...</div>
-                    `;
                 } else {
                     hudContent = `
                         <div style="font-size: 24px; font-weight: bold;">EARN MODE</div>
@@ -2959,20 +2952,9 @@
                 return;
             }
 
-            // Handle respawn countdown
+            // Handle death - exit to main menu immediately
             if (practiceMode.isDead) {
-                practiceMode.respawnCountdown -= deltaTime;
-                if (practiceMode.respawnCountdown <= 0) {
-                    // Respawn at start position
-                    player.x = 100;
-                    player.y = 300;
-                    player.velocityX = 0;
-                    player.velocityY = 0;
-                    practiceMode.isDead = false;
-                    practiceMode.startCountdown = 180; // 3 second countdown before restart
-                    practiceMode.isStarting = true;
-                }
-                // Skip physics while dead
+                exitPracticeMode();
                 return;
             }
 
@@ -2980,9 +2962,8 @@
             if (practiceMode.hazards) {
                 for (const hazard of practiceMode.hazards) {
                     if (checkCollision(player, hazard)) {
-                        // Kill player and start countdown
+                        // Kill player and exit to main menu
                         practiceMode.isDead = true;
-                        practiceMode.respawnCountdown = 180; // 3 seconds at 60fps
                         // Spawn death particles
                         spawnParticles(player.x + player.width / 2, player.y + player.height / 2, 30, 'rgb(255, 255, 255)');
                         // Skip physics this frame
@@ -3267,14 +3248,13 @@
                 }
             }
 
-            // Die if fall off - respawn at start
+            // Die if fall off - exit to main menu
             if (player.y > 900) {
                 // Death particles
                 spawnParticles(player.x + player.width / 2, player.y + player.height / 2, 30, 'rgb(255, 255, 255)');
 
-                // Kill player and trigger respawn countdown
+                // Kill player and exit to main menu
                 practiceMode.isDead = true;
-                practiceMode.respawnCountdown = 180; // 3 seconds at 60fps
             }
 
             // Update camera
