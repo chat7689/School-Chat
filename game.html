@@ -2982,10 +2982,38 @@
                 return;
             }
 
-            // Handle death - exit to main menu immediately
+            // Handle death
             if (practiceMode.isDead) {
-                exitPracticeMode();
-                return;
+                if (practiceMode.isLevelMode) {
+                    // Practice level mode - respawn at start with countdown
+                    // Check if countdown is active
+                    if (!practiceMode.isStarting) {
+                        // Start respawn countdown
+                        practiceMode.isStarting = true;
+                        practiceMode.startCountdown = 180; // 3 seconds at 60fps
+
+                        // Reset player to start position
+                        player.x = practiceMode.levelData.start.x;
+                        player.y = practiceMode.levelData.start.y;
+                        player.velocityX = 0;
+                        player.velocityY = 0;
+                        player.currentSize = 40;
+                        player.width = 40;
+                        player.height = 40;
+
+                        // Reset timer
+                        practiceMode.startTime = null;
+                        practiceMode.finished = false;
+
+                        // Clear death flag
+                        practiceMode.isDead = false;
+                    }
+                    return;
+                } else {
+                    // Earn mode (infinite runner) - exit to main menu immediately
+                    exitPracticeMode();
+                    return;
+                }
             }
 
             // Check hazard collision (before position update)
