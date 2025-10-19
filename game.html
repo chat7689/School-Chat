@@ -448,7 +448,7 @@
 
     <!-- Cosmetic Shop Screen -->
     <div id="shopScreen" class="screen">
-        <h1>Cosmetic Shop</h1>
+        <h1>Shop</h1>
         <div id="shopCredits" style="font-size: 24px; color: #FFC107; margin-bottom: 20px;"></div>
         <div class="scroll-container">
             <div id="shopContent"></div>
@@ -507,6 +507,16 @@
         <button onclick="backToMainMenu()" style="margin-top: 40px;">Back to Menu</button>
     </div>
 
+    <!-- Backpack Screen -->
+    <div id="backpackScreen" class="screen">
+        <h1>Backpack</h1>
+        <div style="margin-top: 20px;">
+            <div style="font-size: 24px; font-weight: bold; color: #FFD700;">Credits: <span id="backpackCreditsCount">0</span> / <span id="backpackMaxSize">1</span></div>
+        </div>
+        <div id="backpackGrid" style="margin: 40px auto; display: inline-grid; gap: 5px; padding: 20px; background: rgba(0,0,0,0.3); border-radius: 10px; border: 3px solid #4facfe;"></div>
+        <button onclick="closeBackpack()" style="margin-top: 40px;">Close Backpack</button>
+    </div>
+
     <!-- Race Results -->
     <div id="raceResults">
         <h2>Race Complete!</h2>
@@ -555,8 +565,11 @@
         // Global variables
         let currentUser = null;
         let currentUsername = '';
-        let userCredits = 0; // On-hand credits (can be spent)
+        let userCredits = 0; // On-hand credits (stored in backpack)
         let secureCredits = 0; // Secure credits (stored at base, main credits display)
+        let backpackSize = 1; // Max credits that can be held in backpack (1, 4, 9, 16, 25, 36, 49, 64, 81, 100)
+        let backpackHoldProgress = 0; // Progress of holding E/H to open backpack (0-1)
+        let backpackOpen = false; // Is backpack screen currently open?
         let userCosmetics = { skins: ['default_orange'], trails: ['none'], hats: ['none'], effects: ['none'] };
         let equippedCosmetics = { skin: 'default_orange', trail: 'none', hat: 'none', effect: 'none' };
         let equippedItem = 'none'; // Equippable item: 'none' or 'credits'
@@ -972,10 +985,16 @@
 
             if (data) {
                 userCredits = data.credits || 0;
+                backpackSize = data.backpackSize || 1;
                 userCosmetics = data.cosmetics || { skins: ['default_orange'], trails: ['none'], hats: ['none'], effects: ['none'] };
                 equippedCosmetics = data.equippedCosmetics || { skin: 'default_orange', trail: 'none', hat: 'none', effect: 'none' };
                 equippedItem = data.equippedItem || 'none';
                 userStats = data.stats || { racesWon: 0, racesPlayed: 0, totalCreditsEarned: 0 };
+
+                // Cap credits to backpack size
+                if (userCredits > backpackSize) {
+                    userCredits = backpackSize;
+                }
 
                 // Calculate secure credits from BASE blocks (sum of all credits in blocks)
                 const baseBlocks = data.baseBlocks || [];
@@ -983,15 +1002,19 @@
 
                 // Update Firebase to match actual BASE block count
                 await userRef.update({
-                    secureCredits: secureCredits
+                    secureCredits: secureCredits,
+                    credits: userCredits,
+                    backpackSize: backpackSize
                 });
             } else {
                 // Initialize new user
                 secureCredits = 0;
+                backpackSize = 1;
                 await userRef.set({
                     username: currentUsername,
                     credits: 0,
                     secureCredits: 0,
+                    backpackSize: 1,
                     cosmetics: userCosmetics,
                     equippedCosmetics: equippedCosmetics,
                     stats: userStats
@@ -1009,6 +1032,14 @@
         async function updateCredits(amount, type = 'onhand') {
             if (type === 'onhand') {
                 userCredits += amount;
+                // Cap credits to backpack size
+                if (userCredits > backpackSize) {
+                    userCredits = backpackSize;
+                }
+                // Don't allow negative credits
+                if (userCredits < 0) {
+                    userCredits = 0;
+                }
             } else if (type === 'secure') {
                 // SECURE credits are ONLY stored in base blocks, not as a separate value
                 // This parameter is now ignored - secure credits come from blocks only
@@ -1307,6 +1338,36 @@
                 menuPlayer.updateTrail();
                 menuPlayer.draw(ctx, menuCameraX, menuCameraY, false);
 
+                // Draw backpack hold progress circle above player
+                if (backpackHoldProgress > 0) {
+                    const playerScreenX = menuPlayer.x - menuCameraX;
+                    const playerScreenY = menuPlayer.y - menuCameraY;
+                    const circleX = playerScreenX + menuPlayer.width / 2;
+                    const circleY = playerScreenY - 30; // Above player
+                    const radius = 15;
+
+                    // Background circle (empty)
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.arc(circleX, circleY, radius, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    // Progress arc (fills clockwise from top)
+                    ctx.strokeStyle = '#4facfe';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.arc(circleX, circleY, radius, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * backpackHoldProgress));
+                    ctx.stroke();
+
+                    // Backpack icon in center
+                    ctx.fillStyle = '#FFD700';
+                    ctx.font = 'bold 20px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('🎒', circleX, circleY);
+                }
+
                 requestAnimationFrame(menuLoop);
             }
 
@@ -1349,6 +1410,19 @@
                 if (menuKeys[' ']) {
                     executePlatformAction(standingOnPlatform.action);
                 }
+            }
+
+            // Backpack hold mechanic (E or H key)
+            if (menuKeys['e'] || menuKeys['h']) {
+                backpackHoldProgress += deltaTime * 0.02; // Takes ~50 frames (0.8 seconds) to fill
+                if (backpackHoldProgress >= 1) {
+                    backpackHoldProgress = 0;
+                    menuKeys['e'] = false;
+                    menuKeys['h'] = false;
+                    openBackpack();
+                }
+            } else {
+                backpackHoldProgress = Math.max(0, backpackHoldProgress - deltaTime * 0.05); // Decay faster when not holding
             }
 
             // Apply gravity with fast fall (scaled by size)
@@ -4314,6 +4388,49 @@
 
             let html = '';
 
+            // Backpack Upgrades Section
+            const backpackUpgrades = [
+                { size: 1, price: 0, name: '1x1 Backpack' },
+                { size: 4, price: 10, name: '2x2 Backpack' },
+                { size: 9, price: 25, name: '3x3 Backpack' },
+                { size: 16, price: 50, name: '4x4 Backpack' },
+                { size: 25, price: 100, name: '5x5 Backpack' },
+                { size: 36, price: 200, name: '6x6 Backpack' },
+                { size: 49, price: 400, name: '7x7 Backpack' },
+                { size: 64, price: 800, name: '8x8 Backpack' },
+                { size: 81, price: 1600, name: '9x9 Backpack' },
+                { size: 100, price: 3200, name: '10x10 Backpack' }
+            ];
+
+            html += `<div class="shop-category">
+                <h2>BACKPACK UPGRADES</h2>
+                <div style="color: #aaa; font-size: 14px; margin-bottom: 15px;">Increase your backpack storage to carry more credits</div>
+                <div class="cosmetics-grid">`;
+
+            for (const upgrade of backpackUpgrades) {
+                const owned = backpackSize >= upgrade.size;
+                const gridSize = Math.sqrt(upgrade.size);
+
+                html += `<div class="cosmetic-item ${owned ? 'owned' : ''}">
+                    <div style="font-weight: bold;">${upgrade.name}</div>
+                    <div style="color: #FFD700; margin: 5px 0;">Holds ${upgrade.size} credits</div>
+                    <div style="color: #FFC107; margin-bottom: 10px;">${upgrade.price} credits</div>`;
+
+                if (owned) {
+                    if (backpackSize === upgrade.size) {
+                        html += `<div style="color: #0f0;">✓ CURRENT</div>`;
+                    } else {
+                        html += `<div style="color: #0f0;">✓ OWNED</div>`;
+                    }
+                } else {
+                    html += `<button onclick="buyBackpack(${upgrade.size}, ${upgrade.price})" ${userCredits >= upgrade.price ? '' : 'disabled'}>Buy</button>`;
+                }
+
+                html += `</div>`;
+            }
+
+            html += `</div></div>`;
+
             // Equippable Items Section
             html += `<div class="shop-category">
                 <h2>EQUIPPABLE ITEMS</h2>
@@ -4515,6 +4632,25 @@
             userCosmetics[category].push(itemId);
             await database.ref('players/' + currentUser.uid + '/cosmetics').set(userCosmetics);
 
+            updateShopUI();
+        }
+
+        async function buyBackpack(size, price) {
+            if (userCredits < price) {
+                alert('Not enough credits!');
+                return;
+            }
+
+            if (backpackSize >= size) {
+                alert('You already have this backpack or better!');
+                return;
+            }
+
+            await updateCredits(-price);
+            backpackSize = size;
+            await database.ref('players/' + currentUser.uid + '/backpackSize').set(backpackSize);
+
+            alert(`Backpack upgraded! You can now carry ${backpackSize} credits.`);
             updateShopUI();
         }
 
@@ -5660,6 +5796,7 @@
             levelSelectActive = false;
             leaderboardActive = false;
             baseActive = false;
+            backpackOpen = false;
 
             // Hide all screens
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -5672,6 +5809,52 @@
 
             // Show main menu
             initMainMenu();
+        }
+
+        function openBackpack() {
+            backpackOpen = true;
+            showScreen('backpackScreen');
+            renderBackpackGrid();
+        }
+
+        function closeBackpack() {
+            backpackOpen = false;
+            backToMainMenu();
+        }
+
+        function renderBackpackGrid() {
+            const grid = document.getElementById('backpackGrid');
+            const gridSize = Math.sqrt(backpackSize); // Get grid dimensions (e.g., 1, 2, 3, 4, 5...)
+
+            // Set grid layout
+            grid.style.gridTemplateColumns = `repeat(${gridSize}, 50px)`;
+            grid.style.gridTemplateRows = `repeat(${gridSize}, 50px)`;
+
+            // Clear existing grid
+            grid.innerHTML = '';
+
+            // Create grid cells
+            for (let i = 0; i < backpackSize; i++) {
+                const cell = document.createElement('div');
+                cell.style.width = '50px';
+                cell.style.height = '50px';
+                cell.style.border = '2px solid #4facfe';
+                cell.style.borderRadius = '5px';
+
+                // Fill cells with credits (gold) or empty (dark)
+                if (i < userCredits) {
+                    cell.style.background = 'linear-gradient(135deg, #FFD700, #FFA500)';
+                    cell.style.boxShadow = '0 0 10px rgba(255, 215, 0, 0.5)';
+                } else {
+                    cell.style.background = 'rgba(0, 0, 0, 0.5)';
+                }
+
+                grid.appendChild(cell);
+            }
+
+            // Update text counts
+            document.getElementById('backpackCreditsCount').textContent = userCredits;
+            document.getElementById('backpackMaxSize').textContent = backpackSize;
         }
 
         // Keyboard handling
