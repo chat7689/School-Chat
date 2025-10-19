@@ -4907,12 +4907,15 @@
                 baseCtx.strokeRect(screenX, screenY, 40, 40);
             }
 
-            // Update and draw particles
-            updateAndDrawParticles(baseCtx, cameraX, cameraY, 1);
-
             // Draw player
             basePlayer.updateTrail();
             basePlayer.draw(baseCtx, cameraX, cameraY, false);
+
+            // Reset transform BEFORE drawing particles (so particles aren't zoomed)
+            baseCtx.setTransform(1, 0, 0, 1, 0, 0);
+
+            // Update and draw particles (particles use camera offset internally, not zoom)
+            updateAndDrawParticles(baseCtx, cameraX, cameraY, 1);
         }
 
         async function handleBaseClick(e) {

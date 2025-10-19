@@ -166,15 +166,15 @@
                 const fb = await initializeFirebase();
                 auth = fb.auth;
                 database = fb.database;
+
+                // Set auth persistence to SESSION - lasts until browser closes
+                // (NONE would log out immediately when navigating from game.html)
+                auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
             } catch (error) {
                 console.error('Initialization error:', error);
                 alert('Failed to initialize. Please refresh the page.');
             }
         })();
-
-        // Set auth persistence to SESSION - lasts until browser closes
-        // (NONE would log out immediately when navigating from game.html)
-        auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
 
         // Create favicon with orange square character
         const faviconCanvas = document.createElement('canvas');
