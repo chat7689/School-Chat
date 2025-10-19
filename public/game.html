@@ -3013,8 +3013,8 @@
 
             // Jump with variable height based on hold time
             if ((practiceMode.keys['w'] || practiceMode.keys['ArrowUp'] || practiceMode.keys[' '] || practiceMode.keys['Space']) && isGrounded && !practiceIsJumping) {
-                // Start jump with weak initial velocity - must hold for full height
-                player.velocityY = -0.8 * sizeScale; // Weak initial jump - hold to go higher
+                // Start jump immediately with strong initial velocity
+                player.velocityY = -1.5 * sizeScale; // Strong initial jump
                 practiceIsJumping = true;
                 player.jumpHoldTime = 0;
                 // White jump particles
