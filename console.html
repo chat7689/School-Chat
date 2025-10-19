@@ -960,37 +960,49 @@
                     // Delete user auth data
                     deletePromises.push(database.ref('users/' + foundUid).remove());
 
-                    // Delete all leaderboard entries
-                    const leaderboardsSnapshot = await database.ref('leaderboards').once('value');
-                    leaderboardsSnapshot.forEach((mapSnapshot) => {
-                        if (mapSnapshot.child(foundUid).exists()) {
-                            deletePromises.push(database.ref('leaderboards/' + mapSnapshot.key + '/' + foundUid).remove());
-                        }
-                    });
+                    // Delete all leaderboard entries (try/catch in case of permission issues)
+                    try {
+                        const leaderboardsSnapshot = await database.ref('leaderboards').once('value');
+                        leaderboardsSnapshot.forEach((mapSnapshot) => {
+                            if (mapSnapshot.child(foundUid).exists()) {
+                                deletePromises.push(database.ref('leaderboards/' + mapSnapshot.key + '/' + foundUid).remove());
+                            }
+                        });
+                    } catch (leaderboardError) {
+                        addOutput('  ⚠️  Could not access leaderboards (permission denied), skipping...', 'warning');
+                    }
 
-                    // Delete all score entries
-                    const scoresSnapshot = await database.ref('scores').once('value');
-                    scoresSnapshot.forEach((mapSnapshot) => {
-                        if (mapSnapshot.child(foundUid).exists()) {
-                            deletePromises.push(database.ref('scores/' + mapSnapshot.key + '/' + foundUid).remove());
-                        }
-                    });
+                    // Delete all score entries (try/catch in case of permission issues)
+                    try {
+                        const scoresSnapshot = await database.ref('scores').once('value');
+                        scoresSnapshot.forEach((mapSnapshot) => {
+                            if (mapSnapshot.child(foundUid).exists()) {
+                                deletePromises.push(database.ref('scores/' + mapSnapshot.key + '/' + foundUid).remove());
+                            }
+                        });
+                    } catch (scoresError) {
+                        addOutput('  ⚠️  Could not access scores (permission denied), skipping...', 'warning');
+                    }
 
                     // Delete times history
                     deletePromises.push(database.ref('times_history/' + foundUid).remove());
 
-                    // Delete from any parties
-                    const partiesSnapshot = await database.ref('parties').once('value');
-                    partiesSnapshot.forEach((partySnapshot) => {
-                        const partyData = partySnapshot.val();
-                        if (partyData.members && partyData.members[foundUid]) {
-                            deletePromises.push(database.ref('parties/' + partySnapshot.key + '/members/' + foundUid).remove());
-                        }
-                        if (partyData.leader === foundUid) {
-                            // If user is party leader, delete entire party
-                            deletePromises.push(database.ref('parties/' + partySnapshot.key).remove());
-                        }
-                    });
+                    // Delete from any parties (try/catch in case of permission issues)
+                    try {
+                        const partiesSnapshot = await database.ref('parties').once('value');
+                        partiesSnapshot.forEach((partySnapshot) => {
+                            const partyData = partySnapshot.val();
+                            if (partyData.members && partyData.members[foundUid]) {
+                                deletePromises.push(database.ref('parties/' + partySnapshot.key + '/members/' + foundUid).remove());
+                            }
+                            if (partyData.leader === foundUid) {
+                                // If user is party leader, delete entire party
+                                deletePromises.push(database.ref('parties/' + partySnapshot.key).remove());
+                            }
+                        });
+                    } catch (partiesError) {
+                        addOutput('  ⚠️  Could not access parties (permission denied), skipping...', 'warning');
+                    }
 
                     // Execute all deletions
                     await Promise.all(deletePromises);
