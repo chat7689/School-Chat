@@ -2912,6 +2912,18 @@
                 practiceMode.player.updateTrail();
                 practiceMode.player.draw(ctx, practiceMode.cameraX, practiceMode.cameraY, false);
 
+                // Draw credits earned counter at top of screen
+                if (!practiceMode.isStarting) {
+                    ctx.shadowBlur = 0;
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                    ctx.fillRect(canvas.width / 2 - 150, 10, 300, 50);
+
+                    ctx.fillStyle = '#FFD700';
+                    ctx.font = 'bold 24px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`Credits Earned: ${practiceMode.creditsCollected}`, canvas.width / 2, 40);
+                }
+
                 requestAnimationFrame(practiceLoop);
             }
 

@@ -196,6 +196,13 @@
         let currentUser = null;
         let currentUsername = '';
 
+        // Admin configuration
+        window.AppConfig = {
+            admin: {
+                passwordHash: btoa('a1b2c3') // Base64 encoded password
+            }
+        };
+
         // Admin emails for verification
         const ADMIN_EMAILS = [
             'malonetobinkai@gmail.com',
