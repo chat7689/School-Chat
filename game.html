@@ -4638,53 +4638,90 @@
             ctx.fillStyle = '#87CEEB';
             ctx.fillRect(0, 0, 1200, 800);
 
-            // Draw platforms
+            // Draw background gridlines (40x40px)
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 1;
+
+            // Vertical lines
+            for (let x = 0; x < 1200; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, 800);
+                ctx.stroke();
+            }
+
+            // Horizontal lines
+            for (let y = 0; y < 800; y += 40) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(1200, y);
+                ctx.stroke();
+            }
+
+            // Draw platforms with clean styling matching main menu
             for (const platform of shopHubPlatforms) {
-                if (platform.action) {
-                    // Portal platforms with labels
-                    let portalColor;
-                    if (platform.action === 'exit') {
-                        portalColor = '#FF4444'; // Red for exit
-                    } else if (platform.action === 'cosmetics') {
-                        portalColor = '#9B59B6'; // Purple for cosmetics
-                    } else if (platform.action === 'backpack') {
-                        portalColor = '#FFD700'; // Gold for backpack
-                    }
-
-                    // Glowing portal effect
-                    ctx.fillStyle = portalColor;
-                    ctx.globalAlpha = 0.6;
+                if (platform.action === 'exit') {
+                    // Exit portal - dark blue with glow (same as "back" portal)
+                    const gradient = ctx.createLinearGradient(platform.x, platform.y, platform.x, platform.y + platform.height);
+                    gradient.addColorStop(0, 'rgba(25, 82, 154, 0.7)');
+                    gradient.addColorStop(1, 'rgba(25, 82, 154, 0.4)');
+                    ctx.fillStyle = gradient;
                     ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
-                    ctx.globalAlpha = 1;
 
-                    // Portal border
-                    ctx.strokeStyle = portalColor;
-                    ctx.lineWidth = 3;
-                    ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+                    // Glowing border - darker blue (inside edge)
+                    ctx.shadowColor = '#19529a';
+                    ctx.shadowBlur = 15;
+                    ctx.strokeStyle = '#19529a';
+                    ctx.lineWidth = 4;
+                    ctx.strokeRect(platform.x + 2, platform.y + 2, platform.width - 4, platform.height - 4);
+                    ctx.shadowBlur = 0;
 
-                    // Portal label
-                    ctx.fillStyle = 'white';
+                    // Label with shadow - matching main menu style exactly
+                    ctx.fillStyle = '#ffffff';
                     ctx.font = 'bold 14px Arial';
                     ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(platform.label, platform.x + platform.width / 2, platform.y + platform.height / 2);
-                } else {
-                    // Regular platforms (walls, floor, ceiling)
-                    ctx.fillStyle = '#8B4513';
+                    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                    ctx.shadowBlur = 5;
+                    ctx.fillText(platform.label, platform.x + platform.width / 2, platform.y + platform.height / 2 + 5);
+                    ctx.shadowBlur = 0;
+                } else if (platform.action === 'cosmetics' || platform.action === 'backpack') {
+                    // Shop portals - light blue with glow (same as level portals)
+                    const gradient = ctx.createLinearGradient(platform.x, platform.y, platform.x, platform.y + platform.height);
+                    gradient.addColorStop(0, 'rgba(79, 172, 254, 0.5)');
+                    gradient.addColorStop(1, 'rgba(79, 172, 254, 0.2)');
+                    ctx.fillStyle = gradient;
                     ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
-                    ctx.strokeStyle = '#654321';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+
+                    // Glowing border (inside edge)
+                    ctx.shadowColor = '#4facfe';
+                    ctx.shadowBlur = 15;
+                    ctx.strokeStyle = '#4facfe';
+                    ctx.lineWidth = 4;
+                    ctx.strokeRect(platform.x + 2, platform.y + 2, platform.width - 4, platform.height - 4);
+                    ctx.shadowBlur = 0;
+
+                    // Text with shadow - matching main menu style exactly
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = 'bold 14px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                    ctx.shadowBlur = 5;
+                    ctx.fillText(platform.label, platform.x + platform.width / 2, platform.y + platform.height / 2 + 5);
+                    ctx.shadowBlur = 0;
+                } else {
+                    // Boundary platforms - standardized
+                    ctx.fillStyle = '#4CAF50';
+                    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
                 }
             }
+
+            // Draw particles BEFORE player so they're behind the player
+            updateAndDrawParticles(ctx, 0, 0, 1);
 
             // Draw player
             if (shopHubPlayer) {
                 shopHubPlayer.draw(ctx);
             }
-
-            // Draw particles
-            updateAndDrawParticles(ctx, 0, 0, 1);
 
             // Draw title
             ctx.fillStyle = '#FFC107';
