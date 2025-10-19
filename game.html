@@ -1046,6 +1046,49 @@
             return secureCredits;
         }
 
+        // Remove credits from base by taking from the topmost/rightmost blocks
+        async function removeCreditsFromBase(amount) {
+            let creditsToRemove = amount;
+
+            while (creditsToRemove > 0 && baseBlocks.length > 0) {
+                // Find the topmost (lowest y value) block, or if tied, the rightmost (highest x value)
+                let topmostBlock = baseBlocks[0];
+                let topmostIndex = 0;
+
+                for (let i = 1; i < baseBlocks.length; i++) {
+                    const block = baseBlocks[i];
+                    // Topmost = lowest Y value (negative Y is up)
+                    // If tied on Y, rightmost = highest X value
+                    if (block.y < topmostBlock.y || (block.y === topmostBlock.y && block.x > topmostBlock.x)) {
+                        topmostBlock = block;
+                        topmostIndex = i;
+                    }
+                }
+
+                // Remove one credit from this block
+                if (topmostBlock.credits > 1) {
+                    // Block has multiple credits, reduce by 1
+                    topmostBlock.credits--;
+                } else {
+                    // Block has only 1 credit, remove the entire block
+                    baseBlocks.splice(topmostIndex, 1);
+                }
+
+                creditsToRemove--;
+            }
+
+            // Save updated base blocks to Firebase
+            await database.ref('players/' + currentUser.uid + '/baseBlocks').set(baseBlocks);
+
+            // Recalculate secure credits from blocks
+            recalcSecureCredits();
+
+            // Update Firebase with new secure credits
+            await database.ref('players/' + currentUser.uid).update({
+                secureCredits: secureCredits
+            });
+        }
+
         // Update credits in Firebase
         async function updateCredits(amount, type = 'onhand') {
             if (type === 'onhand') {
@@ -4819,7 +4862,7 @@
         }
 
         function updateCosmeticsShopUI() {
-            document.getElementById('cosmeticsShopCredits').textContent = `On-Hand Credits: ${userCredits}`;
+            document.getElementById('cosmeticsShopCredits').textContent = `BASE Credits: ${secureCredits}`;
 
             let html = '';
 
@@ -4860,7 +4903,7 @@
                     } else if (owned) {
                         html += `<button onclick="equipCosmetic('${category}', '${item.id}')" style="margin-top: 5px;">Equip</button>`;
                     } else {
-                        html += `<button onclick="buyCosmetic('${category}', '${item.id}', ${item.price})" ${userCredits >= item.price ? '' : 'disabled'} style="margin-top: 5px;">Buy</button>`;
+                        html += `<button onclick="buyCosmetic('${category}', '${item.id}', ${item.price})" ${secureCredits >= item.price ? '' : 'disabled'} style="margin-top: 5px;">Buy</button>`;
                     }
 
                     html += `</div>`;
@@ -4876,7 +4919,7 @@
         }
 
         function updateBackpackShopUI() {
-            document.getElementById('backpackShopCredits').textContent = `On-Hand Credits: ${userCredits}`;
+            document.getElementById('backpackShopCredits').textContent = `BASE Credits: ${secureCredits}`;
 
             let html = '';
 
@@ -4915,7 +4958,7 @@
                         html += `<div style="color: #0f0;">✓ OWNED</div>`;
                     }
                 } else {
-                    html += `<button onclick="buyBackpack(${upgrade.size}, ${upgrade.price})" ${userCredits >= upgrade.price ? '' : 'disabled'}>Buy</button>`;
+                    html += `<button onclick="buyBackpack(${upgrade.size}, ${upgrade.price})" ${secureCredits >= upgrade.price ? '' : 'disabled'}>Buy</button>`;
                 }
 
                 html += `</div>`;
@@ -5066,12 +5109,14 @@
         }
 
         async function buyCosmetic(category, itemId, price) {
-            if (userCredits < price) {
-                alert('Not enough credits!');
+            if (secureCredits < price) {
+                alert(`Not enough credits in your BASE!\n\nYou need ${price} credits but only have ${secureCredits} in your base.\n\nGo to your BASE and place more blocks to earn secure credits.`);
                 return;
             }
 
-            await updateCredits(-price);
+            // Remove credits from base blocks
+            await removeCreditsFromBase(price);
+
             userCosmetics[category].push(itemId);
             await database.ref('players/' + currentUser.uid + '/cosmetics').set(userCosmetics);
 
@@ -5079,8 +5124,8 @@
         }
 
         async function buyBackpack(size, price) {
-            if (userCredits < price) {
-                alert('Not enough credits!');
+            if (secureCredits < price) {
+                alert(`Not enough credits in your BASE!\n\nYou need ${price} credits but only have ${secureCredits} in your base.\n\nGo to your BASE and place more blocks to earn secure credits.`);
                 return;
             }
 
@@ -5089,7 +5134,9 @@
                 return;
             }
 
-            await updateCredits(-price);
+            // Remove credits from base blocks
+            await removeCreditsFromBase(price);
+
             backpackSize = size;
             await database.ref('players/' + currentUser.uid + '/backpackSize').set(backpackSize);
 
