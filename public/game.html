@@ -446,14 +446,32 @@
         <button onclick="leaveLobby()" class="secondary">Leave Lobby</button>
     </div>
 
-    <!-- Cosmetic Shop Screen -->
-    <div id="shopScreen" class="screen">
-        <h1>Shop</h1>
-        <div id="shopCredits" style="font-size: 24px; color: #FFC107; margin-bottom: 20px;"></div>
-        <div class="scroll-container">
-            <div id="shopContent"></div>
+    <!-- Shop Hub Screen (Portal Selection) -->
+    <div id="shopHubScreen" class="screen">
+        <canvas id="shopHubCanvas" width="1200" height="800" style="display: block; margin: 0 auto; background: #87CEEB;"></canvas>
+        <div id="shopHubHUD" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 15px; border-radius: 10px; color: white; font-size: 18px; text-align: center;">
+            Use arrow keys to move, press SPACE to enter portal
         </div>
-        <button onclick="backToMainMenu()">Back to Menu</button>
+    </div>
+
+    <!-- Cosmetics Shop Screen -->
+    <div id="cosmeticsShopScreen" class="screen">
+        <h1>Cosmetics Shop</h1>
+        <div id="cosmeticsShopCredits" style="font-size: 24px; color: #FFC107; margin-bottom: 20px;"></div>
+        <div class="scroll-container">
+            <div id="cosmeticsShopContent"></div>
+        </div>
+        <button onclick="backToShopHub()">Back to Shop</button>
+    </div>
+
+    <!-- Backpack Shop Screen -->
+    <div id="backpackShopScreen" class="screen">
+        <h1>Backpack Shop</h1>
+        <div id="backpackShopCredits" style="font-size: 24px; color: #FFC107; margin-bottom: 20px;"></div>
+        <div class="scroll-container">
+            <div id="backpackShopContent"></div>
+        </div>
+        <button onclick="backToShopHub()">Back to Shop</button>
     </div>
 
     <!-- Practice Levels Screen -->
@@ -1643,6 +1661,13 @@
         let availableLevels = [];
         let playerBestTimes = {};
         let levelSelectIsJumping = false;
+
+        // Shop hub variables
+        let shopHubActive = false;
+        let shopHubPlayer = null;
+        let shopHubPlatforms = [];
+        let shopHubKeys = {};
+        let shopHubIsJumping = false;
 
         async function showPracticeLevels() {
             try {
@@ -4377,59 +4402,321 @@
             countdownEl.style.display = 'none';
         }
 
-        // Cosmetic shop
+        // Shop hub (portal selection screen)
         function showShop() {
-            showScreen('shopScreen');
-            updateShopUI();
-        }
+            showScreen('shopHubScreen');
+            shopHubActive = true;
 
-        function updateShopUI() {
-            document.getElementById('shopCredits').textContent = `On-Hand Credits: ${userCredits}`;
+            const canvas = document.getElementById('shopHubCanvas');
+            const ctx = canvas.getContext('2d');
 
-            let html = '';
+            const portalWidth = 120;
+            const portalHeight = 40;
+            const groundY = 720;
 
-            // Backpack Upgrades Section
-            const backpackUpgrades = [
-                { size: 1, price: 0, name: '1x1 Backpack' },
-                { size: 4, price: 10, name: '2x2 Backpack' },
-                { size: 9, price: 25, name: '3x3 Backpack' },
-                { size: 16, price: 50, name: '4x4 Backpack' },
-                { size: 25, price: 100, name: '5x5 Backpack' },
-                { size: 36, price: 200, name: '6x6 Backpack' },
-                { size: 49, price: 400, name: '7x7 Backpack' },
-                { size: 64, price: 800, name: '8x8 Backpack' },
-                { size: 81, price: 1600, name: '9x9 Backpack' },
-                { size: 100, price: 3200, name: '10x10 Backpack' }
+            shopHubPlatforms = [
+                // Boundary walls - thick floor (80px), side walls (40px), ceiling (40px)
+                { x: 0, y: 0, width: 40, height: 800 }, // Left wall
+                { x: 1160, y: 0, width: 40, height: 800 }, // Right wall
+                { x: 0, y: 0, width: 1200, height: 40 }, // Ceiling
+                { x: 0, y: 720, width: 1200, height: 80 }, // Ground
+
+                // Exit portal (left side)
+                {
+                    x: 150,
+                    y: groundY - 120,
+                    width: portalWidth,
+                    height: portalHeight,
+                    action: 'exit',
+                    label: 'EXIT'
+                },
+
+                // Cosmetics portal (center-left)
+                {
+                    x: 450,
+                    y: groundY - 120,
+                    width: portalWidth,
+                    height: portalHeight,
+                    action: 'cosmetics',
+                    label: 'COSMETICS'
+                },
+
+                // Backpack portal (center-right)
+                {
+                    x: 630,
+                    y: groundY - 120,
+                    width: portalWidth,
+                    height: portalHeight,
+                    action: 'backpack',
+                    label: 'BACKPACK'
+                }
             ];
 
-            html += `<div class="shop-category">
-                <h2>BACKPACK UPGRADES</h2>
-                <div style="color: #aaa; font-size: 14px; margin-bottom: 15px;">Increase your backpack storage to carry more credits</div>
-                <div class="cosmetics-grid">`;
+            // Create player on ground
+            const spawnX = 600 - 20; // Center
+            const spawnY = groundY - 40; // On top of ground
+            shopHubPlayer = new Player(spawnX, spawnY, equippedCosmetics);
 
-            for (const upgrade of backpackUpgrades) {
-                const owned = backpackSize >= upgrade.size;
-                const gridSize = Math.sqrt(upgrade.size);
+            // Start render loop
+            let lastFrameTime = performance.now();
+            function shopHubLoop(currentTime) {
+                if (!shopHubActive) return;
 
-                html += `<div class="cosmetic-item ${owned ? 'owned' : ''}">
-                    <div style="font-weight: bold;">${upgrade.name}</div>
-                    <div style="color: #FFD700; margin: 5px 0;">Holds ${upgrade.size} credits</div>
-                    <div style="color: #FFC107; margin-bottom: 10px;">${upgrade.price} credits</div>`;
+                if (!currentTime) currentTime = performance.now();
+                let deltaTime = (currentTime - lastFrameTime) / 16.67;
+                if (deltaTime <= 0 || deltaTime > 10) deltaTime = 1;
+                lastFrameTime = currentTime;
 
-                if (owned) {
-                    if (backpackSize === upgrade.size) {
-                        html += `<div style="color: #0f0;">✓ CURRENT</div>`;
-                    } else {
-                        html += `<div style="color: #0f0;">✓ OWNED</div>`;
-                    }
-                } else {
-                    html += `<button onclick="buyBackpack(${upgrade.size}, ${upgrade.price})" ${userCredits >= upgrade.price ? '' : 'disabled'}>Buy</button>`;
+                updateShopHub(deltaTime);
+                renderShopHub(ctx);
+
+                requestAnimationFrame(shopHubLoop);
+            }
+            shopHubLoop();
+        }
+
+        function updateShopHub(deltaTime) {
+            if (!shopHubPlayer) return;
+
+            // STEP 1: Calculate grounded state BEFORE physics
+            let isGrounded = false;
+            let standingOnPlatform = null;
+
+            for (const platform of shopHubPlatforms) {
+                const onTop = shopHubPlayer.y + shopHubPlayer.height >= platform.y &&
+                              shopHubPlayer.y + shopHubPlayer.height <= platform.y + 5;
+                const horizontalOverlap = shopHubPlayer.x + shopHubPlayer.width > platform.x &&
+                                         shopHubPlayer.x < platform.x + platform.width;
+
+                if (onTop && horizontalOverlap) {
+                    isGrounded = true;
+                    standingOnPlatform = platform;
+                    break;
                 }
-
-                html += `</div>`;
             }
 
-            html += `</div></div>`;
+            // STEP 2: Apply gravity with fast fall
+            const sizeScale = shopHubPlayer.currentSize / 40;
+            if ((shopHubKeys['s'] || shopHubKeys['ArrowDown']) && !isGrounded) {
+                shopHubPlayer.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
+            } else {
+                shopHubPlayer.velocityY += GRAVITY * sizeScale * deltaTime;
+            }
+
+            // STEP 3: Handle input
+            const scaledMoveSpeed = MOVE_SPEED * sizeScale;
+            if (shopHubKeys['a'] || shopHubKeys['ArrowLeft']) {
+                shopHubPlayer.velocityX -= scaledMoveSpeed * deltaTime;
+            }
+            if (shopHubKeys['d'] || shopHubKeys['ArrowRight']) {
+                shopHubPlayer.velocityX += scaledMoveSpeed * deltaTime;
+            }
+
+            // Movement particles
+            const wasMovingLeft = shopHubPlayer.prevVelocityX !== undefined && shopHubPlayer.prevVelocityX < -0.5;
+            const wasMovingRight = shopHubPlayer.prevVelocityX !== undefined && shopHubPlayer.prevVelocityX > 0.5;
+            const isMovingLeft = shopHubPlayer.velocityX < -0.5;
+            const isMovingRight = shopHubPlayer.velocityX > 0.5;
+
+            if (isMovingLeft && !wasMovingLeft && Math.random() < 0.3) {
+                spawnParticles(shopHubPlayer.x + shopHubPlayer.width / 2, shopHubPlayer.y + shopHubPlayer.height / 2, 2, 'rgb(255, 255, 255)', shopHubPlayer.currentSize);
+            }
+            if (isMovingRight && !wasMovingRight && Math.random() < 0.3) {
+                spawnParticles(shopHubPlayer.x + shopHubPlayer.width / 2, shopHubPlayer.y + shopHubPlayer.height / 2, 2, 'rgb(255, 255, 255)', shopHubPlayer.currentSize);
+            }
+
+            const speed = Math.abs(shopHubPlayer.velocityX);
+            if (speed > 0.5) {
+                const particleChance = Math.min(speed / 10, 0.8);
+                if (Math.random() < particleChance) {
+                    const particleCount = Math.floor(speed / 2);
+                    spawnParticles(shopHubPlayer.x + shopHubPlayer.width / 2, shopHubPlayer.y + shopHubPlayer.height / 2, particleCount, 'rgb(255, 140, 66)', shopHubPlayer.currentSize);
+                }
+            }
+
+            shopHubPlayer.prevVelocityX = shopHubPlayer.velocityX;
+
+            // Check if player pressed space on a portal
+            if (standingOnPlatform && (shopHubKeys[' '] || shopHubKeys['Space'])) {
+                if (standingOnPlatform.action === 'exit') {
+                    shopHubActive = false;
+                    backToMainMenu();
+                } else if (standingOnPlatform.action === 'cosmetics') {
+                    shopHubActive = false;
+                    showCosmeticsShop();
+                } else if (standingOnPlatform.action === 'backpack') {
+                    shopHubActive = false;
+                    showBackpackShop();
+                }
+                shopHubKeys[' '] = false;
+                shopHubKeys['Space'] = false;
+            }
+
+            // STEP 4: Jump mechanics
+            if ((shopHubKeys['w'] || shopHubKeys['ArrowUp'] || shopHubKeys[' '] || shopHubKeys['Space']) && isGrounded && !shopHubIsJumping) {
+                shopHubIsJumping = true;
+                shopHubPlayer.jumpCharge = 0;
+            }
+
+            if (shopHubIsJumping) {
+                shopHubPlayer.jumpCharge += JUMP_CHARGE_RATE * deltaTime;
+
+                if (!(shopHubKeys['w'] || shopHubKeys['ArrowUp'] || shopHubKeys[' '] || shopHubKeys['Space'])) {
+                    const jumpFraction = Math.min(shopHubPlayer.jumpCharge / (MAX_JUMP_HOLD_TIME / 16.67), 1);
+                    const jumpPower = JUMP_POWER * jumpFraction * sizeScale;
+                    shopHubPlayer.velocityY = -jumpPower;
+                    shopHubIsJumping = false;
+                    shopHubPlayer.jumpCharge = 0;
+
+                    spawnParticles(shopHubPlayer.x + shopHubPlayer.width / 2, shopHubPlayer.y + shopHubPlayer.height, 5, 'rgb(200, 200, 200)', shopHubPlayer.currentSize);
+                }
+
+                if (shopHubPlayer.jumpCharge >= (MAX_JUMP_HOLD_TIME / 16.67)) {
+                    shopHubPlayer.velocityY = -JUMP_POWER * sizeScale;
+                    shopHubIsJumping = false;
+                    shopHubPlayer.jumpCharge = 0;
+
+                    spawnParticles(shopHubPlayer.x + shopHubPlayer.width / 2, shopHubPlayer.y + shopHubPlayer.height, 5, 'rgb(200, 200, 200)', shopHubPlayer.currentSize);
+                }
+            }
+
+            if (!isGrounded && !shopHubIsJumping) {
+                shopHubPlayer.jumpCharge = 0;
+            }
+
+            // STEP 5: Apply friction
+            if (isGrounded) {
+                shopHubPlayer.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
+            } else {
+                shopHubPlayer.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
+            }
+
+            // STEP 6: Cap velocities
+            const maxSpeed = isGrounded ? GROUND_MAX_SPEED : AIR_MAX_SPEED;
+            shopHubPlayer.velocityX = Math.max(-maxSpeed, Math.min(maxSpeed, shopHubPlayer.velocityX));
+            shopHubPlayer.velocityY = Math.min(shopHubPlayer.velocityY, 10);
+
+            // STEP 7: Update position
+            shopHubPlayer.x += shopHubPlayer.velocityX * deltaTime;
+            shopHubPlayer.y += shopHubPlayer.velocityY * deltaTime;
+
+            // STEP 8: Check collisions
+            for (const platform of shopHubPlatforms) {
+                if (shopHubPlayer.x + shopHubPlayer.width > platform.x &&
+                    shopHubPlayer.x < platform.x + platform.width &&
+                    shopHubPlayer.y + shopHubPlayer.height > platform.y &&
+                    shopHubPlayer.y < platform.y + platform.height) {
+
+                    const overlapLeft = (shopHubPlayer.x + shopHubPlayer.width) - platform.x;
+                    const overlapRight = (platform.x + platform.width) - shopHubPlayer.x;
+                    const overlapTop = (shopHubPlayer.y + shopHubPlayer.height) - platform.y;
+                    const overlapBottom = (platform.y + platform.height) - shopHubPlayer.y;
+
+                    const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+
+                    if (minOverlap === overlapTop) {
+                        shopHubPlayer.y = platform.y - shopHubPlayer.height;
+                        shopHubPlayer.velocityY = 0;
+                    } else if (minOverlap === overlapBottom) {
+                        shopHubPlayer.y = platform.y + platform.height;
+                        shopHubPlayer.velocityY = 0;
+                    } else if (minOverlap === overlapLeft) {
+                        shopHubPlayer.x = platform.x - shopHubPlayer.width;
+                        shopHubPlayer.velocityX = 0;
+                    } else if (minOverlap === overlapRight) {
+                        shopHubPlayer.x = platform.x + platform.width;
+                        shopHubPlayer.velocityX = 0;
+                    }
+                }
+            }
+
+            updateAndDrawParticles(null, 0, 0, deltaTime);
+        }
+
+        function renderShopHub(ctx) {
+            ctx.clearRect(0, 0, 1200, 800);
+
+            // Sky background
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, 1200, 800);
+
+            // Draw platforms
+            for (const platform of shopHubPlatforms) {
+                if (platform.action) {
+                    // Portal platforms with labels
+                    let portalColor;
+                    if (platform.action === 'exit') {
+                        portalColor = '#FF4444'; // Red for exit
+                    } else if (platform.action === 'cosmetics') {
+                        portalColor = '#9B59B6'; // Purple for cosmetics
+                    } else if (platform.action === 'backpack') {
+                        portalColor = '#FFD700'; // Gold for backpack
+                    }
+
+                    // Glowing portal effect
+                    ctx.fillStyle = portalColor;
+                    ctx.globalAlpha = 0.6;
+                    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                    ctx.globalAlpha = 1;
+
+                    // Portal border
+                    ctx.strokeStyle = portalColor;
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+
+                    // Portal label
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 14px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(platform.label, platform.x + platform.width / 2, platform.y + platform.height / 2);
+                } else {
+                    // Regular platforms (walls, floor, ceiling)
+                    ctx.fillStyle = '#8B4513';
+                    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                    ctx.strokeStyle = '#654321';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+                }
+            }
+
+            // Draw player
+            if (shopHubPlayer) {
+                shopHubPlayer.draw(ctx);
+            }
+
+            // Draw particles
+            updateAndDrawParticles(ctx, 0, 0, 1);
+
+            // Draw title
+            ctx.fillStyle = '#FFC107';
+            ctx.font = 'bold 48px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+            ctx.shadowBlur = 10;
+            ctx.fillText('SHOP', 600, 60);
+            ctx.shadowBlur = 0;
+        }
+
+        function backToShopHub() {
+            showShop();
+        }
+
+        function showCosmeticsShop() {
+            showScreen('cosmeticsShopScreen');
+            updateCosmeticsShopUI();
+        }
+
+        function showBackpackShop() {
+            showScreen('backpackShopScreen');
+            updateBackpackShopUI();
+        }
+
+        function updateCosmeticsShopUI() {
+            document.getElementById('cosmeticsShopCredits').textContent = `On-Hand Credits: ${userCredits}`;
+
+            let html = '';
 
             // Equippable Items Section
             html += `<div class="shop-category">
@@ -4477,10 +4764,61 @@
                 html += `</div></div>`;
             }
 
-            document.getElementById('shopContent').innerHTML = html;
+            document.getElementById('cosmeticsShopContent').innerHTML = html;
 
             // Draw previews for all cosmetics
             setTimeout(() => drawCosmeticPreviews(), 0);
+        }
+
+        function updateBackpackShopUI() {
+            document.getElementById('backpackShopCredits').textContent = `On-Hand Credits: ${userCredits}`;
+
+            let html = '';
+
+            // Backpack Upgrades Section
+            const backpackUpgrades = [
+                { size: 1, price: 0, name: '1x1 Backpack' },
+                { size: 4, price: 10, name: '2x2 Backpack' },
+                { size: 9, price: 25, name: '3x3 Backpack' },
+                { size: 16, price: 50, name: '4x4 Backpack' },
+                { size: 25, price: 100, name: '5x5 Backpack' },
+                { size: 36, price: 200, name: '6x6 Backpack' },
+                { size: 49, price: 400, name: '7x7 Backpack' },
+                { size: 64, price: 800, name: '8x8 Backpack' },
+                { size: 81, price: 1600, name: '9x9 Backpack' },
+                { size: 100, price: 3200, name: '10x10 Backpack' }
+            ];
+
+            html += `<div class="shop-category">
+                <h2>BACKPACK UPGRADES</h2>
+                <div style="color: #aaa; font-size: 14px; margin-bottom: 15px;">Increase your backpack storage to carry more credits</div>
+                <div class="cosmetics-grid">`;
+
+            for (const upgrade of backpackUpgrades) {
+                const owned = backpackSize >= upgrade.size;
+                const gridSize = Math.sqrt(upgrade.size);
+
+                html += `<div class="cosmetic-item ${owned ? 'owned' : ''}">
+                    <div style="font-weight: bold;">${upgrade.name}</div>
+                    <div style="color: #FFD700; margin: 5px 0;">Holds ${upgrade.size} credits</div>
+                    <div style="color: #FFC107; margin-bottom: 10px;">${upgrade.price} credits</div>`;
+
+                if (owned) {
+                    if (backpackSize === upgrade.size) {
+                        html += `<div style="color: #0f0;">✓ CURRENT</div>`;
+                    } else {
+                        html += `<div style="color: #0f0;">✓ OWNED</div>`;
+                    }
+                } else {
+                    html += `<button onclick="buyBackpack(${upgrade.size}, ${upgrade.price})" ${userCredits >= upgrade.price ? '' : 'disabled'}>Buy</button>`;
+                }
+
+                html += `</div>`;
+            }
+
+            html += `</div></div>`;
+
+            document.getElementById('backpackShopContent').innerHTML = html;
         }
 
         function drawCosmeticPreviews() {
@@ -4632,7 +4970,7 @@
             userCosmetics[category].push(itemId);
             await database.ref('players/' + currentUser.uid + '/cosmetics').set(userCosmetics);
 
-            updateShopUI();
+            updateCosmeticsShopUI();
         }
 
         async function buyBackpack(size, price) {
@@ -4651,7 +4989,7 @@
             await database.ref('players/' + currentUser.uid + '/backpackSize').set(backpackSize);
 
             alert(`Backpack upgraded! You can now carry ${backpackSize} credits.`);
-            updateShopUI();
+            updateBackpackShopUI();
         }
 
         async function equipCosmetic(category, itemId) {
@@ -4664,7 +5002,7 @@
                 menuPlayer.cosmetics = equippedCosmetics;
             }
 
-            updateShopUI();
+            updateCosmeticsShopUI();
         }
 
         async function unequipCosmetic(category) {
@@ -4678,19 +5016,19 @@
                 menuPlayer.cosmetics = equippedCosmetics;
             }
 
-            updateShopUI();
+            updateCosmeticsShopUI();
         }
 
         async function equipItem(itemId) {
             equippedItem = itemId;
             await database.ref('players/' + currentUser.uid + '/equippedItem').set(equippedItem);
-            updateShopUI();
+            updateCosmeticsShopUI();
         }
 
         async function unequipItem() {
             equippedItem = 'none';
             await database.ref('players/' + currentUser.uid + '/equippedItem').set(equippedItem);
-            updateShopUI();
+            updateCosmeticsShopUI();
         }
 
         // Stats screen
@@ -5875,6 +6213,8 @@
             baseKeys[e.key.toLowerCase()] = true;
             levelSelectKeys[e.key] = true;
             levelSelectKeys[e.key.toLowerCase()] = true;
+            shopHubKeys[e.key] = true;
+            shopHubKeys[e.key.toLowerCase()] = true;
 
             if (e.key === 'Escape') {
                 if (practiceMode.active) {
@@ -5890,6 +6230,8 @@
             baseKeys[e.key.toLowerCase()] = false;
             levelSelectKeys[e.key] = false;
             levelSelectKeys[e.key.toLowerCase()] = false;
+            shopHubKeys[e.key] = false;
+            shopHubKeys[e.key.toLowerCase()] = false;
             delete practiceMode.keys[e.key];
             delete raceState.keys[e.key];
         });
