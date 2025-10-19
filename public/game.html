@@ -494,33 +494,33 @@
 
         <div style="margin-bottom: 12px;">
             <label style="display: block; margin-bottom: 5px; font-size: 14px;">
-                Gravity: <span id="gravityValue">0.063</span>
+                Gravity: <span id="gravityValue">0.132</span>
             </label>
-            <input type="range" id="gravitySlider" min="0.01" max="0.15" step="0.001" value="0.063"
+            <input type="range" id="gravitySlider" min="0.01" max="0.15" step="0.001" value="0.132"
                 style="width: 100%;" oninput="updatePhysics()">
         </div>
 
         <div style="margin-bottom: 12px;">
             <label style="display: block; margin-bottom: 5px; font-size: 14px;">
-                Jump Power: <span id="jumpPowerValue">4.62</span>
+                Jump Power: <span id="jumpPowerValue">5.13</span>
             </label>
-            <input type="range" id="jumpPowerSlider" min="1.0" max="8.0" step="0.01" value="4.62"
+            <input type="range" id="jumpPowerSlider" min="1.0" max="8.0" step="0.01" value="5.13"
                 style="width: 100%;" oninput="updatePhysics()">
         </div>
 
         <div style="margin-bottom: 12px;">
             <label style="display: block; margin-bottom: 5px; font-size: 14px;">
-                Move Speed: <span id="moveSpeedValue">0.42</span>
+                Move Speed: <span id="moveSpeedValue">0.45</span>
             </label>
-            <input type="range" id="moveSpeedSlider" min="0.1" max="1.0" step="0.01" value="0.42"
+            <input type="range" id="moveSpeedSlider" min="0.1" max="1.0" step="0.01" value="0.45"
                 style="width: 100%;" oninput="updatePhysics()">
         </div>
 
         <div style="margin-bottom: 12px;">
             <label style="display: block; margin-bottom: 5px; font-size: 14px;">
-                Jump Charge Rate: <span id="jumpChargeValue">0.375</span>
+                Jump Charge Rate: <span id="jumpChargeValue">0.41</span>
             </label>
-            <input type="range" id="jumpChargeSlider" min="0.1" max="1.0" step="0.01" value="0.375"
+            <input type="range" id="jumpChargeSlider" min="0.1" max="1.0" step="0.01" value="0.41"
                 style="width: 100%;" oninput="updatePhysics()">
         </div>
 
@@ -746,17 +746,17 @@
         let practiceIsJumping = false;
         let raceIsJumping = false;
 
-        // Game constants (overrideable for testing)
-        let GRAVITY = 0.063; // 1.5x stronger (was 0.042) - faster falling
-        let MOVE_SPEED = 0.42; // 1.5x faster (was 0.28) - faster horizontal movement
-        let GROUND_MAX_SPEED = 5.25; // 1.5x faster (was 3.5)
-        let AIR_MAX_SPEED = 6.5625; // 1.25x ground speed (was 4.375)
+        // Game constants - TUNED VALUES
+        const GRAVITY = 0.132; // Tuned for perfect feel
+        const MOVE_SPEED = 0.45; // Tuned horizontal movement speed
+        const GROUND_MAX_SPEED = 5.625; // Max speed on ground
+        const AIR_MAX_SPEED = 7.0313; // Max speed in air (1.25x ground speed)
         const AIR_RESISTANCE = 0.88;
         const GROUND_FRICTION = 0.94;
         const GROUND_ACCELERATION = 0.15; // Gradual acceleration when grounded
-        let JUMP_POWER = 4.62; // 1.5x stronger (was 3.08) - compensates for gravity to maintain same jump height
+        const JUMP_POWER = 5.13; // Tuned jump power for perfect height
         const FAST_FALL_MULTIPLIER = 3.5; // 1.75x stronger than before (was 2.0)
-        let JUMP_CHARGE_RATE = 0.375; // 1.5x faster (was 0.25) - faster charge rate to compensate
+        const JUMP_CHARGE_RATE = 0.41; // Tuned charge rate for responsive variable jumps
         const MAX_JUMP_HOLD_TIME = 16.67; // Maximum time (ms) to hold jump button for max height
 
         // Game feel constants
