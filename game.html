@@ -1188,7 +1188,7 @@
                 // LEFT STACK (3 portals) - 40px higher than middle
                 { x: leftX, y: sideBottomY, width: 120, height: 40, label: 'BASE', action: 'base' },
                 { x: leftX, y: sideBottomY - spacing, width: 120, height: 40, label: 'VIEW STATS', action: 'stats' },
-                { x: leftX, y: sideBottomY - spacing * 2, width: 120, height: 40, label: 'COSMETIC SHOP', action: 'shop' },
+                { x: leftX, y: sideBottomY - spacing * 2, width: 120, height: 40, label: 'SHOP', action: 'shop' },
 
                 // MIDDLE STACK (4 portals)
                 { x: middleX, y: middleBottomY, width: 120, height: 40, label: 'EARN MODE', action: 'practice' },
@@ -4629,8 +4629,6 @@
                     }
                 }
             }
-
-            updateAndDrawParticles(null, 0, 0, deltaTime);
         }
 
         function renderShopHub(ctx) {
