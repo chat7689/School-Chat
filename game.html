@@ -473,6 +473,70 @@
     <!-- Left Side Credit Panel -->
     <div id="creditPanel" style="display: none;"></div>
 
+    <!-- Physics Testing Panel -->
+    <div id="physicsPanel" style="
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        background: linear-gradient(135deg, rgba(40, 40, 40, 0.95), rgba(60, 60, 60, 0.95));
+        backdrop-filter: blur(10px);
+        padding: 20px;
+        border-radius: 12px;
+        border: 2px solid #4facfe;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        color: white;
+        font-family: Arial, sans-serif;
+        min-width: 300px;
+        display: none;
+        z-index: 9999;
+    ">
+        <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #FFC107;">Physics Testing</div>
+
+        <div style="margin-bottom: 12px;">
+            <label style="display: block; margin-bottom: 5px; font-size: 14px;">
+                Gravity: <span id="gravityValue">0.132</span>
+            </label>
+            <input type="range" id="gravitySlider" min="0.01" max="0.2" step="0.001" value="0.132"
+                style="width: 100%;" oninput="updatePhysics()">
+        </div>
+
+        <div style="margin-bottom: 12px;">
+            <label style="display: block; margin-bottom: 5px; font-size: 14px;">
+                Jump Power: <span id="jumpPowerValue">5.13</span>
+            </label>
+            <input type="range" id="jumpPowerSlider" min="1.0" max="10.0" step="0.01" value="5.13"
+                style="width: 100%;" oninput="updatePhysics()">
+        </div>
+
+        <div style="margin-bottom: 12px;">
+            <label style="display: block; margin-bottom: 5px; font-size: 14px;">
+                Move Speed: <span id="moveSpeedValue">0.45</span>
+            </label>
+            <input type="range" id="moveSpeedSlider" min="0.1" max="1.0" step="0.01" value="0.45"
+                style="width: 100%;" oninput="updatePhysics()">
+        </div>
+
+        <div style="margin-bottom: 12px;">
+            <label style="display: block; margin-bottom: 5px; font-size: 14px;">
+                Jump Charge Rate: <span id="jumpChargeValue">0.41</span>
+            </label>
+            <input type="range" id="jumpChargeSlider" min="0.1" max="1.0" step="0.01" value="0.41"
+                style="width: 100%;" oninput="updatePhysics()">
+        </div>
+
+        <button onclick="copyPhysicsValues()" style="
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            background: linear-gradient(135deg, #4CAF50, #66BB6A);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        ">Copy Values to Console</button>
+    </div>
+
     <!-- Right Side Leaderboard Panel -->
     <div id="leaderboardPanel" style="display: none;">
         <div style="font-family: 'Inter', Arial, sans-serif; font-size: 18px; color: #fff; margin-bottom: 15px; text-align: center; font-weight: bold;">
@@ -683,16 +747,16 @@
         let raceIsJumping = false;
 
         // Game constants - TUNED VALUES
-        const GRAVITY = 0.132; // Tuned for perfect feel
-        const MOVE_SPEED = 0.45; // Tuned horizontal movement speed
-        const GROUND_MAX_SPEED = 5.625; // Max speed on ground
-        const AIR_MAX_SPEED = 7.0313; // Max speed in air (1.25x ground speed)
+        let GRAVITY = 0.132; // Tuned for perfect feel
+        let MOVE_SPEED = 0.45; // Tuned horizontal movement speed
+        let GROUND_MAX_SPEED = 5.625; // Max speed on ground
+        let AIR_MAX_SPEED = 7.0313; // Max speed in air (1.25x ground speed)
         const AIR_RESISTANCE = 0.88;
         const GROUND_FRICTION = 0.94;
         const GROUND_ACCELERATION = 0.15; // Gradual acceleration when grounded
-        const JUMP_POWER = 5.13; // Tuned jump power for perfect height
+        let JUMP_POWER = 5.13; // Tuned jump power for perfect height
         const FAST_FALL_MULTIPLIER = 3.5; // 1.75x stronger than before (was 2.0)
-        const JUMP_CHARGE_RATE = 0.41; // Tuned charge rate for responsive variable jumps
+        let JUMP_CHARGE_RATE = 0.41; // Tuned charge rate for responsive variable jumps
         const MAX_JUMP_HOLD_TIME = 16.67; // Maximum time (ms) to hold jump button for max height
 
         // Game feel constants
@@ -1359,6 +1423,9 @@
             // Populate and show leaderboard panel
             loadMiniLeaderboard();
             document.getElementById('leaderboardPanel').style.display = 'block';
+
+            // Show physics testing panel
+            document.getElementById('physicsPanel').style.display = 'block';
 
             // Auto-refresh leaderboard every 5 seconds
             const leaderboardRefreshInterval = setInterval(() => {
@@ -6345,6 +6412,41 @@
             setTimeout(() => {
                 notification.remove();
             }, 3000);
+        }
+
+        // Physics testing functions
+        function updatePhysics() {
+            GRAVITY = parseFloat(document.getElementById('gravitySlider').value);
+            JUMP_POWER = parseFloat(document.getElementById('jumpPowerSlider').value);
+            MOVE_SPEED = parseFloat(document.getElementById('moveSpeedSlider').value);
+            JUMP_CHARGE_RATE = parseFloat(document.getElementById('jumpChargeSlider').value);
+
+            // Update speed limits proportionally
+            GROUND_MAX_SPEED = MOVE_SPEED * 12.5;
+            AIR_MAX_SPEED = GROUND_MAX_SPEED * 1.25;
+
+            // Update display values
+            document.getElementById('gravityValue').textContent = GRAVITY.toFixed(3);
+            document.getElementById('jumpPowerValue').textContent = JUMP_POWER.toFixed(2);
+            document.getElementById('moveSpeedValue').textContent = MOVE_SPEED.toFixed(2);
+            document.getElementById('jumpChargeValue').textContent = JUMP_CHARGE_RATE.toFixed(3);
+        }
+
+        function copyPhysicsValues() {
+            const values = `
+GRAVITY = ${GRAVITY};
+MOVE_SPEED = ${MOVE_SPEED};
+GROUND_MAX_SPEED = ${GROUND_MAX_SPEED.toFixed(4)};
+AIR_MAX_SPEED = ${AIR_MAX_SPEED.toFixed(4)};
+JUMP_POWER = ${JUMP_POWER};
+JUMP_CHARGE_RATE = ${JUMP_CHARGE_RATE};
+            `.trim();
+
+            console.log('=== CURRENT PHYSICS VALUES ===');
+            console.log(values);
+            console.log('==============================');
+
+            showNotification('Physics values copied to console!', 'success');
         }
 
         // Screen management
