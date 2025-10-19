@@ -999,17 +999,29 @@
             }
         }
 
+        // Recalculate secure credits from base blocks (source of truth)
+        function recalcSecureCredits() {
+            secureCredits = baseBlocks.reduce((sum, block) => sum + (block.credits || 1), 0);
+            return secureCredits;
+        }
+
         // Update credits in Firebase
         async function updateCredits(amount, type = 'onhand') {
             if (type === 'onhand') {
                 userCredits += amount;
             } else if (type === 'secure') {
-                secureCredits += amount;
+                // SECURE credits are ONLY stored in base blocks, not as a separate value
+                // This parameter is now ignored - secure credits come from blocks only
+                console.warn('updateCredits called with type="secure" - secure credits are calculated from base blocks only');
+                return;
             }
 
             if (amount > 0) {
                 userStats.totalCreditsEarned += amount;
             }
+
+            // Recalculate secure credits from blocks before saving
+            recalcSecureCredits();
 
             await database.ref('players/' + currentUser.uid).update({
                 credits: userCredits,
@@ -1020,14 +1032,21 @@
 
         async function transferCredits(amount, fromType, toType) {
             if (fromType === 'onhand' && userCredits >= amount) {
+                // Transfer onhand → secure: Add blocks to base
                 userCredits -= amount;
-                secureCredits += amount;
+                // Don't modify secureCredits directly - it's calculated from blocks
+                console.log(`Transfer ${amount} from onhand to secure - blocks should be added in base mode`);
             } else if (fromType === 'secure' && secureCredits >= amount) {
-                secureCredits -= amount;
+                // Transfer secure → onhand: Remove blocks from base
+                // Don't modify secureCredits directly - it's calculated from blocks
                 userCredits += amount;
+                console.log(`Transfer ${amount} from secure to onhand - blocks should be removed in base mode`);
             } else {
                 return false; // Insufficient funds
             }
+
+            // Recalculate secure credits from blocks before saving
+            recalcSecureCredits();
 
             await database.ref('players/' + currentUser.uid).update({
                 credits: userCredits,
@@ -1052,14 +1071,20 @@
 
                 playersSnapshot.forEach(child => {
                     const data = child.val();
+                    const secureCredits = data.secureCredits || 0;
+                    const onhandCredits = data.credits || 0;
+                    const totalCredits = secureCredits + onhandCredits;
+
                     players.push({
                         username: data.username || 'Unknown',
-                        secureCredits: data.secureCredits || 0
+                        totalCredits: totalCredits,
+                        secureCredits: secureCredits,
+                        onhandCredits: onhandCredits
                     });
                 });
 
-                // Sort by secure credits descending
-                players.sort((a, b) => b.secureCredits - a.secureCredits);
+                // Sort by total credits descending
+                players.sort((a, b) => b.totalCredits - a.totalCredits);
 
                 // Build leaderboard HTML
                 let html = '';
@@ -1068,7 +1093,7 @@
                     const isCurrentUser = player.username === currentUsername;
                     html += `<div style="padding: 8px 4px; ${isCurrentUser ? 'background: rgba(79, 172, 254, 0.3); border-radius: 5px;' : ''} display: flex; justify-content: space-between; align-items: center;">
                         <div style="font-size: 16px; font-weight: bold;">${i + 1}. ${player.username}</div>
-                        <div style="font-size: 16px; color: #FFD700; font-weight: bold;">${player.secureCredits}</div>
+                        <div style="font-size: 16px; color: #FFD700; font-weight: bold;">${player.totalCredits}</div>
                     </div>`;
                 }
 
@@ -1163,15 +1188,6 @@
             // Populate and show leaderboard panel
             loadMiniLeaderboard();
             document.getElementById('leaderboardPanel').style.display = 'block';
-
-            // Show jump power slider panel
-            const sliderPanel = document.getElementById('jumpSliderPanel');
-            if (sliderPanel) {
-                sliderPanel.style.display = 'block';
-                console.log('Jump slider panel displayed:', sliderPanel);
-            } else {
-                console.error('Jump slider panel not found!');
-            }
 
             // Auto-refresh leaderboard every 5 seconds
             const leaderboardRefreshInterval = setInterval(() => {
@@ -1510,7 +1526,6 @@
             document.getElementById('menuHUD').style.display = 'none';
             document.getElementById('creditPanel').style.display = 'none';
             document.getElementById('leaderboardPanel').style.display = 'none';
-            document.getElementById('jumpSliderPanel').style.display = 'none';
 
             switch(action) {
                 case 'practice':
@@ -1682,8 +1697,10 @@
         function updateLevelSelect(deltaTime) {
             if (!levelSelectPlayer) return;
 
-            // Check grounded state first
+            // STEP 1: Calculate grounded state BEFORE physics (matches main menu)
             let isGrounded = false;
+            let standingOnPlatform = null;
+
             for (const platform of levelSelectPlatforms) {
                 const onTop = levelSelectPlayer.y + levelSelectPlayer.height >= platform.y &&
                               levelSelectPlayer.y + levelSelectPlayer.height <= platform.y + 5;
@@ -1692,11 +1709,12 @@
 
                 if (onTop && horizontalOverlap) {
                     isGrounded = true;
+                    standingOnPlatform = platform;
                     break;
                 }
             }
 
-            // Apply gravity with fast fall (scaled by size)
+            // STEP 2: Apply gravity with fast fall (scaled by size) - MATCHES MAIN MENU
             const sizeScale = levelSelectPlayer.currentSize / 40;
             if ((levelSelectKeys['s'] || levelSelectKeys['ArrowDown']) && !isGrounded) {
                 levelSelectPlayer.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
@@ -1704,22 +1722,7 @@
                 levelSelectPlayer.velocityY += GRAVITY * sizeScale * deltaTime;
             }
 
-            // Apply friction (use previous frame's grounded state)
-            if (levelSelectPlayer.wasGrounded) {
-                levelSelectPlayer.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
-            } else {
-                levelSelectPlayer.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
-            }
-
-            // Cap vertical velocity to prevent tunneling (scaled by size)
-            const maxFallSpeed = 8 * sizeScale;
-            levelSelectPlayer.velocityY = Math.min(levelSelectPlayer.velocityY, maxFallSpeed);
-
-            // Limit horizontal speed (scaled by size)
-            const scaledMaxSpeed = GROUND_MAX_SPEED * sizeScale;
-            levelSelectPlayer.velocityX = Math.max(-scaledMaxSpeed, Math.min(scaledMaxSpeed, levelSelectPlayer.velocityX));
-
-            // Handle movement (scaled by size)
+            // STEP 3: Handle input (movement scaled by size)
             const scaledMoveSpeed = MOVE_SPEED * sizeScale;
             if (levelSelectKeys['a'] || levelSelectKeys['ArrowLeft']) {
                 levelSelectPlayer.velocityX -= scaledMoveSpeed * deltaTime;
@@ -1735,7 +1738,7 @@
             const isMovingLeft = levelSelectPlayer.velocityX < -0.5;
             const isMovingRight = levelSelectPlayer.velocityX > 0.5;
 
-            // White particles on movement START
+            // White particles on movement START (when starting to move from stopped/opposite direction)
             if (isMovingLeft && !wasMovingLeft && Math.random() < 0.3) {
                 spawnParticles(levelSelectPlayer.x + levelSelectPlayer.width / 2, levelSelectPlayer.y + levelSelectPlayer.height / 2, 2, 'rgb(255, 255, 255)', levelSelectPlayer.currentSize);
             }
@@ -1743,7 +1746,7 @@
                 spawnParticles(levelSelectPlayer.x + levelSelectPlayer.width / 2, levelSelectPlayer.y + levelSelectPlayer.height / 2, 2, 'rgb(255, 255, 255)', levelSelectPlayer.currentSize);
             }
 
-            // Orange speed-based particles
+            // Orange speed-based particles (when moving fast horizontally)
             const speed = Math.abs(levelSelectPlayer.velocityX);
             if (speed > 0.5) {
                 const particleChance = Math.min(speed / 10, 0.8);
@@ -1755,64 +1758,6 @@
 
             // Store current velocity for next frame
             levelSelectPlayer.prevVelocityX = levelSelectPlayer.velocityX;
-
-            // Fast-fall particles (white) - spawn when holding down/S in air
-            if ((levelSelectKeys['s'] || levelSelectKeys['ArrowDown']) && !isGrounded && levelSelectPlayer.velocityY > 0) {
-                // Spawn particles continuously during fast fall
-                if (Math.random() < 0.3) { // 30% chance each frame for smooth particle trail
-                    spawnParticles(levelSelectPlayer.x + levelSelectPlayer.width / 2, levelSelectPlayer.y, 3, 'rgb(255, 255, 255)', levelSelectPlayer.currentSize);
-                }
-            }
-
-            // Update position
-            levelSelectPlayer.x += levelSelectPlayer.velocityX * deltaTime;
-            levelSelectPlayer.y += levelSelectPlayer.velocityY * deltaTime;
-
-            // Collision detection - matches main menu and level creator
-            let standingOnPlatform = null;
-
-            for (const platform of levelSelectPlatforms) {
-                if (levelSelectPlayer.x + levelSelectPlayer.width > platform.x &&
-                    levelSelectPlayer.x < platform.x + platform.width &&
-                    levelSelectPlayer.y + levelSelectPlayer.height > platform.y &&
-                    levelSelectPlayer.y < platform.y + platform.height) {
-
-                    const overlapLeft = (levelSelectPlayer.x + levelSelectPlayer.width) - platform.x;
-                    const overlapRight = (platform.x + platform.width) - levelSelectPlayer.x;
-                    const overlapTop = (levelSelectPlayer.y + levelSelectPlayer.height) - platform.y;
-                    const overlapBottom = (platform.y + platform.height) - levelSelectPlayer.y;
-
-                    const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
-
-                    // Floor collision (landing on top)
-                    if ((minOverlap === overlapTop && levelSelectPlayer.velocityY >= 0) ||
-                        (levelSelectPlayer.velocityY > 0 && overlapTop < overlapBottom &&
-                         overlapTop < overlapLeft * 0.5 && overlapTop < overlapRight * 0.5)) {
-                        // Cyan landing particles if falling with significant velocity
-                        if (levelSelectPlayer.velocityY > 2) {
-                            spawnParticles(levelSelectPlayer.x + levelSelectPlayer.width / 2, levelSelectPlayer.y + levelSelectPlayer.height, 8, 'rgb(255, 255, 255)', levelSelectPlayer.currentSize);
-                        }
-                        levelSelectPlayer.y = platform.y - levelSelectPlayer.height;
-                        levelSelectPlayer.velocityY = 0;
-                        standingOnPlatform = platform;
-                    }
-                    // Ceiling collision (hitting from below)
-                    else if (minOverlap === overlapBottom && levelSelectPlayer.velocityY < 0) {
-                        levelSelectPlayer.y = platform.y + platform.height;
-                        levelSelectPlayer.velocityY = 0;
-                    }
-                    // Left wall collision
-                    else if (minOverlap === overlapLeft) {
-                        levelSelectPlayer.x = platform.x - levelSelectPlayer.width;
-                        levelSelectPlayer.velocityX = 0;
-                    }
-                    // Right wall collision
-                    else if (minOverlap === overlapRight) {
-                        levelSelectPlayer.x = platform.x + platform.width;
-                        levelSelectPlayer.velocityX = 0;
-                    }
-                }
-            }
 
             // Check if player pressed space on a platform
             if (standingOnPlatform && (levelSelectKeys[' '] || levelSelectKeys['Space'])) {
@@ -1829,10 +1774,9 @@
                 levelSelectKeys['Space'] = false;
             }
 
-            // Jump with variable height based on hold time (W or Up only, NOT space)
+            // STEP 4: Jump with variable height based on hold time (W or Up only, NOT space)
             if ((levelSelectKeys['w'] || levelSelectKeys['ArrowUp']) && isGrounded && !levelSelectIsJumping) {
                 // Start jump immediately with strong initial velocity
-                const sizeScale = levelSelectPlayer.currentSize / 40;
                 levelSelectPlayer.velocityY = -1.5 * sizeScale; // Strong initial jump
                 levelSelectIsJumping = true;
                 levelSelectPlayer.jumpHoldTime = 0;
@@ -1842,7 +1786,6 @@
 
             // Continue adding upward velocity while holding button (extends jump height)
             if (levelSelectIsJumping && (levelSelectKeys['w'] || levelSelectKeys['ArrowUp']) && levelSelectPlayer.velocityY < 0 && levelSelectPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
-                const sizeScale = levelSelectPlayer.currentSize / 40;
                 levelSelectPlayer.jumpHoldTime += deltaTime;
 
                 // Add upward acceleration while holding (max height = 4x playerSize + 1px)
@@ -1867,7 +1810,72 @@
                 levelSelectIsJumping = false;
             }
 
-            levelSelectPlayer.wasGrounded = isGrounded;
+            // Fast-fall particles (white) - spawn when holding down/S in air
+            if ((levelSelectKeys['s'] || levelSelectKeys['ArrowDown']) && !isGrounded && levelSelectPlayer.velocityY > 0) {
+                // Spawn particles continuously during fast fall
+                if (Math.random() < 0.3) { // 30% chance each frame for smooth particle trail
+                    spawnParticles(levelSelectPlayer.x + levelSelectPlayer.width / 2, levelSelectPlayer.y, 3, 'rgb(255, 255, 255)', levelSelectPlayer.currentSize);
+                }
+            }
+
+            // STEP 5: Apply friction using exponential decay
+            if (isGrounded) {
+                levelSelectPlayer.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
+            } else {
+                levelSelectPlayer.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
+            }
+
+            // STEP 6: Cap vertical velocity to prevent tunneling (scaled by size)
+            const maxFallSpeed = 8 * sizeScale;
+            levelSelectPlayer.velocityY = Math.min(levelSelectPlayer.velocityY, maxFallSpeed);
+
+            // Limit horizontal speed (scaled by size)
+            const scaledMaxSpeed = GROUND_MAX_SPEED * sizeScale;
+            levelSelectPlayer.velocityX = Math.max(-scaledMaxSpeed, Math.min(scaledMaxSpeed, levelSelectPlayer.velocityX));
+
+            // STEP 7: Update position HORIZONTALLY first, then check X collisions
+            levelSelectPlayer.x += levelSelectPlayer.velocityX * deltaTime;
+
+            // Check horizontal collisions
+            for (const platform of levelSelectPlatforms) {
+                if (checkCollision(levelSelectPlayer, platform)) {
+                    if (levelSelectPlayer.velocityX > 0) {
+                        // Moving right, hit left side of platform
+                        levelSelectPlayer.x = platform.x - levelSelectPlayer.width;
+                    } else if (levelSelectPlayer.velocityX < 0) {
+                        // Moving left, hit right side of platform
+                        levelSelectPlayer.x = platform.x + platform.width;
+                    }
+                    levelSelectPlayer.velocityX = 0;
+                }
+            }
+
+            // Update position VERTICALLY, then check Y collisions
+            levelSelectPlayer.y += levelSelectPlayer.velocityY * deltaTime;
+
+            // Check vertical collisions
+            for (const platform of levelSelectPlatforms) {
+                if (checkCollision(levelSelectPlayer, platform)) {
+                    if (levelSelectPlayer.velocityY > 0) {
+                        // Moving down, hit top of platform
+                        // White landing particles if falling with significant velocity
+                        if (levelSelectPlayer.velocityY > 2) {
+                            spawnParticles(levelSelectPlayer.x + levelSelectPlayer.width / 2, levelSelectPlayer.y + levelSelectPlayer.height, 8, 'rgb(255, 255, 255)', levelSelectPlayer.currentSize);
+                        }
+                        levelSelectPlayer.y = platform.y - levelSelectPlayer.height;
+                        levelSelectPlayer.velocityY = 0;
+                    } else if (levelSelectPlayer.velocityY < 0) {
+                        // Moving up, hit bottom of platform
+                        levelSelectPlayer.y = platform.y + platform.height;
+                        levelSelectPlayer.velocityY = 0;
+                        levelSelectIsJumping = false;
+                    }
+                }
+            }
+
+            // Keep player in bounds (horizontal only)
+            if (levelSelectPlayer.x < 0) levelSelectPlayer.x = 0;
+            if (levelSelectPlayer.x > 1200 - levelSelectPlayer.width) levelSelectPlayer.x = 1200 - levelSelectPlayer.width;
         }
 
         function renderLevelSelect(ctx) {
@@ -3951,33 +3959,28 @@
                 }
             }
 
-            // Apply gravity with fast fall (scaled by size)
-            if ((raceState.keys['s'] || raceState.keys['ArrowDown']) && !player.wasGrounded && player.velocityY > 0) {
-                player.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
-                // Spawn particles continuously during fast fall
-                if (Math.random() < 0.3) { // 30% chance each frame for smooth particle trail
-                    spawnParticles(player.x + player.width / 2, player.y, 3, 'rgb(255, 255, 255)', player.currentSize);
+            // STEP 1: Calculate grounded state BEFORE physics (matches main menu)
+            let isGrounded = false;
+            for (const platform of raceState.platforms) {
+                const onTop = player.y + player.height >= platform.y &&
+                              player.y + player.height <= platform.y + 5;
+                const horizontalOverlap = player.x + player.width > platform.x &&
+                                         player.x < platform.x + platform.width;
+
+                if (onTop && horizontalOverlap) {
+                    isGrounded = true;
+                    break;
                 }
+            }
+
+            // STEP 2: Apply gravity with fast fall (scaled by size) - MATCHES MAIN MENU
+            if ((raceState.keys['s'] || raceState.keys['ArrowDown']) && !isGrounded) {
+                player.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
             } else {
                 player.velocityY += GRAVITY * sizeScale * deltaTime;
             }
 
-            // Apply friction using exponential decay (use previous frame's grounded state)
-            if (player.wasGrounded) {
-                player.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
-            } else {
-                player.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
-            }
-
-            // Cap vertical velocity to prevent tunneling
-            const maxFallSpeed = 8 * sizeScale;
-            player.velocityY = Math.min(player.velocityY, maxFallSpeed);
-
-            // Limit horizontal speed (scaled by size)
-            const scaledMaxSpeed = GROUND_MAX_SPEED * sizeScale;
-            player.velocityX = Math.max(-scaledMaxSpeed, Math.min(scaledMaxSpeed, player.velocityX));
-
-            // Handle input (acceleration-based movement, scaled by size)
+            // STEP 3: Handle input (movement scaled by size)
             const scaledMoveSpeed = MOVE_SPEED * sizeScale;
             if (raceState.keys['a'] || raceState.keys['ArrowLeft']) {
                 player.velocityX -= scaledMoveSpeed * deltaTime;
@@ -3993,7 +3996,7 @@
             const isMovingLeft = player.velocityX < -0.5;
             const isMovingRight = player.velocityX > 0.5;
 
-            // White particles on movement START
+            // White particles on movement START (when starting to move from stopped/opposite direction)
             if (isMovingLeft && !wasMovingLeft && Math.random() < 0.3) {
                 spawnParticles(player.x + player.width / 2, player.y + player.height / 2, 2, 'rgb(255, 255, 255)', player.currentSize);
             }
@@ -4001,7 +4004,7 @@
                 spawnParticles(player.x + player.width / 2, player.y + player.height / 2, 2, 'rgb(255, 255, 255)', player.currentSize);
             }
 
-            // Orange speed-based particles
+            // Orange speed-based particles (when moving fast horizontally)
             const speed = Math.abs(player.velocityX);
             if (speed > 0.5) {
                 const particleChance = Math.min(speed / 10, 0.8);
@@ -4013,57 +4016,6 @@
 
             // Store current velocity for next frame
             player.prevVelocityX = player.velocityX;
-
-            // Update position
-            player.x += player.velocityX * deltaTime;
-            player.y += player.velocityY * deltaTime;
-
-            // Collision detection - matches level creator and practice mode
-            let isGrounded = false;
-            for (const platform of raceState.platforms) {
-                if (player.x + player.width > platform.x &&
-                    player.x < platform.x + platform.width &&
-                    player.y + player.height > platform.y &&
-                    player.y < platform.y + platform.height) {
-
-                    const overlapLeft = (player.x + player.width) - platform.x;
-                    const overlapRight = (platform.x + platform.width) - player.x;
-                    const overlapTop = (player.y + player.height) - platform.y;
-                    const overlapBottom = (platform.y + platform.height) - player.y;
-
-                    const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
-
-                    // Floor collision (landing on top)
-                    if ((minOverlap === overlapTop && player.velocityY >= 0) ||
-                        (player.velocityY > 0 && overlapTop < overlapBottom &&
-                         overlapTop < overlapLeft * 0.5 && overlapTop < overlapRight * 0.5)) {
-                        // Cyan landing particles if falling with significant velocity
-                        if (player.velocityY > 2) {
-                            spawnParticles(player.x + player.width / 2, player.y + player.height, 8, 'rgb(255, 255, 255)', player.currentSize);
-                        }
-                        player.y = platform.y - player.height;
-                        player.velocityY = 0;
-                        newIsGrounded = true;
-                    }
-                    // Ceiling collision (hitting from below)
-                    else if (minOverlap === overlapBottom && player.velocityY < 0) {
-                        player.y = platform.y + platform.height;
-                        player.velocityY = 0;
-                    }
-                    // Left wall collision
-                    else if (minOverlap === overlapLeft) {
-                        player.x = platform.x - player.width;
-                        player.velocityX = 0;
-                    }
-                    // Right wall collision
-                    else if (minOverlap === overlapRight) {
-                        player.x = platform.x + platform.width;
-                        player.velocityX = 0;
-                    }
-                }
-            }
-
-            player.wasGrounded = isGrounded;
 
             // Jump with variable height based on hold time (W or Up only, NOT space)
             if ((raceState.keys['w'] || raceState.keys['ArrowUp']) && isGrounded && !raceIsJumping) {
@@ -4099,6 +4051,69 @@
             // Reset jump state when grounded
             if (isGrounded && player.velocityY >= 0) {
                 raceIsJumping = false;
+            }
+
+            // Fast-fall particles (white) - spawn when holding down/S in air
+            if ((raceState.keys['s'] || raceState.keys['ArrowDown']) && !isGrounded && player.velocityY > 0) {
+                // Spawn particles continuously during fast fall
+                if (Math.random() < 0.3) { // 30% chance each frame for smooth particle trail
+                    spawnParticles(player.x + player.width / 2, player.y, 3, 'rgb(255, 255, 255)', player.currentSize);
+                }
+            }
+
+            // STEP 4: Apply friction using exponential decay
+            if (isGrounded) {
+                player.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
+            } else {
+                player.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
+            }
+
+            // STEP 5: Cap vertical velocity to prevent tunneling (scaled by size)
+            const maxFallSpeed = 8 * sizeScale;
+            player.velocityY = Math.min(player.velocityY, maxFallSpeed);
+
+            // Limit horizontal speed (scaled by size)
+            const scaledMaxSpeed = GROUND_MAX_SPEED * sizeScale;
+            player.velocityX = Math.max(-scaledMaxSpeed, Math.min(scaledMaxSpeed, player.velocityX));
+
+            // STEP 6: Update position HORIZONTALLY first, then check X collisions
+            player.x += player.velocityX * deltaTime;
+
+            // Check horizontal collisions
+            for (const platform of raceState.platforms) {
+                if (checkCollision(player, platform)) {
+                    if (player.velocityX > 0) {
+                        // Moving right, hit left side of platform
+                        player.x = platform.x - player.width;
+                    } else if (player.velocityX < 0) {
+                        // Moving left, hit right side of platform
+                        player.x = platform.x + platform.width;
+                    }
+                    player.velocityX = 0;
+                }
+            }
+
+            // Update position VERTICALLY, then check Y collisions
+            player.y += player.velocityY * deltaTime;
+
+            // Check vertical collisions
+            for (const platform of raceState.platforms) {
+                if (checkCollision(player, platform)) {
+                    if (player.velocityY > 0) {
+                        // Moving down, hit top of platform
+                        // White landing particles if falling with significant velocity
+                        if (player.velocityY > 2) {
+                            spawnParticles(player.x + player.width / 2, player.y + player.height, 8, 'rgb(255, 255, 255)', player.currentSize);
+                        }
+                        player.y = platform.y - player.height;
+                        player.velocityY = 0;
+                    } else if (player.velocityY < 0) {
+                        // Moving up, hit bottom of platform
+                        player.y = platform.y + platform.height;
+                        player.velocityY = 0;
+                        raceIsJumping = false;
+                    }
+                }
             }
 
             // Update camera
@@ -4656,15 +4671,10 @@
                 }
             }
 
-            // Apply gravity (scaled by size)
+            // Apply gravity with fast fall (scaled by size)
             const sizeScale = basePlayer.currentSize / 40;
-            if ((baseKeys['s'] || baseKeys['ArrowDown']) && !isGrounded && basePlayer.velocityY > 0) {
+            if ((baseKeys['s'] || baseKeys['ArrowDown']) && !isGrounded) {
                 basePlayer.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
-
-                // Fast-fall particles (white) - spawn when holding down/S in air
-                if (Math.random() < 0.3) { // 30% chance each frame for smooth particle trail
-                    spawnParticles(basePlayer.x + basePlayer.width / 2, basePlayer.y, 3, 'rgb(255, 255, 255)', basePlayer.currentSize);
-                }
             } else {
                 basePlayer.velocityY += GRAVITY * sizeScale * deltaTime;
             }
@@ -4737,6 +4747,19 @@
             // Stop jump when time limit exceeded
             if (baseIsJumping && basePlayer.jumpHoldTime >= MAX_JUMP_HOLD_TIME) {
                 baseIsJumping = false;
+            }
+
+            // Reset jump state when grounded
+            if (isGrounded && basePlayer.velocityY >= 0) {
+                baseIsJumping = false;
+            }
+
+            // Fast-fall particles (white) - spawn when holding down/S in air
+            if ((baseKeys['s'] || baseKeys['ArrowDown']) && !isGrounded && basePlayer.velocityY > 0) {
+                // Spawn particles continuously during fast fall
+                if (Math.random() < 0.3) { // 30% chance each frame for smooth particle trail
+                    spawnParticles(basePlayer.x + basePlayer.width / 2, basePlayer.y, 3, 'rgb(255, 255, 255)', basePlayer.currentSize);
+                }
             }
 
             // Friction
@@ -4934,8 +4957,21 @@
 
             // Place new block with 1 credit
             baseBlocks.push({ x: gridX, y: gridY, credits: 1 });
-            await updateCredits(-1, 'onhand');
-            await database.ref('players/' + currentUser.uid + '/baseBlocks').set(baseBlocks);
+            userCredits -= 1; // Remove from onhand
+
+            // Recalculate secure credits from blocks
+            recalcSecureCredits();
+
+            // Update stats
+            if (userStats.totalCreditsEarned === undefined) userStats.totalCreditsEarned = 0;
+
+            // Save to database
+            await database.ref('players/' + currentUser.uid).update({
+                credits: userCredits,
+                secureCredits: secureCredits,
+                baseBlocks: baseBlocks,
+                stats: userStats
+            });
 
             document.getElementById('baseCredits').textContent = `Credits: ${secureCredits} (${userCredits} on hand)`;
         }
@@ -4971,21 +5007,30 @@
                 return false; // Silently prevent if no block
             }
 
-            // Remove ONE credit from the block
+            // Remove ONE credit from the block and add to onhand
             const block = baseBlocks[index];
             const creditsInBlock = block.credits || 1;
 
             if (creditsInBlock > 1) {
                 // Block has multiple credits - just remove one
                 block.credits = creditsInBlock - 1;
-                await updateCredits(1, 'secure');  // One credit goes to secure storage
-                await database.ref('players/' + currentUser.uid + '/baseBlocks').set(baseBlocks);
             } else {
                 // Block has only 1 credit - remove entire block
                 baseBlocks.splice(index, 1);
-                await updateCredits(1, 'secure');  // One credit goes to secure storage
-                await database.ref('players/' + currentUser.uid + '/baseBlocks').set(baseBlocks);
             }
+
+            // Add credit to onhand
+            userCredits += 1;
+
+            // Recalculate secure credits from blocks (will be lower now)
+            recalcSecureCredits();
+
+            // Save to database
+            await database.ref('players/' + currentUser.uid).update({
+                credits: userCredits,
+                secureCredits: secureCredits,
+                baseBlocks: baseBlocks
+            });
 
             document.getElementById('baseCredits').textContent = `Credits: ${secureCredits} (${userCredits} on hand)`;
 
@@ -5122,32 +5167,32 @@
         function updateLeaderboardPlayer(deltaTime) {
             if (!leaderboardPlayer) return;
 
-            // Apply gravity (scaled by size)
-            const sizeScale = leaderboardPlayer.currentSize / 40;
-            if ((leaderboardKeys['s'] || leaderboardKeys['ArrowDown']) && !leaderboardPlayer.wasGrounded) {
-                leaderboardPlayer.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
+            // STEP 1: Calculate grounded state BEFORE physics (matches main menu)
+            let isGrounded = false;
+            let standingOnPlatform = null;
 
-                // Fast-fall particles (white) - spawn when holding down/S in air
-                if (leaderboardPlayer.velocityY > 0 && Math.random() < 0.3) { // 30% chance each frame for smooth particle trail
-                    spawnParticles(leaderboardPlayer.x + leaderboardPlayer.width / 2, leaderboardPlayer.y, 3, 'rgb(255, 255, 255)', leaderboardPlayer.currentSize);
+            for (const platform of leaderboardPlatforms) {
+                const onTop = leaderboardPlayer.y + leaderboardPlayer.height >= platform.y &&
+                              leaderboardPlayer.y + leaderboardPlayer.height <= platform.y + 5;
+                const horizontalOverlap = leaderboardPlayer.x + leaderboardPlayer.width > platform.x &&
+                                         leaderboardPlayer.x < platform.x + platform.width;
+
+                if (onTop && horizontalOverlap) {
+                    isGrounded = true;
+                    standingOnPlatform = platform;
+                    break;
                 }
+            }
+
+            // STEP 2: Apply gravity with fast fall (scaled by size) - MATCHES MAIN MENU
+            const sizeScale = leaderboardPlayer.currentSize / 40;
+            if ((leaderboardKeys['s'] || leaderboardKeys['ArrowDown']) && !isGrounded) {
+                leaderboardPlayer.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
             } else {
                 leaderboardPlayer.velocityY += GRAVITY * sizeScale * deltaTime;
             }
 
-            // Apply friction
-            if (leaderboardPlayer.wasGrounded) {
-                leaderboardPlayer.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
-            } else {
-                leaderboardPlayer.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
-            }
-
-            // Cap velocities (scaled by size)
-            leaderboardPlayer.velocityY = Math.min(leaderboardPlayer.velocityY, 8 * sizeScale);
-            const scaledMaxSpeed = GROUND_MAX_SPEED * sizeScale;
-            leaderboardPlayer.velocityX = Math.max(-scaledMaxSpeed, Math.min(scaledMaxSpeed, leaderboardPlayer.velocityX));
-
-            // Handle movement (scaled by size)
+            // STEP 3: Handle input (movement scaled by size)
             const scaledMoveSpeed = MOVE_SPEED * sizeScale;
             if (leaderboardKeys['a'] || leaderboardKeys['ArrowLeft']) {
                 leaderboardPlayer.velocityX -= scaledMoveSpeed * deltaTime;
@@ -5163,7 +5208,7 @@
             const isMovingLeft = leaderboardPlayer.velocityX < -0.5;
             const isMovingRight = leaderboardPlayer.velocityX > 0.5;
 
-            // White particles on movement START
+            // White particles on movement START (when starting to move from stopped/opposite direction)
             if (isMovingLeft && !wasMovingLeft && Math.random() < 0.3) {
                 spawnParticles(leaderboardPlayer.x + leaderboardPlayer.width / 2, leaderboardPlayer.y + leaderboardPlayer.height / 2, 2, 'rgb(255, 255, 255)', leaderboardPlayer.currentSize);
             }
@@ -5171,7 +5216,7 @@
                 spawnParticles(leaderboardPlayer.x + leaderboardPlayer.width / 2, leaderboardPlayer.y + leaderboardPlayer.height / 2, 2, 'rgb(255, 255, 255)', leaderboardPlayer.currentSize);
             }
 
-            // Orange speed-based particles
+            // Orange speed-based particles (when moving fast horizontally)
             const speed = Math.abs(leaderboardPlayer.velocityX);
             if (speed > 0.5) {
                 const particleChance = Math.min(speed / 10, 0.8);
@@ -5183,53 +5228,6 @@
 
             // Store current velocity for next frame
             leaderboardPlayer.prevVelocityX = leaderboardPlayer.velocityX;
-
-            // Update position
-            leaderboardPlayer.x += leaderboardPlayer.velocityX * deltaTime;
-            leaderboardPlayer.y += leaderboardPlayer.velocityY * deltaTime;
-
-            // Collision detection
-            let isGrounded = false;
-            let standingOnPlatform = null;
-
-            for (const platform of leaderboardPlatforms) {
-                if (leaderboardPlayer.x + leaderboardPlayer.width > platform.x &&
-                    leaderboardPlayer.x < platform.x + platform.width &&
-                    leaderboardPlayer.y + leaderboardPlayer.height > platform.y &&
-                    leaderboardPlayer.y < platform.y + platform.height) {
-
-                    const overlapLeft = (leaderboardPlayer.x + leaderboardPlayer.width) - platform.x;
-                    const overlapRight = (platform.x + platform.width) - leaderboardPlayer.x;
-                    const overlapTop = (leaderboardPlayer.y + leaderboardPlayer.height) - platform.y;
-                    const overlapBottom = (platform.y + platform.height) - leaderboardPlayer.y;
-
-                    const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
-
-                    if ((minOverlap === overlapTop && leaderboardPlayer.velocityY >= 0) ||
-                        (leaderboardPlayer.velocityY > 0 && overlapTop < overlapBottom &&
-                         overlapTop < overlapLeft * 0.5 && overlapTop < overlapRight * 0.5)) {
-                        // Cyan landing particles if falling with significant velocity
-                        if (leaderboardPlayer.velocityY > 2) {
-                            spawnParticles(leaderboardPlayer.x + leaderboardPlayer.width / 2, leaderboardPlayer.y + leaderboardPlayer.height, 8, 'rgb(255, 255, 255)', leaderboardPlayer.currentSize);
-                        }
-                        leaderboardPlayer.y = platform.y - leaderboardPlayer.height;
-                        leaderboardPlayer.velocityY = 0;
-                        isGrounded = true;
-                        standingOnPlatform = platform;
-                    } else if (minOverlap === overlapBottom && leaderboardPlayer.velocityY < 0) {
-                        leaderboardPlayer.y = platform.y + platform.height;
-                        leaderboardPlayer.velocityY = 0;
-                    } else if (minOverlap === overlapLeft) {
-                        leaderboardPlayer.x = platform.x - leaderboardPlayer.width;
-                        leaderboardPlayer.velocityX = 0;
-                    } else if (minOverlap === overlapRight) {
-                        leaderboardPlayer.x = platform.x + platform.width;
-                        leaderboardPlayer.velocityX = 0;
-                    }
-                }
-            }
-
-            leaderboardPlayer.wasGrounded = isGrounded;
 
             // Handle platform selection
             if (standingOnPlatform && (leaderboardKeys[' '] || leaderboardKeys['Space'])) {
@@ -5244,10 +5242,9 @@
                 leaderboardKeys['Space'] = false;
             }
 
-            // Jump with variable height based on hold time (W or Up only, NOT space)
+            // STEP 4: Jump with variable height based on hold time (W or Up only, NOT space)
             if ((leaderboardKeys['w'] || leaderboardKeys['ArrowUp']) && isGrounded && !leaderboardIsJumping) {
                 // Start jump immediately with strong initial velocity
-                const sizeScale = leaderboardPlayer.currentSize / 40;
                 leaderboardPlayer.velocityY = -1.5 * sizeScale; // Strong initial jump
                 leaderboardIsJumping = true;
                 leaderboardPlayer.jumpHoldTime = 0;
@@ -5257,7 +5254,6 @@
 
             // Continue adding upward velocity while holding button (extends jump height)
             if (leaderboardIsJumping && (leaderboardKeys['w'] || leaderboardKeys['ArrowUp']) && leaderboardPlayer.velocityY < 0 && leaderboardPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
-                const sizeScale = leaderboardPlayer.currentSize / 40;
                 leaderboardPlayer.jumpHoldTime += deltaTime;
 
                 // Add upward acceleration while holding (max height = 4x playerSize + 1px)
@@ -5280,6 +5276,69 @@
             // Reset jump state when grounded
             if (isGrounded && leaderboardPlayer.velocityY >= 0) {
                 leaderboardIsJumping = false;
+            }
+
+            // Fast-fall particles (white) - spawn when holding down/S in air
+            if ((leaderboardKeys['s'] || leaderboardKeys['ArrowDown']) && !isGrounded && leaderboardPlayer.velocityY > 0) {
+                // Spawn particles continuously during fast fall
+                if (Math.random() < 0.3) { // 30% chance each frame for smooth particle trail
+                    spawnParticles(leaderboardPlayer.x + leaderboardPlayer.width / 2, leaderboardPlayer.y, 3, 'rgb(255, 255, 255)', leaderboardPlayer.currentSize);
+                }
+            }
+
+            // STEP 5: Apply friction using exponential decay
+            if (isGrounded) {
+                leaderboardPlayer.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
+            } else {
+                leaderboardPlayer.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
+            }
+
+            // STEP 6: Cap vertical velocity to prevent tunneling (scaled by size)
+            const maxFallSpeed = 8 * sizeScale;
+            leaderboardPlayer.velocityY = Math.min(leaderboardPlayer.velocityY, maxFallSpeed);
+
+            // Limit horizontal speed (scaled by size)
+            const scaledMaxSpeed = GROUND_MAX_SPEED * sizeScale;
+            leaderboardPlayer.velocityX = Math.max(-scaledMaxSpeed, Math.min(scaledMaxSpeed, leaderboardPlayer.velocityX));
+
+            // STEP 7: Update position HORIZONTALLY first, then check X collisions
+            leaderboardPlayer.x += leaderboardPlayer.velocityX * deltaTime;
+
+            // Check horizontal collisions
+            for (const platform of leaderboardPlatforms) {
+                if (checkCollision(leaderboardPlayer, platform)) {
+                    if (leaderboardPlayer.velocityX > 0) {
+                        // Moving right, hit left side of platform
+                        leaderboardPlayer.x = platform.x - leaderboardPlayer.width;
+                    } else if (leaderboardPlayer.velocityX < 0) {
+                        // Moving left, hit right side of platform
+                        leaderboardPlayer.x = platform.x + platform.width;
+                    }
+                    leaderboardPlayer.velocityX = 0;
+                }
+            }
+
+            // Update position VERTICALLY, then check Y collisions
+            leaderboardPlayer.y += leaderboardPlayer.velocityY * deltaTime;
+
+            // Check vertical collisions
+            for (const platform of leaderboardPlatforms) {
+                if (checkCollision(leaderboardPlayer, platform)) {
+                    if (leaderboardPlayer.velocityY > 0) {
+                        // Moving down, hit top of platform
+                        // White landing particles if falling with significant velocity
+                        if (leaderboardPlayer.velocityY > 2) {
+                            spawnParticles(leaderboardPlayer.x + leaderboardPlayer.width / 2, leaderboardPlayer.y + leaderboardPlayer.height, 8, 'rgb(255, 255, 255)', leaderboardPlayer.currentSize);
+                        }
+                        leaderboardPlayer.y = platform.y - leaderboardPlayer.height;
+                        leaderboardPlayer.velocityY = 0;
+                    } else if (leaderboardPlayer.velocityY < 0) {
+                        // Moving up, hit bottom of platform
+                        leaderboardPlayer.y = platform.y + platform.height;
+                        leaderboardPlayer.velocityY = 0;
+                        leaderboardIsJumping = false;
+                    }
+                }
             }
         }
 
@@ -5608,18 +5667,6 @@
             delete practiceMode.keys[e.key];
             delete raceState.keys[e.key];
         });
-
-        // Setup jump power slider
-        const jumpSlider = document.getElementById('jumpPowerSlider');
-        const jumpValueDisplay = document.getElementById('jumpPowerValue');
-        if (jumpSlider && jumpValueDisplay) {
-            jumpSlider.addEventListener('input', function() {
-                const newValue = parseFloat(this.value);
-                jumpValueDisplay.textContent = newValue.toFixed(2);
-                JUMP_POWER = newValue;
-                console.log('Jump power changed to:', newValue);
-            });
-        }
 
         // Initialize on auth
         auth.onAuthStateChanged(async (user) => {
