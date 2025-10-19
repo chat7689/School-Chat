@@ -2870,19 +2870,33 @@
                 }
             }
 
+            // STEP 1: Calculate grounded state BEFORE physics (matches main menu)
+            isGrounded = false;
+            for (let platform of platforms) {
+                const onTop = player.y + player.height >= platform.y &&
+                              player.y + player.height <= platform.y + 5;
+                const horizontalOverlap = player.x + player.width > platform.x &&
+                                         player.x < platform.x + platform.width;
+
+                if (onTop && horizontalOverlap) {
+                    isGrounded = true;
+                    break;
+                }
+            }
+
             // Freeze movement during transition
             if (!sizeTransitioning) {
                 // Scale factors based on player size (40 is base) - linear scaling
                 const sizeScale = player.currentSize / 40;
 
-                // Gravity (scaled by size for proportional physics)
+                // STEP 2: Apply gravity with fast fall (scaled by size) - MATCHES MAIN MENU
                 if ((keys['KeyS'] || keys['ArrowDown']) && !isGrounded) {
-                    player.velocityY += physics.gravity * sizeScale * physics.fastFallMultiplier * deltaTime;  // Fall 1.75x faster
+                    player.velocityY += physics.gravity * sizeScale * physics.fastFallMultiplier * deltaTime;
                 } else {
                     player.velocityY += physics.gravity * sizeScale * deltaTime;
                 }
 
-                // Movement (scaled by size)
+                // STEP 3: Handle movement input (scaled by size)
                 const moveSpeed = physics.moveSpeed * sizeScale;
                 if (keys['KeyA'] || keys['ArrowLeft']) {
                     player.velocityX -= moveSpeed * deltaTime;
@@ -2891,7 +2905,8 @@
                     player.velocityX += moveSpeed * deltaTime;
                 }
 
-                // Jump - Variable height based on hold time (matching main game)
+                // STEP 4: Jump mechanics - Variable height based on hold time
+                // NOTE: Jump height kept different from main menu - perfect for all 3 block sizes!
                 if ((keys['KeyW'] || keys['ArrowUp'] || keys['Space']) && isGrounded && !isJumping) {
                     player.velocityY = -1.5 * sizeScale; // Strong initial jump
                     isJumping = true;
@@ -2922,23 +2937,26 @@
                     isJumping = false;
                 }
 
-                // Apply friction (using exponential decay for frame-rate independence)
+                // STEP 5: Apply friction (using exponential decay for frame-rate independence)
                 if (isGrounded) {
                     player.velocityX *= Math.pow(physics.friction, deltaTime);
                 } else {
                     player.velocityX *= Math.pow(physics.airRes, deltaTime);
                 }
 
+                // STEP 6: Cap velocities
                 player.velocityX = Math.max(-physics.maxSpeed * sizeScale, Math.min(physics.maxSpeed * sizeScale, player.velocityX));
 
                 // Cap vertical velocity to prevent tunneling through platforms
                 const maxFallSpeed = 8 * sizeScale; // Terminal velocity (reduced to prevent glitching)
                 player.velocityY = Math.min(player.velocityY, maxFallSpeed);
 
+                // STEP 7: Update position
                 player.x += player.velocityX * deltaTime;
                 player.y += player.velocityY * deltaTime;
             }
 
+            // STEP 8: Check collisions and resolve (but don't recalculate isGrounded - already done at start!)
             checkCollision();
             checkHazards();
             checkGrowers();
@@ -2969,7 +2987,8 @@
         }
 
         function checkCollision() {
-            isGrounded = false;
+            // NOTE: isGrounded is now calculated at the START of updatePlayer, not here!
+            // This function only handles collision resolution
 
             for (let platform of platforms) {
                 if (player.x + player.width > platform.x &&
