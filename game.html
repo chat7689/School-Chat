@@ -3109,7 +3109,15 @@
                     }
                     return;
                 } else {
-                    // Earn mode (infinite runner) - exit to main menu immediately
+                    // Earn mode (infinite runner) - show death summary and exit
+                    const creditsEarned = practiceMode.creditsCollected;
+
+                    if (creditsEarned > 0) {
+                        alert(`You died!\n\nCredits earned this run: ${creditsEarned}\nThese credits have been added to your backpack!`);
+                    } else {
+                        alert(`You died!\n\nNo credits earned this run.`);
+                    }
+
                     exitPracticeMode();
                     return;
                 }
@@ -4718,9 +4726,9 @@
             // Draw particles BEFORE player so they're behind the player
             updateAndDrawParticles(ctx, 0, 0, 1);
 
-            // Draw player
+            // Draw player (pass 0, 0 for camera since shop hub has no camera)
             if (shopHubPlayer) {
-                shopHubPlayer.draw(ctx);
+                shopHubPlayer.draw(ctx, 0, 0);
             }
 
             // Draw title
