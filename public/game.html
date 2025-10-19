@@ -4486,10 +4486,9 @@
         function updateShopHub(deltaTime) {
             if (!shopHubPlayer) return;
 
-            // STEP 1: Calculate grounded state BEFORE physics
+            // Check current grounded state BEFORE applying physics (MATCHES MAIN MENU)
             let isGrounded = false;
             let standingOnPlatform = null;
-
             for (const platform of shopHubPlatforms) {
                 const onTop = shopHubPlayer.y + shopHubPlayer.height >= platform.y &&
                               shopHubPlayer.y + shopHubPlayer.height <= platform.y + 5;
@@ -4503,7 +4502,25 @@
                 }
             }
 
-            // STEP 2: Apply gravity with fast fall
+            shopHubPlayer.wasGrounded = isGrounded;
+
+            // Check for platform interaction when standing on action platform
+            if (standingOnPlatform && standingOnPlatform.action) {
+                if (shopHubKeys[' ']) {
+                    if (standingOnPlatform.action === 'exit') {
+                        shopHubActive = false;
+                        backToMainMenu();
+                    } else if (standingOnPlatform.action === 'cosmetics') {
+                        shopHubActive = false;
+                        showCosmeticsShop();
+                    } else if (standingOnPlatform.action === 'backpack') {
+                        shopHubActive = false;
+                        showBackpackShop();
+                    }
+                }
+            }
+
+            // Apply gravity with fast fall (MATCHES MAIN MENU)
             const sizeScale = shopHubPlayer.currentSize / 40;
             if ((shopHubKeys['s'] || shopHubKeys['ArrowDown']) && !isGrounded) {
                 shopHubPlayer.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
@@ -4511,7 +4528,7 @@
                 shopHubPlayer.velocityY += GRAVITY * sizeScale * deltaTime;
             }
 
-            // STEP 3: Handle input
+            // Handle input (movement scaled by size) (MATCHES MAIN MENU)
             const scaledMoveSpeed = MOVE_SPEED * sizeScale;
             if (shopHubKeys['a'] || shopHubKeys['ArrowLeft']) {
                 shopHubPlayer.velocityX -= scaledMoveSpeed * deltaTime;
@@ -4520,12 +4537,14 @@
                 shopHubPlayer.velocityX += scaledMoveSpeed * deltaTime;
             }
 
-            // Movement particles
+            // Old action-based particle system (MATCHES MAIN MENU)
+            // Track movement state for movement start particles
             const wasMovingLeft = shopHubPlayer.prevVelocityX !== undefined && shopHubPlayer.prevVelocityX < -0.5;
             const wasMovingRight = shopHubPlayer.prevVelocityX !== undefined && shopHubPlayer.prevVelocityX > 0.5;
             const isMovingLeft = shopHubPlayer.velocityX < -0.5;
             const isMovingRight = shopHubPlayer.velocityX > 0.5;
 
+            // White particles on movement START (when starting to move from stopped/opposite direction)
             if (isMovingLeft && !wasMovingLeft && Math.random() < 0.3) {
                 spawnParticles(shopHubPlayer.x + shopHubPlayer.width / 2, shopHubPlayer.y + shopHubPlayer.height / 2, 2, 'rgb(255, 255, 255)', shopHubPlayer.currentSize);
             }
@@ -4533,6 +4552,7 @@
                 spawnParticles(shopHubPlayer.x + shopHubPlayer.width / 2, shopHubPlayer.y + shopHubPlayer.height / 2, 2, 'rgb(255, 255, 255)', shopHubPlayer.currentSize);
             }
 
+            // Orange speed-based particles (when moving fast horizontally)
             const speed = Math.abs(shopHubPlayer.velocityX);
             if (speed > 0.5) {
                 const particleChance = Math.min(speed / 10, 0.8);
@@ -4542,100 +4562,120 @@
                 }
             }
 
+            // Store current velocity for next frame
             shopHubPlayer.prevVelocityX = shopHubPlayer.velocityX;
 
-            // Check if player pressed space on a portal
-            if (standingOnPlatform && (shopHubKeys[' '] || shopHubKeys['Space'])) {
-                if (standingOnPlatform.action === 'exit') {
-                    shopHubActive = false;
-                    backToMainMenu();
-                } else if (standingOnPlatform.action === 'cosmetics') {
-                    shopHubActive = false;
-                    showCosmeticsShop();
-                } else if (standingOnPlatform.action === 'backpack') {
-                    shopHubActive = false;
-                    showBackpackShop();
-                }
-                shopHubKeys[' '] = false;
-                shopHubKeys['Space'] = false;
-            }
-
-            // STEP 4: Jump mechanics
-            if ((shopHubKeys['w'] || shopHubKeys['ArrowUp'] || shopHubKeys[' '] || shopHubKeys['Space']) && isGrounded && !shopHubIsJumping) {
+            // Jump with variable height based on hold time (W or Up Arrow only, NOT space) (MATCHES MAIN MENU)
+            if ((shopHubKeys['w'] || shopHubKeys['ArrowUp']) && isGrounded && !shopHubIsJumping) {
+                // Start jump immediately with strong initial velocity
+                const sizeScale = shopHubPlayer.currentSize / 40;
+                shopHubPlayer.velocityY = -1.5 * sizeScale; // Strong initial jump
                 shopHubIsJumping = true;
-                shopHubPlayer.jumpCharge = 0;
+                shopHubPlayer.jumpHoldTime = 0;
+                // White jump particles
+                spawnParticles(shopHubPlayer.x + shopHubPlayer.width / 2, shopHubPlayer.y + shopHubPlayer.height, 12, 'rgb(255, 255, 255)', shopHubPlayer.currentSize);
             }
 
-            if (shopHubIsJumping) {
-                shopHubPlayer.jumpCharge += JUMP_CHARGE_RATE * deltaTime;
+            // Continue adding upward velocity while holding button (extends jump height)
+            if (shopHubIsJumping && (shopHubKeys['w'] || shopHubKeys['ArrowUp']) && shopHubPlayer.velocityY < 0 && shopHubPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+                const sizeScale = shopHubPlayer.currentSize / 40;
+                shopHubPlayer.jumpHoldTime += deltaTime;
 
-                if (!(shopHubKeys['w'] || shopHubKeys['ArrowUp'] || shopHubKeys[' '] || shopHubKeys['Space'])) {
-                    const jumpFraction = Math.min(shopHubPlayer.jumpCharge / (MAX_JUMP_HOLD_TIME / 16.67), 1);
-                    const jumpPower = JUMP_POWER * jumpFraction * sizeScale;
-                    shopHubPlayer.velocityY = -jumpPower;
-                    shopHubIsJumping = false;
-                    shopHubPlayer.jumpCharge = 0;
-
-                    spawnParticles(shopHubPlayer.x + shopHubPlayer.width / 2, shopHubPlayer.y + shopHubPlayer.height, 5, 'rgb(200, 200, 200)', shopHubPlayer.currentSize);
-                }
-
-                if (shopHubPlayer.jumpCharge >= (MAX_JUMP_HOLD_TIME / 16.67)) {
-                    shopHubPlayer.velocityY = -JUMP_POWER * sizeScale;
-                    shopHubIsJumping = false;
-                    shopHubPlayer.jumpCharge = 0;
-
-                    spawnParticles(shopHubPlayer.x + shopHubPlayer.width / 2, shopHubPlayer.y + shopHubPlayer.height, 5, 'rgb(200, 200, 200)', shopHubPlayer.currentSize);
+                // Add upward acceleration while holding (max height = 4x playerSize + 1px)
+                const maxJumpVelocity = JUMP_POWER * sizeScale;
+                if (Math.abs(shopHubPlayer.velocityY) < maxJumpVelocity && shopHubPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+                    shopHubPlayer.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
                 }
             }
 
-            if (!isGrounded && !shopHubIsJumping) {
-                shopHubPlayer.jumpCharge = 0;
+            // Stop adding velocity when button released
+            if (shopHubIsJumping && (!shopHubKeys['w'] && !shopHubKeys['ArrowUp'])) {
+                shopHubIsJumping = false;
             }
 
-            // STEP 5: Apply friction
+            // Stop jump when time limit exceeded
+            if (shopHubIsJumping && shopHubPlayer.jumpHoldTime >= MAX_JUMP_HOLD_TIME) {
+                shopHubIsJumping = false;
+            }
+
+            // Reset jump state when grounded
+            if (isGrounded && shopHubPlayer.velocityY >= 0) {
+                shopHubIsJumping = false;
+            }
+
+            // Fast-fall particles (white) - spawn when holding down/S in air (MATCHES MAIN MENU)
+            if ((shopHubKeys['s'] || shopHubKeys['ArrowDown']) && !isGrounded && shopHubPlayer.velocityY > 0) {
+                // Spawn particles continuously during fast fall
+                if (Math.random() < 0.3) { // 30% chance each frame for smooth particle trail
+                    spawnParticles(shopHubPlayer.x + shopHubPlayer.width / 2, shopHubPlayer.y, 3, 'rgb(255, 255, 255)', shopHubPlayer.currentSize);
+                }
+            }
+
+            // Apply friction using exponential decay (MATCHES MAIN MENU)
             if (isGrounded) {
                 shopHubPlayer.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
             } else {
                 shopHubPlayer.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
             }
 
-            // STEP 6: Cap velocities
-            const maxSpeed = isGrounded ? GROUND_MAX_SPEED : AIR_MAX_SPEED;
-            shopHubPlayer.velocityX = Math.max(-maxSpeed, Math.min(maxSpeed, shopHubPlayer.velocityX));
-            shopHubPlayer.velocityY = Math.min(shopHubPlayer.velocityY, 10);
+            // Cap vertical velocity to prevent tunneling (scaled by size) (MATCHES MAIN MENU)
+            const maxFallSpeed = 8 * sizeScale;
+            shopHubPlayer.velocityY = Math.min(shopHubPlayer.velocityY, maxFallSpeed);
 
-            // STEP 7: Update position
+            // Limit horizontal speed (scaled by size) (MATCHES MAIN MENU)
+            const scaledMaxSpeed = GROUND_MAX_SPEED * sizeScale;
+            shopHubPlayer.velocityX = Math.max(-scaledMaxSpeed, Math.min(scaledMaxSpeed, shopHubPlayer.velocityX));
+
+            // Update position HORIZONTALLY first, then check X collisions (MATCHES MAIN MENU)
             shopHubPlayer.x += shopHubPlayer.velocityX * deltaTime;
+
+            // Check horizontal collisions
+            for (const platform of shopHubPlatforms) {
+                if (checkCollision(shopHubPlayer, platform)) {
+                    if (shopHubPlayer.velocityX > 0) {
+                        // Moving right, hit left side of platform
+                        shopHubPlayer.x = platform.x - shopHubPlayer.width;
+                    } else if (shopHubPlayer.velocityX < 0) {
+                        // Moving left, hit right side of platform
+                        shopHubPlayer.x = platform.x + platform.width;
+                    }
+                    shopHubPlayer.velocityX = 0;
+                }
+            }
+
+            // Update position VERTICALLY, then check Y collisions (MATCHES MAIN MENU)
             shopHubPlayer.y += shopHubPlayer.velocityY * deltaTime;
 
-            // STEP 8: Check collisions
+            // Check vertical collisions
             for (const platform of shopHubPlatforms) {
-                if (shopHubPlayer.x + shopHubPlayer.width > platform.x &&
-                    shopHubPlayer.x < platform.x + platform.width &&
-                    shopHubPlayer.y + shopHubPlayer.height > platform.y &&
-                    shopHubPlayer.y < platform.y + platform.height) {
-
-                    const overlapLeft = (shopHubPlayer.x + shopHubPlayer.width) - platform.x;
-                    const overlapRight = (platform.x + platform.width) - shopHubPlayer.x;
-                    const overlapTop = (shopHubPlayer.y + shopHubPlayer.height) - platform.y;
-                    const overlapBottom = (platform.y + platform.height) - shopHubPlayer.y;
-
-                    const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
-
-                    if (minOverlap === overlapTop) {
+                if (checkCollision(shopHubPlayer, platform)) {
+                    if (shopHubPlayer.velocityY > 0) {
+                        // Moving down, hit top of platform
+                        // White landing particles if falling with significant velocity
+                        if (shopHubPlayer.velocityY > 2) {
+                            spawnParticles(shopHubPlayer.x + shopHubPlayer.width / 2, shopHubPlayer.y + shopHubPlayer.height, 8, 'rgb(255, 255, 255)', shopHubPlayer.currentSize);
+                        }
                         shopHubPlayer.y = platform.y - shopHubPlayer.height;
                         shopHubPlayer.velocityY = 0;
-                    } else if (minOverlap === overlapBottom) {
+                    } else if (shopHubPlayer.velocityY < 0) {
+                        // Moving up, hit bottom of platform
                         shopHubPlayer.y = platform.y + platform.height;
                         shopHubPlayer.velocityY = 0;
-                    } else if (minOverlap === overlapLeft) {
-                        shopHubPlayer.x = platform.x - shopHubPlayer.width;
-                        shopHubPlayer.velocityX = 0;
-                    } else if (minOverlap === overlapRight) {
-                        shopHubPlayer.x = platform.x + platform.width;
-                        shopHubPlayer.velocityX = 0;
+                        shopHubIsJumping = false;
                     }
                 }
+            }
+
+            // Keep player in bounds (but allow vertical movement) (MATCHES MAIN MENU)
+            if (shopHubPlayer.x < 0) shopHubPlayer.x = 0;
+            if (shopHubPlayer.x > 1200 - shopHubPlayer.width) shopHubPlayer.x = 1200 - shopHubPlayer.width;
+
+            // Respawn if fall too far
+            if (shopHubPlayer.y > 1500) {
+                shopHubPlayer.x = 600 - 20;
+                shopHubPlayer.y = 720 - 40;
+                shopHubPlayer.velocityX = 0;
+                shopHubPlayer.velocityY = 0;
             }
         }
 
@@ -4717,18 +4757,40 @@
                     ctx.fillText(platform.label, platform.x + platform.width / 2, platform.y + platform.height / 2 + 5);
                     ctx.shadowBlur = 0;
                 } else {
-                    // Boundary platforms - standardized
+                    // Boundary platforms - green platform - standardized (MATCHES MAIN MENU)
                     ctx.fillStyle = '#4CAF50';
                     ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+
+                    // Thicker dark border (inside edge)
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 4;
+                    ctx.strokeRect(platform.x + 2, platform.y + 2, platform.width - 4, platform.height - 4);
+
+                    // Inner 40x40 grid lines
+                    ctx.strokeStyle = '#388E3C';
+                    ctx.lineWidth = 1;
+                    for (let gx = 40; gx < platform.width; gx += 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(platform.x + gx, platform.y);
+                        ctx.lineTo(platform.x + gx, platform.y + platform.height);
+                        ctx.stroke();
+                    }
+                    for (let gy = 40; gy < platform.height; gy += 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(platform.x, platform.y + gy);
+                        ctx.lineTo(platform.x + platform.width, platform.y + gy);
+                        ctx.stroke();
+                    }
                 }
             }
 
-            // Draw particles BEFORE player so they're behind the player
+            // Draw particles (MATCHES MAIN MENU - using camera coords and deltaTime)
             updateAndDrawParticles(ctx, 0, 0, 1);
 
-            // Draw player (pass 0, 0 for camera since shop hub has no camera)
+            // Draw player (MATCHES MAIN MENU)
             if (shopHubPlayer) {
-                shopHubPlayer.draw(ctx, 0, 0);
+                shopHubPlayer.updateTrail();
+                shopHubPlayer.draw(ctx, 0, 0, false);
             }
 
             // Draw title
