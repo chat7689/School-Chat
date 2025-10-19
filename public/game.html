@@ -95,6 +95,82 @@
             box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
         }
 
+        button:disabled {
+            background: linear-gradient(135deg, #555, #777);
+            color: #999;
+            cursor: not-allowed;
+            opacity: 0.6;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        button:disabled:hover {
+            transform: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Notification container */
+        #notificationContainer {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+
+        .notification {
+            background: linear-gradient(135deg, rgba(40, 40, 40, 0.95), rgba(60, 60, 60, 0.95));
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            border-left: 4px solid #4facfe;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            min-width: 300px;
+            max-width: 400px;
+            font-size: 16px;
+            animation: slideIn 0.3s ease-out, fadeOut 0.3s ease-out 2.7s;
+            pointer-events: auto;
+        }
+
+        .notification.error {
+            border-left-color: #ff4444;
+        }
+
+        .notification.success {
+            border-left-color: #4CAF50;
+        }
+
+        .notification.warning {
+            border-left-color: #FFC107;
+        }
+
+        .notification.info {
+            border-left-color: #4facfe;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+            }
+            to {
+                opacity: 0;
+            }
+        }
+
         input, select {
             padding: 12px;
             font-size: 16px;
@@ -386,6 +462,9 @@
     </style>
 </head>
 <body>
+    <!-- Notification Container -->
+    <div id="notificationContainer"></div>
+
     <!-- Main Menu Canvas (Interactive Platformer) -->
     <canvas id="menuCanvas" width="1200" height="800"></canvas>
     <div class="menu-hud" id="menuHUD" style="display: none;">
@@ -4519,7 +4598,7 @@
                 lastFrameTime = currentTime;
 
                 updateShopHub(deltaTime);
-                renderShopHub(ctx);
+                renderShopHub(ctx, deltaTime);
 
                 requestAnimationFrame(shopHubLoop);
             }
@@ -4722,7 +4801,7 @@
             }
         }
 
-        function renderShopHub(ctx) {
+        function renderShopHub(ctx, deltaTime = 1) {
             ctx.clearRect(0, 0, 1200, 800);
 
             // Sky background
@@ -4828,7 +4907,7 @@
             }
 
             // Draw particles (MATCHES MAIN MENU - using camera coords and deltaTime)
-            updateAndDrawParticles(ctx, 0, 0, 1);
+            updateAndDrawParticles(ctx, 0, 0, deltaTime);
 
             // Draw player (MATCHES MAIN MENU)
             if (shopHubPlayer) {
@@ -5110,7 +5189,7 @@
 
         async function buyCosmetic(category, itemId, price) {
             if (secureCredits < price) {
-                alert(`Not enough credits in your BASE!\n\nYou need ${price} credits but only have ${secureCredits} in your base.\n\nGo to your BASE and place more blocks to earn secure credits.`);
+                showNotification(`Not enough BASE credits! Need ${price}, have ${secureCredits}. Build your base to earn more.`, 'error');
                 return;
             }
 
@@ -5120,17 +5199,18 @@
             userCosmetics[category].push(itemId);
             await database.ref('players/' + currentUser.uid + '/cosmetics').set(userCosmetics);
 
+            showNotification('Cosmetic purchased!', 'success');
             updateCosmeticsShopUI();
         }
 
         async function buyBackpack(size, price) {
             if (secureCredits < price) {
-                alert(`Not enough credits in your BASE!\n\nYou need ${price} credits but only have ${secureCredits} in your base.\n\nGo to your BASE and place more blocks to earn secure credits.`);
+                showNotification(`Not enough BASE credits! Need ${price}, have ${secureCredits}. Build your base to earn more.`, 'error');
                 return;
             }
 
             if (backpackSize >= size) {
-                alert('You already have this backpack or better!');
+                showNotification('You already have this backpack or better!', 'warning');
                 return;
             }
 
@@ -5140,7 +5220,7 @@
             backpackSize = size;
             await database.ref('players/' + currentUser.uid + '/backpackSize').set(backpackSize);
 
-            alert(`Backpack upgraded! You can now carry ${backpackSize} credits.`);
+            showNotification(`Backpack upgraded to ${backpackSize} slots!`, 'success');
             updateBackpackShopUI();
         }
 
@@ -6248,6 +6328,21 @@
             document.getElementById('hud').style.display = 'none';
             document.getElementById('practiceBackBtn').style.display = 'none';
             initMainMenu();
+        }
+
+        // Notification system
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('notificationContainer');
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+
+            container.appendChild(notification);
+
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
         }
 
         // Screen management
