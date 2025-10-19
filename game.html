@@ -3159,8 +3159,10 @@
 
         function generatePracticePlatform() {
             const lastPlatform = practiceMode.platforms[practiceMode.platforms.length - 1];
+
+            // First platform should be at player spawn location (100, 340 = just below player at 300)
             const baseX = lastPlatform ? lastPlatform.x + lastPlatform.width + Math.random() * 150 + 50 : 0;
-            const baseY = lastPlatform ? lastPlatform.y + (Math.random() - 0.5) * 100 : 500;
+            const baseY = lastPlatform ? lastPlatform.y + (Math.random() - 0.5) * 100 : 340;
 
             // Width must be multiples of 40 (40x40 blocks only)
             const numBlocks = Math.floor(Math.random() * 4) + 2; // 2-5 blocks wide
