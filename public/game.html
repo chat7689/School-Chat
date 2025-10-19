@@ -747,16 +747,16 @@
         let raceIsJumping = false;
 
         // Game constants - TUNED VALUES
-        const GRAVITY = 0.132; // Tuned for perfect feel
-        const MOVE_SPEED = 0.45; // Tuned horizontal movement speed
-        const GROUND_MAX_SPEED = 5.625; // Max speed on ground
-        const AIR_MAX_SPEED = 7.0313; // Max speed in air (1.25x ground speed)
+        let GRAVITY = 0.132; // Tuned for perfect feel
+        let MOVE_SPEED = 0.45; // Tuned horizontal movement speed
+        let GROUND_MAX_SPEED = 5.625; // Max speed on ground
+        let AIR_MAX_SPEED = 7.0313; // Max speed in air (1.25x ground speed)
         const AIR_RESISTANCE = 0.88;
         const GROUND_FRICTION = 0.94;
         const GROUND_ACCELERATION = 0.15; // Gradual acceleration when grounded
-        const JUMP_POWER = 5.13; // Tuned jump power for perfect height
+        let JUMP_POWER = 5.13; // Tuned jump power for perfect height
         const FAST_FALL_MULTIPLIER = 3.5; // 1.75x stronger than before (was 2.0)
-        const JUMP_CHARGE_RATE = 0.41; // Tuned charge rate for responsive variable jumps
+        let JUMP_CHARGE_RATE = 0.41; // Tuned charge rate for responsive variable jumps
         const MAX_JUMP_HOLD_TIME = 16.67; // Maximum time (ms) to hold jump button for max height
 
         // Game feel constants
