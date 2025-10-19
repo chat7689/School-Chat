@@ -169,7 +169,10 @@
 
                 // Set auth persistence to SESSION - lasts until browser closes
                 // (NONE would log out immediately when navigating from game.html)
-                auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+                await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+
+                // Now that Firebase is initialized, set up auth listener
+                initializeAuthListener();
             } catch (error) {
                 console.error('Initialization error:', error);
                 alert('Failed to initialize. Please refresh the page.');
@@ -209,43 +212,45 @@
             'tmalone01@4j.lane.edu'
         ];
 
-        auth.onAuthStateChanged(async (user) => {
-            if (!user) {
-                window.location.href = 'index.html';
-            } else {
-                currentUser = user;
-
-                // Get username
-                const userSnapshot = await database.ref('users/' + user.uid).once('value');
-                const userData = userSnapshot.val();
-
-                if (userData && userData.username) {
-                    currentUsername = userData.username;
+        function initializeAuthListener() {
+            auth.onAuthStateChanged(async (user) => {
+                if (!user) {
+                    window.location.href = 'index.html';
                 } else {
-                    // Extract username from email (format: username@speedrun.local)
-                    currentUsername = user.email.split('@')[0];
+                    currentUser = user;
 
-                    // Save username to database for future use
-                    await database.ref('users/' + user.uid).set({
-                        username: currentUsername,
-                        createdAt: firebase.database.ServerValue.TIMESTAMP
-                    });
+                    // Get username
+                    const userSnapshot = await database.ref('users/' + user.uid).once('value');
+                    const userData = userSnapshot.val();
+
+                    if (userData && userData.username) {
+                        currentUsername = userData.username;
+                    } else {
+                        // Extract username from email (format: username@speedrun.local)
+                        currentUsername = user.email.split('@')[0];
+
+                        // Save username to database for future use
+                        await database.ref('users/' + user.uid).set({
+                            username: currentUsername,
+                            createdAt: firebase.database.ServerValue.TIMESTAMP
+                        });
+                    }
+
+                    // Require password every time the page is accessed
+                    const password = prompt('Enter console password:');
+                    if (btoa(password || '') !== window.AppConfig.admin.passwordHash) {
+                        alert('Incorrect password. Access denied.');
+                        window.location.href = 'game.html';
+                        return;
+                    }
+
+                    document.getElementById('username').textContent = `👤 ${currentUsername} (ADMIN)`;
+
+                    addOutput('✅ Admin access granted', 'success');
+                    addOutput('⚠️  This is a global admin console - commands affect ALL users', 'warning');
                 }
-
-                // Require password every time the page is accessed
-                const password = prompt('Enter console password:');
-                if (btoa(password || '') !== window.AppConfig.admin.passwordHash) {
-                    alert('Incorrect password. Access denied.');
-                    window.location.href = 'game.html';
-                    return;
-                }
-
-                document.getElementById('username').textContent = `👤 ${currentUsername} (ADMIN)`;
-
-                addOutput('✅ Admin access granted', 'success');
-                addOutput('⚠️  This is a global admin console - commands affect ALL users', 'warning');
-            }
-        });
+            });
+        }
 
         const commandInput = document.getElementById('commandInput');
         const outputContainer = document.getElementById('output');
