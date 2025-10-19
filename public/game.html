@@ -3001,12 +3001,29 @@
                 }
             }
 
-            // Scale factors based on player size (from level creator) - freeze movement during transition
+            // Check if player is grounded (calculate BEFORE physics)
+            let isGrounded = false;
+            for (const platform of practiceMode.platforms) {
+                const onTop = player.y + player.height >= platform.y &&
+                              player.y + player.height <= platform.y + 5;
+                const horizontalOverlap = player.x + player.width > platform.x &&
+                                         player.x < platform.x + platform.width;
+                if (onTop && horizontalOverlap) {
+                    isGrounded = true;
+                    break;
+                }
+            }
+
+            // STEP 1: Apply gravity with fast fall (scaled by size) - MATCHES MAIN MENU
+            if ((practiceMode.keys['s'] || practiceMode.keys['ArrowDown']) && !isGrounded) {
+                player.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
+            } else {
+                player.velocityY += GRAVITY * sizeScale * deltaTime;
+            }
+
+            // STEP 2: Handle input (movement scaled by size) - freeze movement during transition
             if (!player.sizeTransitioning) {
-
-                // Handle input - scaled by size like level creator
                 const scaledMoveSpeed = MOVE_SPEED * sizeScale;
-
                 if (practiceMode.keys['a'] || practiceMode.keys['ArrowLeft']) {
                     player.velocityX -= scaledMoveSpeed * deltaTime;
                 }
@@ -3043,12 +3060,8 @@
             // Store current velocity for next frame
             player.prevVelocityX = player.velocityX;
 
-            // Check if player is grounded (use previous frame state)
-            const isGrounded = player.wasGrounded || false;
-
-            // Jump with variable height based on hold time
+            // STEP 3: Jump with variable height based on hold time - MATCHES MAIN MENU
             if ((practiceMode.keys['w'] || practiceMode.keys['ArrowUp'] || practiceMode.keys[' '] || practiceMode.keys['Space']) && isGrounded && !practiceIsJumping) {
-                // Start jump immediately with strong initial velocity
                 player.velocityY = -1.5 * sizeScale; // Strong initial jump
                 practiceIsJumping = true;
                 player.jumpHoldTime = 0;
@@ -3059,8 +3072,6 @@
             // Continue adding upward velocity while holding button (extends jump height)
             if (practiceIsJumping && (practiceMode.keys['w'] || practiceMode.keys['ArrowUp'] || practiceMode.keys[' '] || practiceMode.keys['Space']) && player.velocityY < 0 && player.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
                 player.jumpHoldTime += deltaTime;
-
-                // Add upward acceleration while holding (max height = 4x playerSize + 1px)
                 const maxJumpVelocity = JUMP_POWER * sizeScale;
                 if (Math.abs(player.velocityY) < maxJumpVelocity && player.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
                     player.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
@@ -3077,19 +3088,15 @@
                 practiceIsJumping = false;
             }
 
-            // Apply gravity scaled by size (from level creator)
-            if ((practiceMode.keys['s'] || practiceMode.keys['ArrowDown']) && !player.wasGrounded && player.velocityY > 0) {
-                player.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
-                // Spawn particles continuously during fast fall
+            // Fast-fall particles (white) - spawn when holding down/S in air - MATCHES MAIN MENU
+            if ((practiceMode.keys['s'] || practiceMode.keys['ArrowDown']) && !isGrounded && player.velocityY > 0) {
                 if (Math.random() < 0.3) { // 30% chance each frame for smooth particle trail
                     spawnParticles(player.x + player.width / 2, player.y, 3, 'rgb(255, 255, 255)', player.currentSize);
                 }
-            } else {
-                player.velocityY += GRAVITY * sizeScale * deltaTime;
             }
 
-            // Apply friction using exponential decay (use previous frame's grounded state)
-            if (player.wasGrounded) {
+            // STEP 4: Apply friction - MATCHES MAIN MENU
+            if (isGrounded) {
                 player.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
             } else {
                 player.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
