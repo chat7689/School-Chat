@@ -2702,7 +2702,9 @@
             cameraY: 0,
             keys: {},
             respawnCountdown: 0, // Countdown timer before respawn
-            isDead: false // Whether player is in death state
+            isDead: false, // Whether player is in death state
+            startCountdown: 0, // Countdown at level start (3 seconds)
+            isStarting: false // Whether level is starting
         };
 
         function startPracticeMode() {
@@ -2729,6 +2731,9 @@
                 practiceMode.platformsPassed = 0;
                 practiceMode.creditsCollected = 0;
                 practiceMode.lastPlatformX = -200; // Start from negative to generate from beginning
+                practiceMode.startCountdown = 180; // 3 seconds at 60fps (3 * 60)
+                practiceMode.isStarting = true;
+                practiceMode.isDead = false;
 
                 console.log('Player created:', practiceMode.player);
 
@@ -2763,13 +2768,30 @@
                 practiceMode.credits = practiceMode.credits.filter(c => c.x > practiceMode.cameraX - 200);
 
                 // Update HUD
-                document.getElementById('hud').innerHTML = `
-                    <div style="font-size: 24px; font-weight: bold;">EARN MODE</div>
-                    <div style="font-size: 18px; margin-top: 5px;">Collected This Run: ${practiceMode.creditsCollected}</div>
-                    <div style="font-size: 16px; margin-top: 3px;">Credits: ${secureCredits} <span style="font-size: 12px; color: #aaa;">(${userCredits} on hand)</span></div>
-                    <div style="font-size: 14px; margin-top: 3px; color: #aaa;">Active Credits: ${practiceMode.credits.filter(c => !c.collected).length}</div>
-                    <div style="font-size: 16px; color: #FFD700; margin-top: 5px;">Collect coins!</div>
-                `;
+                let hudContent = '';
+                if (practiceMode.isStarting) {
+                    const countdownNum = Math.ceil(practiceMode.startCountdown / 60);
+                    hudContent = `
+                        <div style="font-size: 72px; font-weight: bold; color: #FFD700; text-align: center; margin-top: 200px; text-shadow: 3px 3px 6px rgba(0,0,0,0.5);">${countdownNum}</div>
+                        <div style="font-size: 24px; font-weight: bold; text-align: center; margin-top: 20px;">GET READY!</div>
+                    `;
+                } else if (practiceMode.isDead) {
+                    const respawnNum = Math.ceil(practiceMode.respawnCountdown / 60);
+                    hudContent = `
+                        <div style="font-size: 48px; font-weight: bold; color: #FF0000; text-align: center; margin-top: 200px; text-shadow: 3px 3px 6px rgba(0,0,0,0.5);">DEAD!</div>
+                        <div style="font-size: 36px; font-weight: bold; color: #FFD700; text-align: center; margin-top: 20px;">${respawnNum}</div>
+                        <div style="font-size: 18px; text-align: center; margin-top: 10px;">Respawning...</div>
+                    `;
+                } else {
+                    hudContent = `
+                        <div style="font-size: 24px; font-weight: bold;">EARN MODE</div>
+                        <div style="font-size: 18px; margin-top: 5px;">Collected This Run: ${practiceMode.creditsCollected}</div>
+                        <div style="font-size: 16px; margin-top: 3px;">Credits: ${secureCredits} <span style="font-size: 12px; color: #aaa;">(${userCredits} on hand)</span></div>
+                        <div style="font-size: 14px; margin-top: 3px; color: #aaa;">Active Credits: ${practiceMode.credits.filter(c => !c.collected).length}</div>
+                        <div style="font-size: 16px; color: #FFD700; margin-top: 5px;">Collect coins!</div>
+                    `;
+                }
+                document.getElementById('hud').innerHTML = hudContent;
 
                 // Render
                 ctx.fillStyle = '#87CEEB';
@@ -2937,15 +2959,28 @@
             const player = practiceMode.player;
             const sizeScale = player.currentSize / 40;
 
+            // Handle start countdown
+            if (practiceMode.isStarting) {
+                practiceMode.startCountdown -= deltaTime;
+                if (practiceMode.startCountdown <= 0) {
+                    practiceMode.isStarting = false;
+                }
+                // Freeze player during countdown
+                return;
+            }
+
             // Handle respawn countdown
             if (practiceMode.isDead) {
                 practiceMode.respawnCountdown -= deltaTime;
                 if (practiceMode.respawnCountdown <= 0) {
-                    // Return to level select menu instead of respawning
-                    document.getElementById('practiceCanvas').style.display = 'none';
-                    document.getElementById('hud').style.display = 'none';
-                    document.getElementById('practiceBackBtn').style.display = 'none';
-                    showPracticeLevels(); // Go back to level select
+                    // Respawn at start position
+                    player.x = 100;
+                    player.y = 300;
+                    player.velocityX = 0;
+                    player.velocityY = 0;
+                    practiceMode.isDead = false;
+                    practiceMode.startCountdown = 180; // 3 second countdown before restart
+                    practiceMode.isStarting = true;
                 }
                 // Skip physics while dead
                 return;
@@ -3235,13 +3270,14 @@
                 }
             }
 
-            // Die if fall off - return to main menu with credits intact
+            // Die if fall off - respawn at start
             if (player.y > 900) {
                 // Death particles
                 spawnParticles(player.x + player.width / 2, player.y + player.height / 2, 30, 'rgb(255, 255, 255)');
 
-                // Exit earn mode and return to menu (credits already on-hand)
-                exitPracticeMode();
+                // Kill player and trigger respawn countdown
+                practiceMode.isDead = true;
+                practiceMode.respawnCountdown = 180; // 3 seconds at 60fps
             }
 
             // Update camera
