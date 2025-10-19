@@ -1914,6 +1914,8 @@
 
         function drawCommentLines() {
             const svg = document.getElementById('comment-lines-svg');
+            if (!svg) return; // Element doesn't exist in test mode, skip drawing comment lines
+
             svg.innerHTML = ''; // Clear existing lines
 
             const canvas = document.getElementById('canvas');
