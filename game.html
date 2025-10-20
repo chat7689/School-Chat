@@ -2279,25 +2279,43 @@
 
                 // Load leaderboard to find player's position and display leaderboard
                 try {
-                    const scoresSnapshot = await database.ref('scores/' + levelId).once('value');
-                    const scores = scoresSnapshot.val();
+                    const timesSnapshot = await database.ref('times_history').once('value');
+                    const timesData = timesSnapshot.val();
 
-                    if (scores) {
+                    if (timesData) {
                         // Get player data for usernames
                         const playersSnapshot = await database.ref('players').once('value');
                         const playersData = playersSnapshot.val();
 
-                        const sortedScores = Object.entries(scores)
-                            .map(([uid, data]) => ({
-                                uid,
-                                username: playersData?.[uid]?.username || 'Unknown',
-                                time: data.time
-                            }))
-                            .sort((a, b) => a.time - b.time);
+                        const leaderboard = [];
 
-                        practiceMode.leaderboardData = sortedScores.slice(0, 10); // Top 10
-                        practiceMode.totalPlayers = sortedScores.length;
-                        const playerIndex = sortedScores.findIndex(s => s.uid === currentUser.uid);
+                        // Process each user's times for this level
+                        for (const [uid, userTimes] of Object.entries(timesData)) {
+                            if (userTimes[levelId]) {
+                                // Find best time for this user
+                                let bestTime = Infinity;
+                                Object.values(userTimes[levelId]).forEach(timeEntry => {
+                                    if (timeEntry.time < bestTime) {
+                                        bestTime = timeEntry.time;
+                                    }
+                                });
+
+                                if (bestTime < Infinity) {
+                                    leaderboard.push({
+                                        uid: uid,
+                                        username: playersData?.[uid]?.username || 'Unknown',
+                                        time: bestTime
+                                    });
+                                }
+                            }
+                        }
+
+                        // Sort by time
+                        leaderboard.sort((a, b) => a.time - b.time);
+
+                        practiceMode.leaderboardData = leaderboard.slice(0, 10); // Top 10
+                        practiceMode.totalPlayers = leaderboard.length;
+                        const playerIndex = leaderboard.findIndex(s => s.uid === currentUser.uid);
                         if (playerIndex !== -1) {
                             practiceMode.leaderboardPosition = playerIndex + 1;
                         }
