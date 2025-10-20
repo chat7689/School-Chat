@@ -2385,10 +2385,15 @@
                 // Load leaderboard initially
                 await loadLeaderboard();
 
-                // Find the leftmost platform to spawn player
+                // Use start position from level data if available, otherwise fallback to leftmost platform
                 let startX = 100;
                 let startY = -50;
-                if (levelData.platforms && levelData.platforms.length > 0) {
+                if (levelData.start) {
+                    // Use the defined start position from level creator
+                    startX = levelData.start.x;
+                    startY = levelData.start.y;
+                } else if (levelData.platforms && levelData.platforms.length > 0) {
+                    // Fallback: find leftmost platform to spawn player
                     const leftmostPlatform = levelData.platforms.reduce((prev, curr) =>
                         curr.x < prev.x ? curr : prev
                     );
