@@ -1815,6 +1815,7 @@
         let shopHubPlatforms = [];
         let shopHubKeys = {};
         let shopHubIsJumping = false;
+        let savedShopHubPosition = null; // Store player position when entering shop screens
 
         async function showPracticeLevels() {
             try {
@@ -4643,10 +4644,20 @@
                 }
             ];
 
-            // Create player on ground
-            const spawnX = 600 - 20; // Center
-            const spawnY = groundY - 40; // On top of ground
-            shopHubPlayer = new Player(spawnX, spawnY, equippedCosmetics);
+            // Create player - restore saved position if returning from shop, otherwise spawn at center
+            let spawnX, spawnY;
+            if (savedShopHubPosition) {
+                spawnX = savedShopHubPosition.x;
+                spawnY = savedShopHubPosition.y;
+                shopHubPlayer = new Player(spawnX, spawnY, equippedCosmetics);
+                shopHubPlayer.velocityX = savedShopHubPosition.velocityX;
+                shopHubPlayer.velocityY = savedShopHubPosition.velocityY;
+                savedShopHubPosition = null; // Clear saved position after restoring
+            } else {
+                spawnX = 600 - 20; // Center
+                spawnY = groundY - 40; // On top of ground
+                shopHubPlayer = new Player(spawnX, spawnY, equippedCosmetics);
+            }
 
             // Start render loop
             let lastFrameTime = performance.now();
@@ -4695,9 +4706,13 @@
                         backToMainMenu();
                     } else if (standingOnPlatform.action === 'cosmetics') {
                         shopHubActive = false;
+                        // Save player position before entering shop
+                        savedShopHubPosition = { x: shopHubPlayer.x, y: shopHubPlayer.y, velocityX: shopHubPlayer.velocityX, velocityY: shopHubPlayer.velocityY };
                         showCosmeticsShop();
                     } else if (standingOnPlatform.action === 'backpack') {
                         shopHubActive = false;
+                        // Save player position before entering shop
+                        savedShopHubPosition = { x: shopHubPlayer.x, y: shopHubPlayer.y, velocityX: shopHubPlayer.velocityX, velocityY: shopHubPlayer.velocityY };
                         showBackpackShop();
                     }
                 }
