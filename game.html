@@ -3197,6 +3197,10 @@
                 const spawnY = firstPlatform ? firstPlatform.y - 40 : 300; // 40px above platform (player height)
                 practiceMode.player = new Player(spawnX, spawnY, equippedCosmetics);
 
+                // Initialize camera to follow player from the start
+                practiceMode.cameraX = spawnX - 300;
+                practiceMode.cameraY = Math.max(0, Math.min(spawnY - 400, 300));
+
                 console.log('Player created:', practiceMode.player);
 
                 console.log('Generated platforms:', practiceMode.platforms.length);
