@@ -2796,6 +2796,67 @@
                 console.log('Default level "Size Puzzle" added to database');
             }
 
+            // The Labyrinth - Large complex level with multiple size changes
+            if (!existingLevelNames.includes('The Labyrinth')) {
+                const labyrinthData = {
+                    "platforms": [
+                        {"x": -40, "y": 0, "width": 120, "height": 40},
+                        {"x": -200, "y": 120, "width": 320, "height": 40},
+                        {"x": 200, "y": 120, "width": 40, "height": 40},
+                        {"x": 240, "y": 120, "width": 40, "height": 480},
+                        {"x": -240, "y": 120, "width": 40, "height": 480},
+                        {"x": -200, "y": 200, "width": 40, "height": 40},
+                        {"x": -80, "y": 200, "width": 320, "height": 40},
+                        {"x": -200, "y": 280, "width": 80, "height": 40},
+                        {"x": -40, "y": 280, "width": 280, "height": 40},
+                        {"x": -200, "y": 360, "width": 280, "height": 40},
+                        {"x": 160, "y": 360, "width": 80, "height": 40},
+                        {"x": -200, "y": 440, "width": 120, "height": 40},
+                        {"x": 0, "y": 440, "width": 240, "height": 40},
+                        {"x": -200, "y": 520, "width": 240, "height": 40},
+                        {"x": 120, "y": 520, "width": 120, "height": 40},
+                        {"x": 280, "y": 560, "width": 80, "height": 40},
+                        {"x": -320, "y": 560, "width": 80, "height": 40},
+                        {"x": -320, "y": 760, "width": 680, "height": 40},
+                        {"x": 280, "y": 240, "width": 40, "height": 40},
+                        {"x": -280, "y": 240, "width": 40, "height": 40}
+                    ],
+                    "hazards": [
+                        {"x": 560, "y": -480, "width": 40, "height": 1360},
+                        {"x": -560, "y": -480, "width": 40, "height": 1360},
+                        {"x": -520, "y": -480, "width": 1080, "height": 40},
+                        {"x": -520, "y": 840, "width": 1080, "height": 40}
+                    ],
+                    "growers": [
+                        {"x": -40, "y": 680, "width": 120, "height": 80}
+                    ],
+                    "shrinkers": [
+                        {"x": -320, "y": 400, "width": 80, "height": 40},
+                        {"x": 280, "y": 400, "width": 80, "height": 40},
+                        {"x": 80, "y": -160, "width": 200, "height": 40},
+                        {"x": -240, "y": -160, "width": 200, "height": 40}
+                    ],
+                    "defaultSizeBlocks": [],
+                    "backgroundBlocks": [],
+                    "foregroundBlocks": [],
+                    "triggers": [],
+                    "comments": [],
+                    "start": {"x": 0, "y": -40, "width": 40, "height": 40},
+                    "finish": {"x": -40, "y": -400, "width": 120, "height": 80},
+                    "physics": {
+                        "gravity": 0.132,
+                        "moveSpeed": 0.45,
+                        "jumpPower": 5.13,
+                        "maxSpeed": 5.625,
+                        "friction": 0.94,
+                        "airRes": 0.88,
+                        "fastFallMultiplier": 3.5
+                    }
+                };
+                await addLevelToDatabase('The Labyrinth', 'System', labyrinthData);
+                console.log('Default level "The Labyrinth" added to database');
+            }
+
         }
 
         // Practice mode (infinite runner with credit earning)
