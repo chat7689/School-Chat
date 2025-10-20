@@ -5880,17 +5880,12 @@
                 }
 
                 // Setup platforms
-                const portalWidth = 150;
-                const portalHeight = 50;
-                const levelsPerColumn = 4;
-                const numColumns = Math.ceil(availableLeaderboards.length / levelsPerColumn);
-
-                const columnSpacing = 200;
-                const totalWidth = (numColumns - 1) * columnSpacing + portalWidth;
-                const startX = (1200 - totalWidth) / 2;
+                const portalSize = 40; // 40x40px portals
+                const portalsPerRow = 3; // 3 portals wide
+                const portalSpacing = 60; // Space between portals
+                const numRows = Math.ceil(availableLeaderboards.length / portalsPerRow);
 
                 const groundY = 720;
-                const bottomPortalY = groundY - 120;
 
                 leaderboardPlatforms = [
                     // Boundary walls - thick floor (80px), side walls (40px), ceiling (40px)
@@ -5900,29 +5895,33 @@
                     { x: 0, y: 720, width: 1200, height: 80 } // Ground (80px thick - twice as thick)
                 ];
 
-                // Add "Back to Menu" portal
+                // Add "Back to Menu" portal (left side)
                 leaderboardPlatforms.push({
                     x: 100,
-                    y: bottomPortalY,
-                    width: portalWidth,
-                    height: portalHeight,
+                    y: groundY - 120,
+                    width: 100,
+                    height: 40,
                     action: 'back',
-                    label: 'BACK TO MENU'
+                    label: 'BACK'
                 });
 
-                // Create portals for each level
+                // Create portals for each level in rows of 3
                 availableLeaderboards.forEach((level, index) => {
-                    const columnIndex = Math.floor(index / levelsPerColumn);
-                    const rowIndex = index % levelsPerColumn;
+                    const colIndex = index % portalsPerRow; // 0, 1, or 2
+                    const rowIndex = Math.floor(index / portalsPerRow);
 
-                    const x = startX + columnIndex * columnSpacing;
-                    const y = bottomPortalY - rowIndex * 80;
+                    // Center the portals horizontally
+                    const totalRowWidth = (portalsPerRow * portalSize) + ((portalsPerRow - 1) * portalSpacing);
+                    const startX = (1200 - totalRowWidth) / 2;
+
+                    const x = startX + colIndex * (portalSize + portalSpacing);
+                    const y = groundY - 120 - (rowIndex * (portalSize + portalSpacing));
 
                     leaderboardPlatforms.push({
                         x: x,
                         y: y,
-                        width: portalWidth,
-                        height: portalHeight,
+                        width: portalSize,
+                        height: portalSize,
                         levelId: level.id,
                         levelName: level.name
                     });
