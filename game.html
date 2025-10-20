@@ -3043,7 +3043,6 @@
                 document.getElementById('practiceBackBtn').style.display = 'block';
 
                 practiceMode.active = true;
-                practiceMode.player = new Player(100, 300, equippedCosmetics);
                 practiceMode.platforms = [];
                 practiceMode.credits = [];
                 practiceMode.platformsPassed = 0;
@@ -3053,12 +3052,18 @@
                 practiceMode.isStarting = true;
                 practiceMode.isDead = false;
 
-                console.log('Player created:', practiceMode.player);
-
-                // Generate initial platforms
+                // Generate initial platforms first
                 for (let i = 0; i < 20; i++) {
                     generatePracticePlatform();
                 }
+
+                // Spawn player on top of first platform
+                const firstPlatform = practiceMode.platforms[0];
+                const spawnX = firstPlatform ? firstPlatform.x + 20 : 100;
+                const spawnY = firstPlatform ? firstPlatform.y - 40 : 300; // 40px above platform (player height)
+                practiceMode.player = new Player(spawnX, spawnY, equippedCosmetics);
+
+                console.log('Player created:', practiceMode.player);
 
                 console.log('Generated platforms:', practiceMode.platforms.length);
                 console.log('Generated credits:', practiceMode.credits.length);
@@ -3132,17 +3137,15 @@
                     ctx.stroke();
                 }
 
-                // Draw death zone at bottom (red warning blocks)
-                ctx.fillStyle = '#FF0000';
+                // Draw death zone at bottom (red rectangle with black outline)
                 const deathZoneY = 900 - practiceMode.cameraY;
+                ctx.fillStyle = '#FF0000';
                 ctx.fillRect(0, deathZoneY, canvas.width, canvas.height - deathZoneY);
 
-                // Draw skull icons on death zone
-                ctx.fillStyle = '#000000';
-                ctx.font = 'bold 30px Arial';
-                for (let x = 0; x < canvas.width; x += 60) {
-                    ctx.fillText('☠', x, deathZoneY + 40);
-                }
+                // Black outline on death zone
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(0, deathZoneY, canvas.width, canvas.height - deathZoneY);
 
                 // Draw platforms
                 for (const platform of practiceMode.platforms) {
