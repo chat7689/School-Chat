@@ -473,70 +473,6 @@
     <!-- Left Side Credit Panel -->
     <div id="creditPanel" style="display: none;"></div>
 
-    <!-- Physics Testing Panel -->
-    <div id="physicsPanel" style="
-        position: fixed;
-        bottom: 20px;
-        left: 20px;
-        background: linear-gradient(135deg, rgba(40, 40, 40, 0.95), rgba(60, 60, 60, 0.95));
-        backdrop-filter: blur(10px);
-        padding: 20px;
-        border-radius: 12px;
-        border: 2px solid #4facfe;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-        color: white;
-        font-family: Arial, sans-serif;
-        min-width: 300px;
-        display: none;
-        z-index: 9999;
-    ">
-        <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #FFC107;">Physics Testing</div>
-
-        <div style="margin-bottom: 12px;">
-            <label style="display: block; margin-bottom: 5px; font-size: 14px;">
-                Gravity: <span id="gravityValue">0.132</span>
-            </label>
-            <input type="range" id="gravitySlider" min="0.01" max="0.2" step="0.001" value="0.132"
-                style="width: 100%;" oninput="updatePhysics()">
-        </div>
-
-        <div style="margin-bottom: 12px;">
-            <label style="display: block; margin-bottom: 5px; font-size: 14px;">
-                Jump Power: <span id="jumpPowerValue">5.13</span>
-            </label>
-            <input type="range" id="jumpPowerSlider" min="1.0" max="10.0" step="0.01" value="5.13"
-                style="width: 100%;" oninput="updatePhysics()">
-        </div>
-
-        <div style="margin-bottom: 12px;">
-            <label style="display: block; margin-bottom: 5px; font-size: 14px;">
-                Move Speed: <span id="moveSpeedValue">0.45</span>
-            </label>
-            <input type="range" id="moveSpeedSlider" min="0.1" max="1.0" step="0.01" value="0.45"
-                style="width: 100%;" oninput="updatePhysics()">
-        </div>
-
-        <div style="margin-bottom: 12px;">
-            <label style="display: block; margin-bottom: 5px; font-size: 14px;">
-                Jump Charge Rate: <span id="jumpChargeValue">0.41</span>
-            </label>
-            <input type="range" id="jumpChargeSlider" min="0.1" max="1.0" step="0.01" value="0.41"
-                style="width: 100%;" oninput="updatePhysics()">
-        </div>
-
-        <button onclick="copyPhysicsValues()" style="
-            width: 100%;
-            padding: 10px;
-            margin-top: 10px;
-            background: linear-gradient(135deg, #4CAF50, #66BB6A);
-            border: none;
-            border-radius: 8px;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-        ">Copy Values to Console</button>
-    </div>
-
     <!-- Right Side Leaderboard Panel -->
     <div id="leaderboardPanel" style="display: none;">
         <div style="font-family: 'Inter', Arial, sans-serif; font-size: 18px; color: #fff; margin-bottom: 15px; text-align: center; font-weight: bold;">
@@ -747,16 +683,16 @@
         let raceIsJumping = false;
 
         // Game constants - TUNED VALUES
-        let GRAVITY = 0.132; // Tuned for perfect feel
-        let MOVE_SPEED = 0.45; // Tuned horizontal movement speed
-        let GROUND_MAX_SPEED = 5.625; // Max speed on ground
-        let AIR_MAX_SPEED = 7.0313; // Max speed in air (1.25x ground speed)
+        const GRAVITY = 0.132; // Tuned for perfect feel
+        const MOVE_SPEED = 0.45; // Tuned horizontal movement speed
+        const GROUND_MAX_SPEED = 5.625; // Max speed on ground
+        const AIR_MAX_SPEED = 7.0313; // Max speed in air (1.25x ground speed)
         const AIR_RESISTANCE = 0.88;
         const GROUND_FRICTION = 0.94;
         const GROUND_ACCELERATION = 0.15; // Gradual acceleration when grounded
-        let JUMP_POWER = 5.13; // Tuned jump power for perfect height
+        const JUMP_POWER = 5.13; // Tuned jump power for perfect height
         const FAST_FALL_MULTIPLIER = 3.5; // 1.75x stronger than before (was 2.0)
-        let JUMP_CHARGE_RATE = 0.41; // Tuned charge rate for responsive variable jumps
+        const JUMP_CHARGE_RATE = 0.41; // Tuned charge rate for responsive variable jumps
         const MAX_JUMP_HOLD_TIME = 16.67; // Maximum time (ms) to hold jump button for max height
 
         // Game feel constants
@@ -1424,9 +1360,6 @@
             loadMiniLeaderboard();
             document.getElementById('leaderboardPanel').style.display = 'block';
 
-            // Show physics testing panel
-            document.getElementById('physicsPanel').style.display = 'block';
-
             // Auto-refresh leaderboard every 5 seconds
             const leaderboardRefreshInterval = setInterval(() => {
                 if (canvas.style.display !== 'none') {
@@ -1679,16 +1612,34 @@
 
             // Jump with variable height based on hold time (W or Up Arrow only, NOT space)
             if ((menuKeys['w'] || menuKeys['ArrowUp']) && isGrounded && !menuIsJumping) {
-                // Jump with smooth arc (instant full power, no charge)
+                // Start jump immediately with strong initial velocity
                 const sizeScale = menuPlayer.currentSize / 40;
-                menuPlayer.velocityY = -JUMP_POWER * sizeScale; // Full jump power instantly
+                menuPlayer.velocityY = -1.5 * sizeScale; // Strong initial jump
                 menuIsJumping = true;
+                menuPlayer.jumpHoldTime = 0;
                 // White jump particles
                 spawnParticles(menuPlayer.x + menuPlayer.width / 2, menuPlayer.y + menuPlayer.height, 12, 'rgb(255, 255, 255)', menuPlayer.currentSize);
             }
 
-            // Reset jump flag when button released
+            // Continue adding upward velocity while holding button (extends jump height)
+            if (menuIsJumping && (menuKeys['w'] || menuKeys['ArrowUp']) && menuPlayer.velocityY < 0 && menuPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+                const sizeScale = menuPlayer.currentSize / 40;
+                menuPlayer.jumpHoldTime += deltaTime;
+
+                // Add upward acceleration while holding (max height = 4x playerSize + 1px)
+                const maxJumpVelocity = JUMP_POWER * sizeScale;
+                if (Math.abs(menuPlayer.velocityY) < maxJumpVelocity && menuPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+                    menuPlayer.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
+                }
+            }
+
+            // Stop adding velocity when button released
             if (menuIsJumping && (!menuKeys['w'] && !menuKeys['ArrowUp'])) {
+                menuIsJumping = false;
+            }
+
+            // Stop jump when time limit exceeded
+            if (menuIsJumping && menuPlayer.jumpHoldTime >= MAX_JUMP_HOLD_TIME) {
                 menuIsJumping = false;
             }
 
@@ -2044,16 +1995,34 @@
                 levelSelectKeys['Space'] = false;
             }
 
-            // STEP 4: Jump with smooth arc (instant full power, no charge)
+            // STEP 4: Jump with variable height based on hold time (W or Up only, NOT space)
             if ((levelSelectKeys['w'] || levelSelectKeys['ArrowUp']) && isGrounded && !levelSelectIsJumping) {
-                levelSelectPlayer.velocityY = -JUMP_POWER * sizeScale; // Full jump power instantly
+                // Start jump immediately with strong initial velocity
+                levelSelectPlayer.velocityY = -1.5 * sizeScale; // Strong initial jump
                 levelSelectIsJumping = true;
+                levelSelectPlayer.jumpHoldTime = 0;
                 // White jump particles
                 spawnParticles(levelSelectPlayer.x + levelSelectPlayer.width / 2, levelSelectPlayer.y + levelSelectPlayer.height, 12, 'rgb(255, 255, 255)', levelSelectPlayer.currentSize);
             }
 
-            // Reset jump flag when button released
+            // Continue adding upward velocity while holding button (extends jump height)
+            if (levelSelectIsJumping && (levelSelectKeys['w'] || levelSelectKeys['ArrowUp']) && levelSelectPlayer.velocityY < 0 && levelSelectPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+                levelSelectPlayer.jumpHoldTime += deltaTime;
+
+                // Add upward acceleration while holding (max height = 4x playerSize + 1px)
+                const maxJumpVelocity = JUMP_POWER * sizeScale;
+                if (Math.abs(levelSelectPlayer.velocityY) < maxJumpVelocity && levelSelectPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+                    levelSelectPlayer.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
+                }
+            }
+
+            // Stop adding velocity when button released
             if (levelSelectIsJumping && (!levelSelectKeys['w'] && !levelSelectKeys['ArrowUp'])) {
+                levelSelectIsJumping = false;
+            }
+
+            // Stop jump when time limit exceeded
+            if (levelSelectIsJumping && levelSelectPlayer.jumpHoldTime >= MAX_JUMP_HOLD_TIME) {
                 levelSelectIsJumping = false;
             }
 
@@ -3351,16 +3320,31 @@
             // Store current velocity for next frame
             player.prevVelocityX = player.velocityX;
 
-            // STEP 3: Jump with smooth arc (instant full power, no charge)
+            // STEP 3: Jump with variable height based on hold time - MATCHES MAIN MENU
             if ((practiceMode.keys['w'] || practiceMode.keys['ArrowUp'] || practiceMode.keys[' '] || practiceMode.keys['Space']) && isGrounded && !practiceIsJumping) {
-                player.velocityY = -JUMP_POWER * sizeScale; // Full jump power instantly
+                player.velocityY = -1.5 * sizeScale; // Strong initial jump
                 practiceIsJumping = true;
+                player.jumpHoldTime = 0;
                 // White jump particles
                 spawnParticles(player.x + player.width / 2, player.y + player.height, 12, 'rgb(255, 255, 255)', player.currentSize);
             }
 
-            // Reset jump flag when button released
+            // Continue adding upward velocity while holding button (extends jump height)
+            if (practiceIsJumping && (practiceMode.keys['w'] || practiceMode.keys['ArrowUp'] || practiceMode.keys[' '] || practiceMode.keys['Space']) && player.velocityY < 0 && player.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+                player.jumpHoldTime += deltaTime;
+                const maxJumpVelocity = JUMP_POWER * sizeScale;
+                if (Math.abs(player.velocityY) < maxJumpVelocity && player.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+                    player.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
+                }
+            }
+
+            // Stop adding velocity when button released
             if (practiceIsJumping && (!practiceMode.keys['w'] && !practiceMode.keys['ArrowUp'] && !practiceMode.keys[' '] && !practiceMode.keys['Space'])) {
+                practiceIsJumping = false;
+            }
+
+            // Stop jump when time limit exceeded
+            if (practiceIsJumping && player.jumpHoldTime >= MAX_JUMP_HOLD_TIME) {
                 practiceIsJumping = false;
             }
 
@@ -4304,16 +4288,34 @@
             // Store current velocity for next frame
             player.prevVelocityX = player.velocityX;
 
-            // Jump with smooth arc (instant full power, no charge)
+            // Jump with variable height based on hold time (W or Up only, NOT space)
             if ((raceState.keys['w'] || raceState.keys['ArrowUp']) && isGrounded && !raceIsJumping) {
-                player.velocityY = -JUMP_POWER * sizeScale; // Full jump power instantly
+                // Start jump immediately with strong initial velocity
+                player.velocityY = -1.5 * sizeScale; // Strong initial jump
                 raceIsJumping = true;
+                player.jumpHoldTime = 0;
                 // White jump particles
                 spawnParticles(player.x + player.width / 2, player.y + player.height, 12, 'rgb(255, 255, 255)', player.currentSize);
             }
 
-            // Reset jump flag when button released
+            // Continue adding upward velocity while holding button (extends jump height)
+            if (raceIsJumping && (raceState.keys['w'] || raceState.keys['ArrowUp']) && player.velocityY < 0 && player.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+                player.jumpHoldTime += deltaTime;
+
+                // Add upward acceleration while holding (max height = 4x playerSize + 1px)
+                const maxJumpVelocity = JUMP_POWER * sizeScale;
+                if (Math.abs(player.velocityY) < maxJumpVelocity && player.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+                    player.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
+                }
+            }
+
+            // Stop adding velocity when button released
             if (raceIsJumping && (!raceState.keys['w'] && !raceState.keys['ArrowUp'])) {
+                raceIsJumping = false;
+            }
+
+            // Stop jump when time limit exceeded
+            if (raceIsJumping && player.jumpHoldTime >= MAX_JUMP_HOLD_TIME) {
                 raceIsJumping = false;
             }
 
@@ -4687,17 +4689,36 @@
             // Store current velocity for next frame
             shopHubPlayer.prevVelocityX = shopHubPlayer.velocityX;
 
-            // Jump with smooth arc (instant full power, no charge)
+            // Jump with variable height based on hold time (W or Up Arrow only, NOT space) (MATCHES MAIN MENU)
             if ((shopHubKeys['w'] || shopHubKeys['ArrowUp']) && isGrounded && !shopHubIsJumping) {
+                // Start jump immediately with strong initial velocity
                 const sizeScale = shopHubPlayer.currentSize / 40;
-                shopHubPlayer.velocityY = -JUMP_POWER * sizeScale; // Full jump power instantly
+                shopHubPlayer.velocityY = -1.5 * sizeScale; // Strong initial jump
                 shopHubIsJumping = true;
+                shopHubPlayer.jumpHoldTime = 0;
                 // White jump particles
                 spawnParticles(shopHubPlayer.x + shopHubPlayer.width / 2, shopHubPlayer.y + shopHubPlayer.height, 12, 'rgb(255, 255, 255)', shopHubPlayer.currentSize);
             }
 
-            // Reset jump flag when button released
+            // Continue adding upward velocity while holding button (extends jump height)
+            if (shopHubIsJumping && (shopHubKeys['w'] || shopHubKeys['ArrowUp']) && shopHubPlayer.velocityY < 0 && shopHubPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+                const sizeScale = shopHubPlayer.currentSize / 40;
+                shopHubPlayer.jumpHoldTime += deltaTime;
+
+                // Add upward acceleration while holding (max height = 4x playerSize + 1px)
+                const maxJumpVelocity = JUMP_POWER * sizeScale;
+                if (Math.abs(shopHubPlayer.velocityY) < maxJumpVelocity && shopHubPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+                    shopHubPlayer.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
+                }
+            }
+
+            // Stop adding velocity when button released
             if (shopHubIsJumping && (!shopHubKeys['w'] && !shopHubKeys['ArrowUp'])) {
+                shopHubIsJumping = false;
+            }
+
+            // Stop jump when time limit exceeded
+            if (shopHubIsJumping && shopHubPlayer.jumpHoldTime >= MAX_JUMP_HOLD_TIME) {
                 shopHubIsJumping = false;
             }
 
@@ -5443,17 +5464,36 @@
             // Store current velocity for next frame
             basePlayer.prevVelocityX = basePlayer.velocityX;
 
-            // Jump with smooth arc (instant full power, no charge)
+            // Jump with variable height based on hold time (W or Up only, NOT space)
             if ((baseKeys['w'] || baseKeys['ArrowUp']) && isGrounded && !baseIsJumping) {
+                // Start jump immediately with strong initial velocity
                 const sizeScale = basePlayer.currentSize / 40;
-                basePlayer.velocityY = -JUMP_POWER * sizeScale; // Full jump power instantly
+                basePlayer.velocityY = -1.5 * sizeScale; // Strong initial jump
                 baseIsJumping = true;
+                basePlayer.jumpHoldTime = 0;
                 // White jump particles
                 spawnParticles(basePlayer.x + basePlayer.width / 2, basePlayer.y + basePlayer.height, 12, 'rgb(255, 255, 255)', basePlayer.currentSize);
             }
 
-            // Reset jump flag when button released
+            // Continue adding upward velocity while holding button (extends jump height)
+            if (baseIsJumping && (baseKeys['w'] || baseKeys['ArrowUp']) && basePlayer.velocityY < 0 && basePlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+                const sizeScale = basePlayer.currentSize / 40;
+                basePlayer.jumpHoldTime += deltaTime;
+
+                // Add upward acceleration while holding (max height = 4x playerSize + 1px)
+                const maxJumpVelocity = JUMP_POWER * sizeScale;
+                if (Math.abs(basePlayer.velocityY) < maxJumpVelocity && basePlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+                    basePlayer.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
+                }
+            }
+
+            // Stop adding velocity when button released
             if (baseIsJumping && (!baseKeys['w'] && !baseKeys['ArrowUp'])) {
+                baseIsJumping = false;
+            }
+
+            // Stop jump when time limit exceeded
+            if (baseIsJumping && basePlayer.jumpHoldTime >= MAX_JUMP_HOLD_TIME) {
                 baseIsJumping = false;
             }
 
@@ -5953,16 +5993,34 @@
                 leaderboardKeys['Space'] = false;
             }
 
-            // STEP 4: Jump with smooth arc (instant full power, no charge)
+            // STEP 4: Jump with variable height based on hold time (W or Up only, NOT space)
             if ((leaderboardKeys['w'] || leaderboardKeys['ArrowUp']) && isGrounded && !leaderboardIsJumping) {
-                leaderboardPlayer.velocityY = -JUMP_POWER * sizeScale; // Full jump power instantly
+                // Start jump immediately with strong initial velocity
+                leaderboardPlayer.velocityY = -1.5 * sizeScale; // Strong initial jump
                 leaderboardIsJumping = true;
+                leaderboardPlayer.jumpHoldTime = 0;
                 // White jump particles
                 spawnParticles(leaderboardPlayer.x + leaderboardPlayer.width / 2, leaderboardPlayer.y + leaderboardPlayer.height, 12, 'rgb(255, 255, 255)', leaderboardPlayer.currentSize);
             }
 
-            // Reset jump flag when button released
+            // Continue adding upward velocity while holding button (extends jump height)
+            if (leaderboardIsJumping && (leaderboardKeys['w'] || leaderboardKeys['ArrowUp']) && leaderboardPlayer.velocityY < 0 && leaderboardPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+                leaderboardPlayer.jumpHoldTime += deltaTime;
+
+                // Add upward acceleration while holding (max height = 4x playerSize + 1px)
+                const maxJumpVelocity = JUMP_POWER * sizeScale;
+                if (Math.abs(leaderboardPlayer.velocityY) < maxJumpVelocity && leaderboardPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+                    leaderboardPlayer.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
+                }
+            }
+
+            // Stop adding velocity when button released
             if (leaderboardIsJumping && (!leaderboardKeys['w'] && !leaderboardKeys['ArrowUp'])) {
+                leaderboardIsJumping = false;
+            }
+
+            // Stop jump when time limit exceeded
+            if (leaderboardIsJumping && leaderboardPlayer.jumpHoldTime >= MAX_JUMP_HOLD_TIME) {
                 leaderboardIsJumping = false;
             }
 
@@ -6287,41 +6345,6 @@
             setTimeout(() => {
                 notification.remove();
             }, 3000);
-        }
-
-        // Physics testing functions
-        function updatePhysics() {
-            GRAVITY = parseFloat(document.getElementById('gravitySlider').value);
-            JUMP_POWER = parseFloat(document.getElementById('jumpPowerSlider').value);
-            MOVE_SPEED = parseFloat(document.getElementById('moveSpeedSlider').value);
-            JUMP_CHARGE_RATE = parseFloat(document.getElementById('jumpChargeSlider').value);
-
-            // Update speed limits proportionally
-            GROUND_MAX_SPEED = MOVE_SPEED * 12.5;
-            AIR_MAX_SPEED = GROUND_MAX_SPEED * 1.25;
-
-            // Update display values
-            document.getElementById('gravityValue').textContent = GRAVITY.toFixed(3);
-            document.getElementById('jumpPowerValue').textContent = JUMP_POWER.toFixed(2);
-            document.getElementById('moveSpeedValue').textContent = MOVE_SPEED.toFixed(2);
-            document.getElementById('jumpChargeValue').textContent = JUMP_CHARGE_RATE.toFixed(3);
-        }
-
-        function copyPhysicsValues() {
-            const values = `
-GRAVITY = ${GRAVITY};
-MOVE_SPEED = ${MOVE_SPEED};
-GROUND_MAX_SPEED = ${GROUND_MAX_SPEED.toFixed(4)};
-AIR_MAX_SPEED = ${AIR_MAX_SPEED.toFixed(4)};
-JUMP_POWER = ${JUMP_POWER};
-JUMP_CHARGE_RATE = ${JUMP_CHARGE_RATE};
-            `.trim();
-
-            console.log('=== CURRENT PHYSICS VALUES ===');
-            console.log(values);
-            console.log('==============================');
-
-            showNotification('Physics values copied to console!', 'success');
         }
 
         // Screen management
