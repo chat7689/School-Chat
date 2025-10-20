@@ -2668,6 +2668,52 @@
                 console.log('Default level "Simple Map" added to database');
             }
 
+            // Simple Red - Level with hazard obstacles
+            if (!existingLevelNames.includes('Simple Red')) {
+                const simpleRedData = {
+                    "platforms": [
+                        {"x": -80, "y": 0, "width": 520, "height": 40},
+                        {"x": -80, "y": -240, "width": 520, "height": 40},
+                        {"x": 400, "y": -200, "width": 40, "height": 200},
+                        {"x": -80, "y": -200, "width": 40, "height": 200}
+                    ],
+                    "hazards": [
+                        {"x": 40, "y": -40, "width": 40, "height": 40},
+                        {"x": 120, "y": -200, "width": 40, "height": 40},
+                        {"x": 200, "y": -40, "width": 40, "height": 40},
+                        {"x": 280, "y": -200, "width": 40, "height": 40},
+                        {"x": 40, "y": -60, "width": 40, "height": 20},
+                        {"x": 120, "y": -160, "width": 40, "height": 20},
+                        {"x": 200, "y": -60, "width": 40, "height": 20},
+                        {"x": 280, "y": -160, "width": 40, "height": 20},
+                        {"x": 50, "y": -70, "width": 20, "height": 10},
+                        {"x": 130, "y": -140, "width": 20, "height": 10},
+                        {"x": 210, "y": -70, "width": 20, "height": 10},
+                        {"x": 290, "y": -140, "width": 20, "height": 10}
+                    ],
+                    "growers": [],
+                    "shrinkers": [],
+                    "defaultSizeBlocks": [],
+                    "backgroundBlocks": [],
+                    "foregroundBlocks": [],
+                    "triggers": [],
+                    "comments": [],
+                    "start": {"x": -40, "y": -40, "width": 40, "height": 40},
+                    "finish": {"x": 360, "y": -40, "width": 40, "height": 40},
+                    "physics": {
+                        "gravity": 0.132,
+                        "moveSpeed": 0.45,
+                        "jumpPower": 5.13,
+                        "maxSpeed": 5.625,
+                        "friction": 0.94,
+                        "airRes": 0.88,
+                        "fastFallMultiplier": 3.5
+                    }
+                };
+                await addLevelToDatabase('Simple Red', 'System', simpleRedData);
+                console.log('Default level "Simple Red" added to database');
+            }
+
         }
 
         // Practice mode (infinite runner with credit earning)
