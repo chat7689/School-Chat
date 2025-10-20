@@ -2389,7 +2389,8 @@
                             // Save time to Firebase (no await needed in game loop)
                             database.ref('times_history/' + currentUser.uid + '/' + levelId).push({
                                 time: practiceMode.finishTime,
-                                timestamp: firebase.database.ServerValue.TIMESTAMP
+                                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                                username: currentUsername
                             }).catch(err => console.error('Error saving time:', err));
                         }
                     }
