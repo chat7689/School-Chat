@@ -2397,8 +2397,10 @@
                                 timestamp: firebase.database.ServerValue.TIMESTAMP,
                                 username: currentUsername
                             }).then(() => {
-                                // Reload leaderboard after save completes
-                                loadLeaderboard();
+                                // Small delay to ensure Firebase has propagated, then reload leaderboard
+                                setTimeout(() => {
+                                    loadLeaderboard();
+                                }, 200);
                             }).catch(err => console.error('Error saving time:', err));
                         }
                     }
