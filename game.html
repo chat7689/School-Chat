@@ -2275,16 +2275,27 @@
                 practiceMode.finished = false;
                 practiceMode.leaderboardPosition = null;
                 practiceMode.totalPlayers = 0;
+                practiceMode.leaderboardData = [];
 
-                // Load leaderboard to find player's position
+                // Load leaderboard to find player's position and display leaderboard
                 try {
                     const scoresSnapshot = await database.ref('scores/' + levelId).once('value');
                     const scores = scoresSnapshot.val();
+
                     if (scores) {
+                        // Get player data for usernames
+                        const playersSnapshot = await database.ref('players').once('value');
+                        const playersData = playersSnapshot.val();
+
                         const sortedScores = Object.entries(scores)
-                            .map(([uid, data]) => ({ uid, ...data }))
+                            .map(([uid, data]) => ({
+                                uid,
+                                username: playersData?.[uid]?.username || 'Unknown',
+                                time: data.time
+                            }))
                             .sort((a, b) => a.time - b.time);
 
+                        practiceMode.leaderboardData = sortedScores.slice(0, 10); // Top 10
                         practiceMode.totalPlayers = sortedScores.length;
                         const playerIndex = sortedScores.findIndex(s => s.uid === currentUser.uid);
                         if (playerIndex !== -1) {
@@ -2522,6 +2533,66 @@
                         ctx.strokeStyle = '#FFA500';
                         ctx.lineWidth = 1;
                         ctx.strokeRect(creditX, creditY, creditSize, creditSize);
+                    }
+
+                    // Draw leaderboard panel on right side
+                    if (practiceMode.leaderboardData && practiceMode.leaderboardData.length > 0) {
+                        const panelWidth = 250;
+                        const panelX = canvas.width - panelWidth - 10;
+                        const panelY = 10;
+                        const headerHeight = 40;
+                        const rowHeight = 30;
+                        const panelHeight = headerHeight + (practiceMode.leaderboardData.length * rowHeight) + 10;
+
+                        // Semi-transparent background
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                        ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
+
+                        // Border
+                        ctx.strokeStyle = '#4facfe';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
+
+                        // Header
+                        ctx.fillStyle = '#FFD700';
+                        ctx.font = 'bold 18px Arial';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('LEADERBOARD', panelX + panelWidth / 2, panelY + 25);
+
+                        // Leaderboard entries
+                        ctx.font = '14px Arial';
+                        ctx.textAlign = 'left';
+                        practiceMode.leaderboardData.forEach((entry, index) => {
+                            const y = panelY + headerHeight + (index * rowHeight) + 20;
+                            const isCurrentUser = entry.uid === currentUser.uid;
+
+                            // Highlight current user
+                            if (isCurrentUser) {
+                                ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';
+                                ctx.fillRect(panelX + 5, panelY + headerHeight + (index * rowHeight) + 5, panelWidth - 10, rowHeight - 5);
+                            }
+
+                            // Rank
+                            ctx.fillStyle = index < 3 ? '#FFD700' : '#FFFFFF';
+                            ctx.fillText(`${index + 1}.`, panelX + 10, y);
+
+                            // Username (truncate if too long)
+                            ctx.fillStyle = isCurrentUser ? '#FFD700' : '#FFFFFF';
+                            let displayName = entry.username;
+                            if (displayName.length > 15) {
+                                displayName = displayName.substring(0, 12) + '...';
+                            }
+                            ctx.fillText(displayName, panelX + 35, y);
+
+                            // Time
+                            const minutes = Math.floor(entry.time / 60000);
+                            const seconds = Math.floor((entry.time % 60000) / 1000);
+                            const ms = entry.time % 1000;
+                            const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
+                            ctx.textAlign = 'right';
+                            ctx.fillText(timeStr, panelX + panelWidth - 10, y);
+                            ctx.textAlign = 'left';
+                        });
                     }
 
                     requestAnimationFrame(practiceLoop);
