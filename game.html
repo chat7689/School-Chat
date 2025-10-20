@@ -2273,6 +2273,27 @@
                 practiceMode.startTime = null; // Will be set when player moves
                 practiceMode.finishTime = null;
                 practiceMode.finished = false;
+                practiceMode.leaderboardPosition = null;
+                practiceMode.totalPlayers = 0;
+
+                // Load leaderboard to find player's position
+                try {
+                    const scoresSnapshot = await database.ref('scores/' + levelId).once('value');
+                    const scores = scoresSnapshot.val();
+                    if (scores) {
+                        const sortedScores = Object.entries(scores)
+                            .map(([uid, data]) => ({ uid, ...data }))
+                            .sort((a, b) => a.time - b.time);
+
+                        practiceMode.totalPlayers = sortedScores.length;
+                        const playerIndex = sortedScores.findIndex(s => s.uid === currentUser.uid);
+                        if (playerIndex !== -1) {
+                            practiceMode.leaderboardPosition = playerIndex + 1;
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error loading leaderboard:', err);
+                }
 
                 // Find the leftmost platform to spawn player
                 let startX = 100;
@@ -2362,9 +2383,18 @@
                         timerText = `<div style="font-size: 16px; color: #aaa; margin-top: 5px;">Move to start timer!</div>`;
                     }
 
+                    // Add leaderboard position display
+                    let rankText = '';
+                    if (practiceMode.leaderboardPosition !== null) {
+                        rankText = `<div style="font-size: 16px; color: #4facfe; margin-top: 5px;">Your Best: #${practiceMode.leaderboardPosition} of ${practiceMode.totalPlayers}</div>`;
+                    } else if (practiceMode.totalPlayers > 0) {
+                        rankText = `<div style="font-size: 16px; color: #aaa; margin-top: 5px;">Not ranked yet (${practiceMode.totalPlayers} players)</div>`;
+                    }
+
                     document.getElementById('hud').innerHTML = `
                         <div style="font-size: 24px; font-weight: bold;">${levelInfo.name}</div>
                         <div style="font-size: 14px; margin-top: 3px; color: #aaa;">By ${levelInfo.creator}</div>
+                        ${rankText}
                         ${timerText}
                     `;
 
@@ -3149,29 +3179,22 @@
             // Handle death
             if (practiceMode.isDead) {
                 if (practiceMode.isLevelMode) {
-                    // Practice level mode - respawn at start with countdown
-                    // Check if countdown is active
-                    if (!practiceMode.isStarting) {
-                        // Start respawn countdown
-                        practiceMode.isStarting = true;
-                        practiceMode.startCountdown = 180; // 3 seconds at 60fps
+                    // Practice level mode - respawn at start immediately
+                    // Reset player to start position
+                    player.x = practiceMode.levelData.start.x;
+                    player.y = practiceMode.levelData.start.y;
+                    player.velocityX = 0;
+                    player.velocityY = 0;
+                    player.currentSize = 40;
+                    player.width = 40;
+                    player.height = 40;
 
-                        // Reset player to start position
-                        player.x = practiceMode.levelData.start.x;
-                        player.y = practiceMode.levelData.start.y;
-                        player.velocityX = 0;
-                        player.velocityY = 0;
-                        player.currentSize = 40;
-                        player.width = 40;
-                        player.height = 40;
+                    // Reset timer
+                    practiceMode.startTime = null;
+                    practiceMode.finished = false;
 
-                        // Reset timer
-                        practiceMode.startTime = null;
-                        practiceMode.finished = false;
-
-                        // Clear death flag
-                        practiceMode.isDead = false;
-                    }
+                    // Clear death flag
+                    practiceMode.isDead = false;
                     return;
                 } else {
                     // Earn mode (infinite runner) - show death summary and exit
@@ -6410,6 +6433,24 @@
                 if (practiceMode.active) {
                     exitPracticeMode();
                 }
+            }
+
+            // R key to restart level
+            if ((e.key === 'r' || e.key === 'R') && practiceMode.active && practiceMode.isLevelMode) {
+                // Reset player to start position
+                const player = practiceMode.player;
+                player.x = practiceMode.levelData.start.x;
+                player.y = practiceMode.levelData.start.y;
+                player.velocityX = 0;
+                player.velocityY = 0;
+                player.currentSize = 40;
+                player.width = 40;
+                player.height = 40;
+
+                // Reset timer and state
+                practiceMode.startTime = null;
+                practiceMode.finished = false;
+                practiceMode.isDead = false;
             }
         });
 
