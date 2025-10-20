@@ -796,26 +796,58 @@
                 { id: 'blue_blur', name: 'Blue Blur', price: 50, color: '#0066FF' },
                 { id: 'green_machine', name: 'Green Machine', price: 100, color: '#00FF00' },
                 { id: 'purple_pro', name: 'Purple Pro', price: 100, color: '#9900FF' },
-                { id: 'golden_champion', name: 'Golden Champion', price: 500, color: '#FFD700' }
+                { id: 'golden_champion', name: 'Golden Champion', price: 500, color: '#FFD700' },
+                { id: 'hot_pink', name: 'Hot Pink', price: 75, color: '#FF1493' },
+                { id: 'cyan_speed', name: 'Cyan Speed', price: 75, color: '#00FFFF' },
+                { id: 'lime_light', name: 'Lime Light', price: 100, color: '#32CD32' },
+                { id: 'dark_knight', name: 'Dark Knight', price: 200, color: '#1a1a1a' },
+                { id: 'snow_white', name: 'Snow White', price: 150, color: '#FFFFFF' },
+                { id: 'sunset_orange', name: 'Sunset Orange', price: 125, color: '#FF6347' },
+                { id: 'royal_purple', name: 'Royal Purple', price: 200, color: '#6A0DAD' },
+                { id: 'ocean_blue', name: 'Ocean Blue', price: 150, color: '#006994' },
+                { id: 'forest_green', name: 'Forest Green', price: 125, color: '#228B22' },
+                { id: 'electric_yellow', name: 'Electric Yellow', price: 175, color: '#FFFF00' },
+                { id: 'ruby_red', name: 'Ruby Red', price: 250, color: '#E0115F' },
+                { id: 'sapphire_blue', name: 'Sapphire Blue', price: 250, color: '#0F52BA' },
+                { id: 'emerald_green', name: 'Emerald Green', price: 250, color: '#50C878' },
+                { id: 'galaxy_purple', name: 'Galaxy Purple', price: 350, color: '#4B0082' },
+                { id: 'diamond_white', name: 'Diamond White', price: 400, color: '#F0F8FF' },
+                { id: 'shadow_black', name: 'Shadow Black', price: 300, color: '#000000' }
             ],
             trails: [
                 { id: 'none', name: 'None', price: 0 },
                 { id: 'rainbow', name: 'Rainbow Trail', price: 100 },
                 { id: 'fire', name: 'Fire Trail', price: 150 },
                 { id: 'ice', name: 'Ice Trail', price: 150 },
-                { id: 'star', name: 'Star Trail', price: 200 }
+                { id: 'star', name: 'Star Trail', price: 200 },
+                { id: 'smoke', name: 'Smoke Trail', price: 125, color: '#808080' },
+                { id: 'lightning', name: 'Lightning Trail', price: 250, color: '#FFFF00' },
+                { id: 'hearts', name: 'Heart Trail', price: 175, color: '#FF69B4' },
+                { id: 'toxic', name: 'Toxic Trail', price: 200, color: '#00FF00' },
+                { id: 'galaxy', name: 'Galaxy Trail', price: 300, color: '#4B0082' }
             ],
             hats: [
                 { id: 'none', name: 'None', price: 0 },
                 { id: 'crown', name: 'Crown', price: 200 },
                 { id: 'propeller', name: 'Propeller', price: 150 },
-                { id: 'halo', name: 'Halo', price: 300 }
+                { id: 'halo', name: 'Halo', price: 300 },
+                { id: 'top_hat', name: 'Top Hat', price: 250 },
+                { id: 'party_hat', name: 'Party Hat', price: 175 },
+                { id: 'wizard_hat', name: 'Wizard Hat', price: 225 },
+                { id: 'ninja_band', name: 'Ninja Headband', price: 200 },
+                { id: 'santa_hat', name: 'Santa Hat', price: 300 },
+                { id: 'viking_helm', name: 'Viking Helmet', price: 275 }
             ],
             effects: [
                 { id: 'none', name: 'None', price: 0 },
                 { id: 'sparkles', name: 'Sparkles', price: 100 },
                 { id: 'glow', name: 'Glow', price: 150 },
-                { id: 'shadow_clone', name: 'Shadow Clone', price: 300 }
+                { id: 'shadow_clone', name: 'Shadow Clone', price: 300 },
+                { id: 'flames', name: 'Flames', price: 200 },
+                { id: 'electricity', name: 'Electricity', price: 250 },
+                { id: 'bubbles', name: 'Bubbles', price: 175 },
+                { id: 'stars', name: 'Orbiting Stars', price: 225 },
+                { id: 'aura', name: 'Power Aura', price: 350 }
             ]
         };
 
@@ -991,6 +1023,16 @@
                             ctx.fillStyle = i % 2 === 0 ? '#00FFFF' : '#FFFFFF';
                         } else if (this.cosmetics.trail === 'star') {
                             ctx.fillStyle = '#FFFF00';
+                        } else if (this.cosmetics.trail === 'smoke') {
+                            ctx.fillStyle = i % 2 === 0 ? '#808080' : '#A9A9A9';
+                        } else if (this.cosmetics.trail === 'lightning') {
+                            ctx.fillStyle = i % 2 === 0 ? '#FFFF00' : '#FFFFFF';
+                        } else if (this.cosmetics.trail === 'hearts') {
+                            ctx.fillStyle = '#FF69B4';
+                        } else if (this.cosmetics.trail === 'toxic') {
+                            ctx.fillStyle = i % 2 === 0 ? '#00FF00' : '#7FFF00';
+                        } else if (this.cosmetics.trail === 'galaxy') {
+                            ctx.fillStyle = `hsl(${(i * 60 + 240) % 360}, 80%, 40%)`;
                         }
 
                         ctx.fillRect(trailX, trailY, this.width, this.height);
@@ -1043,6 +1085,48 @@
                     ctx.beginPath();
                     ctx.arc(screenX + this.width / 2, screenY - 10, 15, 0, Math.PI * 2);
                     ctx.stroke();
+                } else if (this.cosmetics.hat === 'top_hat') {
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(screenX + 8, screenY - 15, this.width - 16, 10);
+                    ctx.fillRect(screenX + 5, screenY - 5, this.width - 10, 3);
+                } else if (this.cosmetics.hat === 'party_hat') {
+                    ctx.fillStyle = '#FF00FF';
+                    ctx.beginPath();
+                    ctx.moveTo(screenX + this.width / 2, screenY - 20);
+                    ctx.lineTo(screenX + 5, screenY - 2);
+                    ctx.lineTo(screenX + this.width - 5, screenY - 2);
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (this.cosmetics.hat === 'wizard_hat') {
+                    ctx.fillStyle = '#4B0082';
+                    ctx.beginPath();
+                    ctx.moveTo(screenX + this.width / 2, screenY - 25);
+                    ctx.lineTo(screenX + 2, screenY - 2);
+                    ctx.lineTo(screenX + this.width - 2, screenY - 2);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.fillStyle = '#FFD700';
+                    ctx.fillRect(screenX + this.width / 2 - 3, screenY - 15, 6, 2);
+                } else if (this.cosmetics.hat === 'ninja_band') {
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(screenX, screenY - 8, this.width, 5);
+                } else if (this.cosmetics.hat === 'santa_hat') {
+                    ctx.fillStyle = '#FF0000';
+                    ctx.beginPath();
+                    ctx.moveTo(screenX + this.width / 2, screenY - 20);
+                    ctx.lineTo(screenX + 5, screenY - 2);
+                    ctx.lineTo(screenX + this.width - 5, screenY - 2);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.beginPath();
+                    ctx.arc(screenX + this.width / 2, screenY - 20, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (this.cosmetics.hat === 'viking_helm') {
+                    ctx.fillStyle = '#808080';
+                    ctx.fillRect(screenX + 5, screenY - 12, this.width - 10, 8);
+                    ctx.fillRect(screenX - 5, screenY - 10, 5, 12);
+                    ctx.fillRect(screenX + this.width, screenY - 10, 5, 12);
                 }
 
                 // Draw sparkles effect
@@ -1055,6 +1139,56 @@
                         const sparkY = screenY + this.height / 2 + Math.sin(rad) * 30;
                         ctx.fillRect(sparkX - 2, sparkY - 2, 4, 4);
                     }
+                } else if (this.cosmetics.effect === 'flames') {
+                    ctx.save();
+                    for (let i = 0; i < 3; i++) {
+                        const offsetX = (Math.random() - 0.5) * 10;
+                        const offsetY = Math.random() * 10;
+                        ctx.fillStyle = i % 2 === 0 ? '#FF6600' : '#FF0000';
+                        ctx.globalAlpha = 0.6;
+                        ctx.fillRect(screenX + offsetX + 5, screenY + this.height - offsetY, 10, 8);
+                    }
+                    ctx.restore();
+                } else if (this.cosmetics.effect === 'electricity') {
+                    ctx.strokeStyle = '#FFFF00';
+                    ctx.lineWidth = 2;
+                    ctx.globalAlpha = 0.7;
+                    for (let i = 0; i < 3; i++) {
+                        ctx.beginPath();
+                        ctx.moveTo(screenX + Math.random() * this.width, screenY);
+                        ctx.lineTo(screenX + Math.random() * this.width, screenY + this.height);
+                        ctx.stroke();
+                    }
+                    ctx.globalAlpha = 1;
+                } else if (this.cosmetics.effect === 'bubbles') {
+                    ctx.strokeStyle = '#00FFFF';
+                    ctx.lineWidth = 2;
+                    for (let i = 0; i < 3; i++) {
+                        const angle = (Date.now() / 200 + i * 120) % 360;
+                        const rad = angle * Math.PI / 180;
+                        const bubbleX = screenX + this.width / 2 + Math.cos(rad) * 25;
+                        const bubbleY = screenY + this.height / 2 + Math.sin(rad) * 25;
+                        ctx.beginPath();
+                        ctx.arc(bubbleX, bubbleY, 4, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+                } else if (this.cosmetics.effect === 'stars') {
+                    ctx.fillStyle = '#FFFF00';
+                    for (let i = 0; i < 4; i++) {
+                        const angle = (Date.now() / 150 + i * 90) % 360;
+                        const rad = angle * Math.PI / 180;
+                        const starX = screenX + this.width / 2 + Math.cos(rad) * 35;
+                        const starY = screenY + this.height / 2 + Math.sin(rad) * 35;
+                        ctx.fillRect(starX - 3, starY - 3, 6, 6);
+                    }
+                } else if (this.cosmetics.effect === 'aura') {
+                    ctx.save();
+                    ctx.strokeStyle = this.getSkinColor();
+                    ctx.lineWidth = 3;
+                    ctx.globalAlpha = 0.5;
+                    const auraSize = 10 + Math.sin(Date.now() / 200) * 5;
+                    ctx.strokeRect(screenX - auraSize, screenY - auraSize, this.width + auraSize * 2, this.height + auraSize * 2);
+                    ctx.restore();
                 }
 
                 // Draw equipped item (credits display)
