@@ -388,13 +388,14 @@
         <div class="section">
             <h3>Physics Info</h3>
             <div class="stats" style="line-height: 1.8;">
-                <div>Gravity: <span style="color: #4facfe;">0.042</span></div>
-                <div>Move Accel: <span style="color: #4facfe;">0.28</span></div>
-                <div>Jump Power: <span style="color: #4facfe;">3.23</span></div>
-                <div>Max Speed: <span style="color: #4facfe;">3.5</span></div>
+                <div>Gravity: <span style="color: #4facfe;">0.132</span></div>
+                <div>Move Speed: <span style="color: #4facfe;">0.45</span></div>
+                <div>Jump Power: <span style="color: #4facfe;">5.13</span></div>
+                <div>Max Speed: <span style="color: #4facfe;">5.625</span></div>
                 <div>Ground Friction: <span style="color: #4facfe;">0.94</span></div>
                 <div>Air Resistance: <span style="color: #4facfe;">0.88</span></div>
-                <div style="margin-top: 10px; color: #FFC107;">Jump Height: ~161px (size×4+1)</div>
+                <div>Jump Charge: <span style="color: #4facfe;">0.41</span></div>
+                <div style="margin-top: 10px; color: #FFC107;">Tuned physics values</div>
             </div>
         </div>
 
@@ -543,15 +544,16 @@
         let cameraY = 0;
         let zoom = 1;
 
-        // Physics settings (fixed values matching main game)
+        // Physics settings (matching main game - tuned values)
         const physics = {
-            gravity: 0.042,  // 150% of 0.028
-            moveSpeed: 0.28,  // Faster ground movement: 0.21 * 1.33 ≈ 0.28
-            jumpPower: 3.08,  // Allows jumping height × 4 + 1px for each size (161px for 40px player)
-            maxSpeed: 3.5,  // Faster max speed: 2.625 * 1.33 ≈ 3.5
-            friction: 0.94,  // Less friction, more slippery (was 0.80)
-            airRes: 0.88,  // Higher air resistance (was 0.92)
-            fastFallMultiplier: 3.5  // Down arrow fall speed (1.75x stronger, was 2.0)
+            gravity: 0.132,  // Tuned for perfect feel
+            moveSpeed: 0.45,  // Tuned horizontal movement speed
+            jumpPower: 5.13,  // Tuned jump power for perfect height
+            maxSpeed: 5.625,  // Max speed on ground (GROUND_MAX_SPEED)
+            friction: 0.94,  // Ground friction
+            airRes: 0.88,  // Air resistance
+            fastFallMultiplier: 3.5,  // Fast fall speed multiplier
+            jumpChargeRate: 0.41  // Jump charge rate for variable jumps
         };
         const MAX_JUMP_HOLD_TIME = 16.67; // Maximum time (ms) to hold jump button for max height
 
@@ -2918,7 +2920,7 @@
                     player.jumpHoldTime += deltaTime;
                     const maxJumpVelocity = physics.jumpPower * sizeScale;
                     if (Math.abs(player.velocityY) < maxJumpVelocity && player.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
-                        player.velocityY -= 0.25 * sizeScale * deltaTime; // JUMP_CHARGE_RATE
+                        player.velocityY -= physics.jumpChargeRate * sizeScale * deltaTime;
                     }
                 }
 
