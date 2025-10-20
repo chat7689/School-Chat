@@ -3628,9 +3628,11 @@
                 practiceMode.isDead = true;
             }
 
-            // Update camera
+            // Update camera - follow player horizontally, keep vertical centered
             practiceMode.cameraX = player.x - 300;
-            practiceMode.cameraY = 0;
+            // Keep camera centered vertically on player, but clamp so death zone stays visible
+            const targetCameraY = player.y - 400; // Center player vertically
+            practiceMode.cameraY = Math.max(0, Math.min(targetCameraY, 300)); // Clamp between 0 and 300
         }
 
         // Party system
