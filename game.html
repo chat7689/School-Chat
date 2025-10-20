@@ -5903,7 +5903,8 @@
                 }
 
                 // Setup platforms
-                const portalSize = 40; // 40x40px portals
+                const portalWidth = 120; // 3 * 40px wide
+                const portalHeight = 40; // 40px tall
                 const portalsPerRow = 3; // 3 portals wide
                 const portalSpacing = 60; // Space between portals
                 const numRows = Math.ceil(availableLeaderboards.length / portalsPerRow);
@@ -5922,7 +5923,7 @@
                 leaderboardPlatforms.push({
                     x: 100,
                     y: groundY - 120,
-                    width: 100,
+                    width: 120,
                     height: 40,
                     action: 'back',
                     label: 'BACK'
@@ -5934,17 +5935,17 @@
                     const rowIndex = Math.floor(index / portalsPerRow);
 
                     // Center the portals horizontally
-                    const totalRowWidth = (portalsPerRow * portalSize) + ((portalsPerRow - 1) * portalSpacing);
+                    const totalRowWidth = (portalsPerRow * portalWidth) + ((portalsPerRow - 1) * portalSpacing);
                     const startX = (1200 - totalRowWidth) / 2;
 
-                    const x = startX + colIndex * (portalSize + portalSpacing);
-                    const y = groundY - 120 - (rowIndex * (portalSize + portalSpacing));
+                    const x = startX + colIndex * (portalWidth + portalSpacing);
+                    const y = groundY - 120 - (rowIndex * (portalHeight + portalSpacing));
 
                     leaderboardPlatforms.push({
                         x: x,
                         y: y,
-                        width: portalSize,
-                        height: portalSize,
+                        width: portalWidth,
+                        height: portalHeight,
                         levelId: level.id,
                         levelName: level.name
                     });
