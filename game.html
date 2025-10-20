@@ -5360,6 +5360,9 @@
             const baseSnapshot = await database.ref('players/' + currentUser.uid + '/baseBlocks').once('value');
             baseBlocks = baseSnapshot.val() || [];
 
+            // Ensure secureCredits matches base blocks
+            recalcSecureCredits();
+
             // Create base platforms (100x100 blocks = 4000x4000px area)
             basePlatforms = [
                 // Ground
