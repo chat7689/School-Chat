@@ -223,6 +223,22 @@
             overflow-y: auto;
         }
 
+        #levelLeaderboardPanel {
+            position: absolute;
+            top: 50%;
+            right: calc(50% - 600px - 280px); /* Same as main menu leaderboard */
+            transform: translateY(-50%);
+            width: 260px;
+            height: 800px;
+            background: linear-gradient(135deg, rgba(79, 172, 254, 0.3), rgba(79, 172, 254, 0.1));
+            border: 3px solid #4facfe;
+            border-radius: 15px;
+            padding: 15px;
+            z-index: 50;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            overflow-y: auto;
+        }
+
         .cosmetic-item {
             background: rgba(0,0,0,0.4);
             padding: 15px;
@@ -486,6 +502,15 @@
     <canvas id="practiceCanvas" width="1200" height="800" style="display: none;"></canvas>
     <div id="hud"></div>
     <button id="practiceBackBtn" onclick="exitPracticeMode()" style="position: absolute; top: 20px; right: 20px; z-index: 100; display: none; padding: 10px 20px; background: rgba(255,0,0,0.7); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">Back to Menu</button>
+
+    <!-- Level Leaderboard Panel -->
+    <div id="levelLeaderboardPanel" style="display: none;">
+        <div style="font-family: 'Inter', Arial, sans-serif; font-size: 18px; color: #fff; margin-bottom: 15px; text-align: center; font-weight: bold;">
+            Leaderboard
+        </div>
+        <div id="levelLeaderboardList" style="font-family: 'Inter', Arial, sans-serif; font-size: 10px; color: #fff;">
+        </div>
+    </div>
 
     <!-- Race Canvas -->
     <canvas id="raceCanvas" width="1200" height="800" style="display: none;"></canvas>
@@ -2258,11 +2283,12 @@
                 // Hide practice levels screen
                 document.getElementById('practiceLevelsScreen').classList.remove('active');
 
-                // Show practice canvas
+                // Show practice canvas and leaderboard panel
                 const canvas = document.getElementById('practiceCanvas');
                 canvas.style.display = 'block';
                 document.getElementById('hud').style.display = 'block';
                 document.getElementById('practiceBackBtn').style.display = 'block';
+                document.getElementById('levelLeaderboardPanel').style.display = 'block';
 
                 // Initialize practice mode with level data
                 practiceMode.active = true;
@@ -2320,6 +2346,35 @@
                             if (playerIndex !== -1) {
                                 practiceMode.leaderboardPosition = playerIndex + 1;
                             }
+
+                            // Update HTML leaderboard panel
+                            const leaderboardList = document.getElementById('levelLeaderboardList');
+                            leaderboardList.innerHTML = '';
+                            practiceMode.leaderboardData.forEach((entry, index) => {
+                                const isCurrentUser = entry.uid === currentUser.uid;
+                                const minutes = Math.floor(entry.time / 60000);
+                                const seconds = Math.floor((entry.time % 60000) / 1000);
+                                const ms = entry.time % 1000;
+                                const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
+
+                                const entryDiv = document.createElement('div');
+                                entryDiv.style.cssText = `
+                                    padding: 8px;
+                                    margin: 5px 0;
+                                    background: ${isCurrentUser ? 'rgba(255, 215, 0, 0.2)' : 'rgba(0,0,0,0.3)'};
+                                    border-radius: 5px;
+                                    border: 1px solid ${isCurrentUser ? '#FFD700' : 'rgba(79, 172, 254, 0.3)'};
+                                    font-size: 12px;
+                                `;
+                                entryDiv.innerHTML = `
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <span style="color: ${index < 3 ? '#FFD700' : '#fff'}; font-weight: bold;">#${index + 1}</span>
+                                        <span style="color: ${isCurrentUser ? '#FFD700' : '#fff'}; flex: 1; margin: 0 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${entry.username}</span>
+                                        <span style="color: #4facfe; font-family: monospace;">${timeStr}</span>
+                                    </div>
+                                `;
+                                leaderboardList.appendChild(entryDiv);
+                            });
                         }
                     } catch (err) {
                         console.error('Error loading leaderboard:', err);
@@ -2562,66 +2617,6 @@
                         ctx.strokeStyle = '#FFA500';
                         ctx.lineWidth = 1;
                         ctx.strokeRect(creditX, creditY, creditSize, creditSize);
-                    }
-
-                    // Draw leaderboard panel on right side
-                    if (practiceMode.leaderboardData && practiceMode.leaderboardData.length > 0) {
-                        const panelWidth = 250;
-                        const panelX = canvas.width - panelWidth - 10;
-                        const panelY = 10;
-                        const headerHeight = 40;
-                        const rowHeight = 30;
-                        const panelHeight = headerHeight + (practiceMode.leaderboardData.length * rowHeight) + 10;
-
-                        // Semi-transparent background
-                        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                        ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
-
-                        // Border
-                        ctx.strokeStyle = '#4facfe';
-                        ctx.lineWidth = 2;
-                        ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
-
-                        // Header
-                        ctx.fillStyle = '#FFD700';
-                        ctx.font = 'bold 18px Arial';
-                        ctx.textAlign = 'center';
-                        ctx.fillText('LEADERBOARD', panelX + panelWidth / 2, panelY + 25);
-
-                        // Leaderboard entries
-                        ctx.font = '14px Arial';
-                        ctx.textAlign = 'left';
-                        practiceMode.leaderboardData.forEach((entry, index) => {
-                            const y = panelY + headerHeight + (index * rowHeight) + 20;
-                            const isCurrentUser = entry.uid === currentUser.uid;
-
-                            // Highlight current user
-                            if (isCurrentUser) {
-                                ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';
-                                ctx.fillRect(panelX + 5, panelY + headerHeight + (index * rowHeight) + 5, panelWidth - 10, rowHeight - 5);
-                            }
-
-                            // Rank
-                            ctx.fillStyle = index < 3 ? '#FFD700' : '#FFFFFF';
-                            ctx.fillText(`${index + 1}.`, panelX + 10, y);
-
-                            // Username (truncate if too long)
-                            ctx.fillStyle = isCurrentUser ? '#FFD700' : '#FFFFFF';
-                            let displayName = entry.username;
-                            if (displayName.length > 15) {
-                                displayName = displayName.substring(0, 12) + '...';
-                            }
-                            ctx.fillText(displayName, panelX + 35, y);
-
-                            // Time
-                            const minutes = Math.floor(entry.time / 60000);
-                            const seconds = Math.floor((entry.time % 60000) / 1000);
-                            const ms = entry.time % 1000;
-                            const timeStr = `${minutes}:${seconds.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
-                            ctx.textAlign = 'right';
-                            ctx.fillText(timeStr, panelX + panelWidth - 10, y);
-                            ctx.textAlign = 'left';
-                        });
                     }
 
                     requestAnimationFrame(practiceLoop);
@@ -6393,6 +6388,7 @@
             document.getElementById('practiceCanvas').style.display = 'none';
             document.getElementById('hud').style.display = 'none';
             document.getElementById('practiceBackBtn').style.display = 'none';
+            document.getElementById('levelLeaderboardPanel').style.display = 'none';
             initMainMenu();
         }
 
