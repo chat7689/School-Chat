@@ -1903,7 +1903,7 @@
                 lastFrameTime = currentTime;
 
                 updateLevelSelect(deltaTime);
-                renderLevelSelect(ctx);
+                renderLevelSelect(ctx, deltaTime);
 
                 requestAnimationFrame(levelSelectLoop);
             }
@@ -2099,7 +2099,7 @@
             if (levelSelectPlayer.x > 1200 - levelSelectPlayer.width) levelSelectPlayer.x = 1200 - levelSelectPlayer.width;
         }
 
-        function renderLevelSelect(ctx) {
+        function renderLevelSelect(ctx, deltaTime = 1) {
             // Clear with sky blue background
             ctx.fillStyle = '#87CEEB';
             ctx.fillRect(0, 0, 1200, 800);
@@ -2203,7 +2203,7 @@
             }
 
             // Update and draw particles
-            updateAndDrawParticles(ctx, 0, 0, 1);
+            updateAndDrawParticles(ctx, 0, 0, deltaTime);
 
             // Draw player
             levelSelectPlayer.draw(ctx, 0, 0);
@@ -5391,7 +5391,7 @@
                 lastBaseFrameTime = currentTime;
 
                 updateBasePlayer(deltaTime);
-                renderBase();
+                renderBase(deltaTime);
 
                 requestAnimationFrame(baseLoop);
             }
@@ -5558,7 +5558,7 @@
             }
         }
 
-        function renderBase() {
+        function renderBase(deltaTime = 1) {
             if (!basePlayer) return;
 
             // Clear and apply zoom
@@ -5651,7 +5651,7 @@
             baseCtx.setTransform(1, 0, 0, 1, 0, 0);
 
             // Update and draw particles (particles use camera offset internally, not zoom)
-            updateAndDrawParticles(baseCtx, cameraX, cameraY, 1);
+            updateAndDrawParticles(baseCtx, cameraX, cameraY, deltaTime);
         }
 
         async function handleBaseClick(e) {
@@ -5902,7 +5902,7 @@
                     lastLeaderboardFrameTime = currentTime;
 
                     updateLeaderboardPlayer(deltaTime);
-                    renderLeaderboard(ctx);
+                    renderLeaderboard(ctx, deltaTime);
 
                     requestAnimationFrame(leaderboardLoop);
                 }
@@ -6093,7 +6093,7 @@
             }
         }
 
-        function renderLeaderboard(ctx) {
+        function renderLeaderboard(ctx, deltaTime = 1) {
             // Sky blue background
             ctx.fillStyle = '#87CEEB';
             ctx.fillRect(0, 0, 1200, 800);
@@ -6188,7 +6188,7 @@
             }
 
             // Draw particles
-            updateAndDrawParticles(ctx, 0, 0, 1);
+            updateAndDrawParticles(ctx, 0, 0, deltaTime);
 
             // Draw player
             leaderboardPlayer.draw(ctx, 0, 0);
