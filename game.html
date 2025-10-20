@@ -2714,6 +2714,44 @@
                 console.log('Default level "Simple Red" added to database');
             }
 
+            // Sky Climb - Vertical climbing challenge
+            if (!existingLevelNames.includes('Sky Climb')) {
+                const skyClimbData = {
+                    "platforms": [
+                        {"x": -40, "y": 0, "width": 120, "height": 40},
+                        {"x": -40, "y": -120, "width": 120, "height": 40},
+                        {"x": -40, "y": -240, "width": 120, "height": 40},
+                        {"x": -40, "y": -360, "width": 120, "height": 40}
+                    ],
+                    "hazards": [
+                        {"x": -120, "y": 80, "width": 280, "height": 40},
+                        {"x": -120, "y": -480, "width": 280, "height": 40},
+                        {"x": 160, "y": -480, "width": 40, "height": 600},
+                        {"x": -160, "y": -480, "width": 40, "height": 600}
+                    ],
+                    "growers": [],
+                    "shrinkers": [],
+                    "defaultSizeBlocks": [],
+                    "backgroundBlocks": [],
+                    "foregroundBlocks": [],
+                    "triggers": [],
+                    "comments": [],
+                    "start": {"x": 0, "y": -40, "width": 40, "height": 40},
+                    "finish": {"x": 0, "y": -400, "width": 40, "height": 40},
+                    "physics": {
+                        "gravity": 0.132,
+                        "moveSpeed": 0.45,
+                        "jumpPower": 5.13,
+                        "maxSpeed": 5.625,
+                        "friction": 0.94,
+                        "airRes": 0.88,
+                        "fastFallMultiplier": 3.5
+                    }
+                };
+                await addLevelToDatabase('Sky Climb', 'System', skyClimbData);
+                console.log('Default level "Sky Climb" added to database');
+            }
+
         }
 
         // Practice mode (infinite runner with credit earning)
