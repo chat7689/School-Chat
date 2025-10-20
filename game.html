@@ -2452,17 +2452,34 @@
                             practiceMode.finished = true;
                             practiceMode.finishTime = Date.now() - practiceMode.startTime;
 
-                            // Save time to Firebase and reload leaderboard
-                            database.ref('times_history/' + currentUser.uid + '/' + levelId).push({
-                                time: practiceMode.finishTime,
-                                timestamp: firebase.database.ServerValue.TIMESTAMP,
-                                username: currentUsername
-                            }).then(() => {
-                                // Small delay to ensure Firebase has propagated, then reload leaderboard
-                                setTimeout(() => {
-                                    loadLeaderboard();
-                                }, 200);
-                            }).catch(err => console.error('Error saving time:', err));
+                            // Validate time to prevent glitches
+                            const isValidTime = (
+                                typeof practiceMode.finishTime === 'number' &&
+                                !isNaN(practiceMode.finishTime) &&
+                                isFinite(practiceMode.finishTime) &&
+                                practiceMode.finishTime > 0 &&
+                                practiceMode.finishTime >= 100 && // Minimum 100ms (prevent instant completion glitches)
+                                practiceMode.finishTime < 3600000 && // Maximum 1 hour (prevent overflow glitches)
+                                practiceMode.startTime !== null &&
+                                typeof practiceMode.startTime === 'number'
+                            );
+
+                            // Only save if time is valid
+                            if (isValidTime) {
+                                // Save time to Firebase and reload leaderboard
+                                database.ref('times_history/' + currentUser.uid + '/' + levelId).push({
+                                    time: practiceMode.finishTime,
+                                    timestamp: firebase.database.ServerValue.TIMESTAMP,
+                                    username: currentUsername
+                                }).then(() => {
+                                    // Small delay to ensure Firebase has propagated, then reload leaderboard
+                                    setTimeout(() => {
+                                        loadLeaderboard();
+                                    }, 200);
+                                }).catch(err => console.error('Error saving time:', err));
+                            } else {
+                                console.warn('Invalid time detected and rejected:', practiceMode.finishTime);
+                            }
                         }
                     }
 
