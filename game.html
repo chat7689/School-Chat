@@ -2369,9 +2369,9 @@
                                 `;
                                 entryDiv.innerHTML = `
                                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                                        <span style="color: ${index < 3 ? '#FFD700' : '#fff'}; font-weight: bold;">#${index + 1}</span>
-                                        <span style="color: ${isCurrentUser ? '#FFD700' : '#fff'}; flex: 1; margin: 0 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${entry.username}</span>
-                                        <span style="color: #4facfe; font-family: monospace;">${timeStr}</span>
+                                        <span style="color: ${index < 3 ? '#FFD700' : '#fff'}; font-weight: bold; font-size: 12px;">#${index + 1}</span>
+                                        <span style="color: ${isCurrentUser ? '#FFD700' : '#fff'}; flex: 1; margin: 0 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px;">${entry.username}</span>
+                                        <span style="color: #4facfe; font-family: monospace; font-size: 14px; font-weight: bold;">${timeStr}</span>
                                     </div>
                                 `;
                                 leaderboardList.appendChild(entryDiv);
