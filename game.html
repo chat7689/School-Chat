@@ -3084,6 +3084,59 @@
                 console.log('Default level "Size Puzzle" added to database');
             }
 
+            // Hazard Hop - Compact level with hazards and size mechanics
+            if (!existingLevelNames.includes('Hazard Hop')) {
+                const hazardHopData = {
+                    "platforms": [
+                        {"x": -120, "y": 40, "width": 520, "height": 40},
+                        {"x": 360, "y": -160, "width": 40, "height": 200},
+                        {"x": 280, "y": -160, "width": 80, "height": 40},
+                        {"x": 120, "y": 0, "width": 40, "height": 10},
+                        {"x": 430, "y": -160, "width": 50, "height": 240},
+                        {"x": -80, "y": -80, "width": 160, "height": 80},
+                        {"x": 80, "y": -120, "width": 40, "height": 120},
+                        {"x": 120, "y": -160, "width": 40, "height": 160},
+                        {"x": 440, "y": 80, "width": 40, "height": 120},
+                        {"x": -120, "y": 160, "width": 560, "height": 40},
+                        {"x": 100, "y": 120, "width": 20, "height": 40},
+                        {"x": 260, "y": 120, "width": 20, "height": 40},
+                        {"x": -160, "y": -320, "width": 40, "height": 520},
+                        {"x": -120, "y": -320, "width": 600, "height": 40},
+                        {"x": 440, "y": -280, "width": 40, "height": 120}
+                    ],
+                    "hazards": [
+                        {"x": 340, "y": 120, "width": 20, "height": 40},
+                        {"x": 180, "y": 120, "width": 20, "height": 40},
+                        {"x": 20, "y": 120, "width": 20, "height": 40}
+                    ],
+                    "growers": [
+                        {"x": 320, "y": 0, "width": 40, "height": 40}
+                    ],
+                    "shrinkers": [
+                        {"x": -120, "y": -120, "width": 40, "height": 160}
+                    ],
+                    "defaultSizeBlocks": [],
+                    "backgroundBlocks": [],
+                    "foregroundBlocks": [],
+                    "triggers": [],
+                    "comments": [],
+                    "start": {"x": 0, "y": 0, "width": 40, "height": 40},
+                    "finish": {"x": -120, "y": 120, "width": 40, "height": 40},
+                    "physics": {
+                        "gravity": 0.132,
+                        "moveSpeed": 0.45,
+                        "jumpPower": 5.13,
+                        "maxSpeed": 5.625,
+                        "friction": 0.94,
+                        "airRes": 0.88,
+                        "fastFallMultiplier": 3.5,
+                        "jumpChargeRate": 0.41
+                    }
+                };
+                await addLevelToDatabase('Hazard Hop', 'System', hazardHopData);
+                console.log('Default level "Hazard Hop" added to database');
+            }
+
             // The Labyrinth - Large complex level with multiple size changes
             if (!existingLevelNames.includes('The Labyrinth')) {
                 const labyrinthData = {
