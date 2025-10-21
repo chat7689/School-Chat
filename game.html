@@ -4865,6 +4865,16 @@
                     height: portalHeight,
                     action: 'backpack',
                     label: 'BACKPACK'
+                },
+
+                // Games portal (right side)
+                {
+                    x: 900,
+                    y: groundY - 120,
+                    width: portalWidth,
+                    height: portalHeight,
+                    action: 'games',
+                    label: 'GAMES'
                 }
             ];
 
@@ -4938,6 +4948,10 @@
                         // Save player position before entering shop
                         savedShopHubPosition = { x: shopHubPlayer.x, y: shopHubPlayer.y, velocityX: shopHubPlayer.velocityX, velocityY: shopHubPlayer.velocityY };
                         showBackpackShop();
+                    } else if (standingOnPlatform.action === 'games') {
+                        shopHubActive = false;
+                        savedShopHubPosition = { x: shopHubPlayer.x, y: shopHubPlayer.y, velocityX: shopHubPlayer.velocityX, velocityY: shopHubPlayer.velocityY };
+                        startLeftRightGame();
                     }
                 }
             }
@@ -5154,7 +5168,7 @@
                     ctx.shadowBlur = 5;
                     ctx.fillText(platform.label, platform.x + platform.width / 2, platform.y + platform.height / 2 + 5);
                     ctx.shadowBlur = 0;
-                } else if (platform.action === 'cosmetics' || platform.action === 'backpack') {
+                } else if (platform.action === 'cosmetics' || platform.action === 'backpack' || platform.action === 'games') {
                     // Shop portals - light blue with glow (same as level portals)
                     const gradient = ctx.createLinearGradient(platform.x, platform.y, platform.x, platform.y + platform.height);
                     gradient.addColorStop(0, 'rgba(79, 172, 254, 0.5)');
@@ -6632,6 +6646,354 @@
             document.getElementById('practiceBackBtn').style.display = 'none';
             document.getElementById('levelLeaderboardPanel').style.display = 'none';
             initMainMenu();
+        }
+
+        // Left/Right Betting Game
+        let leftRightGame = {
+            active: false,
+            betAmount: 0,
+            phase: 'betting', // 'betting', 'countdown', 'choosing', 'result'
+            countdown: 180, // 3 seconds at 60fps
+            player: null,
+            platforms: [],
+            leftPlatform: null,
+            rightPlatform: null,
+            chosenSide: null,
+            winningSide: null,
+            cameraX: 0,
+            cameraY: 0
+        };
+
+        function startLeftRightGame() {
+            // Show bet input dialog
+            const maxBet = userCredits;
+            if (maxBet <= 0) {
+                alert('You need credits in your backpack to play! Visit the backpack portal to withdraw credits from your base.');
+                showShopHub();
+                return;
+            }
+
+            const betInput = prompt(`How many credits do you want to bet?\n\nYou have ${userCredits} credits in your backpack.\n\nEnter amount (1-${maxBet}):`);
+
+            if (!betInput) {
+                showShopHub();
+                return;
+            }
+
+            const betAmount = parseInt(betInput);
+
+            if (isNaN(betAmount) || betAmount < 1 || betAmount > maxBet) {
+                alert(`Invalid bet amount! Must be between 1 and ${maxBet}.`);
+                showShopHub();
+                return;
+            }
+
+            // Deduct bet from user credits
+            userCredits -= betAmount;
+
+            leftRightGame.betAmount = betAmount;
+            leftRightGame.active = true;
+            leftRightGame.phase = 'countdown';
+            leftRightGame.countdown = 180; // 3 seconds
+            leftRightGame.chosenSide = null;
+            leftRightGame.winningSide = null;
+
+            const canvas = document.getElementById('practiceCanvas');
+            canvas.style.display = 'block';
+            document.getElementById('hud').style.display = 'block';
+            document.getElementById('practiceBackBtn').style.display = 'none';
+
+            // Setup platforms
+            const groundY = 720;
+            const leftPlatformX = 300;
+            const rightPlatformX = 700;
+            const platformY = groundY - 120;
+
+            leftRightGame.platforms = [
+                // Boundary walls
+                { x: 0, y: 0, width: 40, height: 800 }, // Left wall
+                { x: 1160, y: 0, width: 40, height: 800 }, // Right wall
+                { x: 0, y: 0, width: 1200, height: 40 }, // Ceiling
+
+                // Death zone (red ground)
+                { x: 0, y: groundY, width: 1200, height: 80, isHazard: true },
+
+                // Center divider (will appear after countdown)
+                { x: 598, y: 0, width: 4, height: groundY, isDivider: true, visible: false },
+
+                // Left platform
+                { x: leftPlatformX, y: platformY, width: 200, height: 40, side: 'left' },
+
+                // Right platform
+                { x: rightPlatformX, y: platformY, width: 200, height: 40, side: 'right' }
+            ];
+
+            leftRightGame.leftPlatform = leftRightGame.platforms[leftRightGame.platforms.length - 2];
+            leftRightGame.rightPlatform = leftRightGame.platforms[leftRightGame.platforms.length - 1];
+
+            // Create player at center
+            leftRightGame.player = new Player(600 - 20, platformY - 40, equippedCosmetics);
+
+            // Initialize camera
+            leftRightGame.cameraX = 0;
+            leftRightGame.cameraY = 0;
+
+            // Start game loop
+            let lastFrameTime = performance.now();
+            function leftRightGameLoop(currentTime) {
+                if (!leftRightGame.active) return;
+
+                if (!currentTime) currentTime = performance.now();
+                let deltaTime = (currentTime - lastFrameTime) / 16.67;
+                if (deltaTime <= 0 || deltaTime > 10) deltaTime = 1;
+                lastFrameTime = currentTime;
+
+                updateLeftRightGame(deltaTime);
+                renderLeftRightGame();
+
+                requestAnimationFrame(leftRightGameLoop);
+            }
+            requestAnimationFrame(leftRightGameLoop);
+        }
+
+        function updateLeftRightGame(deltaTime) {
+            const player = leftRightGame.player;
+
+            // Phase: Countdown
+            if (leftRightGame.phase === 'countdown') {
+                leftRightGame.countdown -= deltaTime;
+                if (leftRightGame.countdown <= 0) {
+                    leftRightGame.phase = 'choosing';
+                    leftRightGame.countdown = 180; // 3 seconds to choose
+                }
+                return;
+            }
+
+            // Phase: Choosing
+            if (leftRightGame.phase === 'choosing') {
+                leftRightGame.countdown -= deltaTime;
+
+                // Handle player movement
+                player.velocityY += GRAVITY * deltaTime;
+
+                // Horizontal movement
+                if (keys['a'] || keys['ArrowLeft']) {
+                    player.velocityX -= MOVE_SPEED * deltaTime;
+                }
+                if (keys['d'] || keys['ArrowRight']) {
+                    player.velocityX += MOVE_SPEED * deltaTime;
+                }
+
+                // Apply friction
+                player.velocityX *= Math.pow(FRICTION, deltaTime);
+                player.velocityY *= Math.pow(AIR_RES, deltaTime);
+
+                // Limit speed
+                const maxSpeed = MAX_SPEED;
+                player.velocityX = Math.max(-maxSpeed, Math.min(maxSpeed, player.velocityX));
+                player.velocityY = Math.max(-maxSpeed * 2, Math.min(maxSpeed * 2, player.velocityY));
+
+                // Update position
+                player.x += player.velocityX * deltaTime;
+                player.y += player.velocityY * deltaTime;
+
+                // Collision detection
+                let isGrounded = false;
+                for (const platform of leftRightGame.platforms) {
+                    if (platform.isHazard || platform.isDivider || !platform.side) continue;
+
+                    // Bottom collision (landing on platform)
+                    if (player.velocityY > 0 &&
+                        player.y + player.height <= platform.y + Math.abs(player.velocityY) * deltaTime &&
+                        player.y + player.height >= platform.y &&
+                        player.x + player.width > platform.x &&
+                        player.x < platform.x + platform.width) {
+
+                        player.y = platform.y - player.height;
+                        player.velocityY = 0;
+                        isGrounded = true;
+
+                        // Mark chosen side
+                        if (!leftRightGame.chosenSide) {
+                            leftRightGame.chosenSide = platform.side;
+                        }
+                    }
+                }
+
+                // Check if time is up
+                if (leftRightGame.countdown <= 0) {
+                    // If no side chosen, player loses
+                    if (!leftRightGame.chosenSide) {
+                        leftRightGame.phase = 'result';
+                        leftRightGame.winningSide = null;
+                        return;
+                    }
+
+                    // Show divider
+                    const divider = leftRightGame.platforms.find(p => p.isDivider);
+                    if (divider) divider.visible = true;
+
+                    // Randomly choose winning side
+                    leftRightGame.winningSide = Math.random() < 0.5 ? 'left' : 'right';
+
+                    // Start dropping the losing platform
+                    leftRightGame.phase = 'result';
+                }
+
+                return;
+            }
+
+            // Phase: Result
+            if (leftRightGame.phase === 'result') {
+                // Drop the losing platform
+                if (leftRightGame.winningSide === 'left') {
+                    leftRightGame.rightPlatform.y += 5 * deltaTime;
+                } else if (leftRightGame.winningSide === 'right') {
+                    leftRightGame.leftPlatform.y += 5 * deltaTime;
+                }
+
+                // Update player physics
+                player.velocityY += GRAVITY * deltaTime;
+                player.velocityX *= Math.pow(FRICTION, deltaTime);
+                player.velocityY *= Math.pow(AIR_RES, deltaTime);
+
+                player.x += player.velocityX * deltaTime;
+                player.y += player.velocityY * deltaTime;
+
+                // Check if player touched red ground (lost)
+                const deathZone = leftRightGame.platforms.find(p => p.isHazard);
+                if (player.y + player.height >= deathZone.y) {
+                    // Player lost
+                    leftRightGame.active = false;
+                    alert(`You lost ${leftRightGame.betAmount} credits!`);
+
+                    // Update Firebase
+                    database.ref('players/' + currentUser.uid).update({
+                        credits: userCredits
+                    });
+
+                    document.getElementById('practiceCanvas').style.display = 'none';
+                    document.getElementById('hud').style.display = 'none';
+                    showShopHub();
+                    return;
+                }
+
+                // Check if player is safe on winning platform
+                const winningPlatform = leftRightGame.winningSide === 'left' ? leftRightGame.leftPlatform : leftRightGame.rightPlatform;
+                if (leftRightGame.chosenSide === leftRightGame.winningSide &&
+                    player.y + player.height <= winningPlatform.y + 50 &&
+                    player.y + player.height >= winningPlatform.y - 10) {
+
+                    // Player won!
+                    const winnings = leftRightGame.betAmount * 2;
+                    userCredits += winnings;
+                    leftRightGame.active = false;
+                    alert(`You won ${winnings} credits!\n\nYour bet: ${leftRightGame.betAmount}\nTotal winnings: ${winnings}`);
+
+                    // Update Firebase
+                    database.ref('players/' + currentUser.uid).update({
+                        credits: userCredits
+                    });
+
+                    document.getElementById('practiceCanvas').style.display = 'none';
+                    document.getElementById('hud').style.display = 'none';
+                    showShopHub();
+                }
+
+                return;
+            }
+        }
+
+        function renderLeftRightGame() {
+            const canvas = document.getElementById('practiceCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // Sky blue background
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw 40x40px grid
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < canvas.width; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += 40) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+
+            // Draw platforms
+            for (const platform of leftRightGame.platforms) {
+                if (platform.isDivider && !platform.visible) continue;
+
+                if (platform.isHazard) {
+                    // Red death zone
+                    ctx.fillStyle = '#FF0000';
+                    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+                } else if (platform.isDivider) {
+                    // Center divider wall
+                    ctx.fillStyle = '#808080';
+                    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                } else if (platform.side) {
+                    // Left/Right platforms
+                    ctx.fillStyle = '#4CAF50';
+                    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                    ctx.strokeStyle = '#2E7D32';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+
+                    // Label
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.font = 'bold 20px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                    ctx.shadowBlur = 5;
+                    ctx.fillText(platform.side.toUpperCase(), platform.x + platform.width / 2, platform.y - 10);
+                    ctx.shadowBlur = 0;
+                } else {
+                    // Walls
+                    ctx.fillStyle = '#666666';
+                    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                }
+            }
+
+            // Draw player
+            leftRightGame.player.draw(ctx, 0, 0, false);
+
+            // Update HUD
+            let hudContent = '';
+            if (leftRightGame.phase === 'countdown') {
+                const countdownNum = Math.ceil(leftRightGame.countdown / 60);
+                hudContent = `
+                    <div style="font-size: 72px; font-weight: bold; color: #FFD700; text-align: center; margin-top: 200px; text-shadow: 3px 3px 6px rgba(0,0,0,0.5);">${countdownNum}</div>
+                    <div style="font-size: 24px; font-weight: bold; text-align: center; margin-top: 20px;">GET READY!</div>
+                    <div style="font-size: 18px; text-align: center; margin-top: 10px;">Bet: ${leftRightGame.betAmount} credits</div>
+                `;
+            } else if (leftRightGame.phase === 'choosing') {
+                const timeLeft = Math.ceil(leftRightGame.countdown / 60);
+                hudContent = `
+                    <div style="font-size: 48px; font-weight: bold; color: #FF0000; text-align: center; margin-top: 100px; text-shadow: 3px 3px 6px rgba(0,0,0,0.5);">${timeLeft}</div>
+                    <div style="font-size: 24px; font-weight: bold; text-align: center; margin-top: 20px;">CHOOSE LEFT OR RIGHT!</div>
+                    <div style="font-size: 18px; text-align: center; margin-top: 10px;">Bet: ${leftRightGame.betAmount} credits</div>
+                    ${leftRightGame.chosenSide ? `<div style="font-size: 16px; text-align: center; margin-top: 5px; color: #FFD700;">Chosen: ${leftRightGame.chosenSide.toUpperCase()}</div>` : ''}
+                `;
+            } else if (leftRightGame.phase === 'result') {
+                hudContent = `
+                    <div style="font-size: 32px; font-weight: bold; text-align: center; margin-top: 150px;">RESULT...</div>
+                    <div style="font-size: 18px; text-align: center; margin-top: 10px;">Winning side: ${leftRightGame.winningSide ? leftRightGame.winningSide.toUpperCase() : 'NONE'}</div>
+                    <div style="font-size: 18px; text-align: center; margin-top: 10px;">Your choice: ${leftRightGame.chosenSide ? leftRightGame.chosenSide.toUpperCase() : 'NONE'}</div>
+                `;
+            }
+            document.getElementById('hud').innerHTML = hudContent;
         }
 
         // Notification system
