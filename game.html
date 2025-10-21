@@ -1477,10 +1477,11 @@
                 { x: middleX, y: middleBottomY - spacing * 2, width: 120, height: 40, label: 'CREATE PARTY', action: 'createParty' },
                 { x: middleX, y: middleBottomY - spacing * 3, width: 120, height: 40, label: 'JOIN PARTY', action: 'joinParty' },
 
-                // RIGHT STACK (3 portals) - 40px higher than middle
-                { x: rightX, y: sideBottomY, width: 120, height: 40, label: 'LEVEL CREATOR', action: 'creator' },
-                { x: rightX, y: sideBottomY - spacing, width: 120, height: 40, label: 'LEADERBOARD', action: 'leaderboard' },
-                { x: rightX, y: sideBottomY - spacing * 2, width: 120, height: 40, label: 'SETTINGS', action: 'settings' }
+                // RIGHT STACK (4 portals) - same bottom as middle stack
+                { x: rightX, y: middleBottomY, width: 120, height: 40, label: 'GAMES', action: 'games' },
+                { x: rightX, y: middleBottomY - spacing, width: 120, height: 40, label: 'LEVEL CREATOR', action: 'creator' },
+                { x: rightX, y: middleBottomY - spacing * 2, width: 120, height: 40, label: 'LEADERBOARD', action: 'leaderboard' },
+                { x: rightX, y: middleBottomY - spacing * 3, width: 120, height: 40, label: 'SETTINGS', action: 'settings' }
             ];
 
             // Spawn player on ground platform, centered
@@ -1930,6 +1931,9 @@
                     break;
                 case 'settings':
                     showSettings();
+                    break;
+                case 'games':
+                    startLeftRightGame();
                     break;
             }
         }
@@ -4865,16 +4869,6 @@
                     height: portalHeight,
                     action: 'backpack',
                     label: 'BACKPACK'
-                },
-
-                // Games portal (right side)
-                {
-                    x: 900,
-                    y: groundY - 120,
-                    width: portalWidth,
-                    height: portalHeight,
-                    action: 'games',
-                    label: 'GAMES'
                 }
             ];
 
@@ -4948,10 +4942,6 @@
                         // Save player position before entering shop
                         savedShopHubPosition = { x: shopHubPlayer.x, y: shopHubPlayer.y, velocityX: shopHubPlayer.velocityX, velocityY: shopHubPlayer.velocityY };
                         showBackpackShop();
-                    } else if (standingOnPlatform.action === 'games') {
-                        shopHubActive = false;
-                        savedShopHubPosition = { x: shopHubPlayer.x, y: shopHubPlayer.y, velocityX: shopHubPlayer.velocityX, velocityY: shopHubPlayer.velocityY };
-                        startLeftRightGame();
                     }
                 }
             }
@@ -6668,15 +6658,15 @@
             // Show bet input dialog
             const maxBet = userCredits;
             if (maxBet <= 0) {
-                alert('You need credits in your backpack to play! Visit the backpack portal to withdraw credits from your base.');
-                showShopHub();
+                alert('You need credits in your backpack to play! Visit the SHOP portal to withdraw credits from your base.');
+                initMainMenu();
                 return;
             }
 
             const betInput = prompt(`How many credits do you want to bet?\n\nYou have ${userCredits} credits in your backpack.\n\nEnter amount (1-${maxBet}):`);
 
             if (!betInput) {
-                showShopHub();
+                initMainMenu();
                 return;
             }
 
@@ -6684,7 +6674,7 @@
 
             if (isNaN(betAmount) || betAmount < 1 || betAmount > maxBet) {
                 alert(`Invalid bet amount! Must be between 1 and ${maxBet}.`);
-                showShopHub();
+                initMainMenu();
                 return;
             }
 
@@ -6874,7 +6864,7 @@
 
                     document.getElementById('practiceCanvas').style.display = 'none';
                     document.getElementById('hud').style.display = 'none';
-                    showShopHub();
+                    initMainMenu();
                     return;
                 }
 
@@ -6897,7 +6887,7 @@
 
                     document.getElementById('practiceCanvas').style.display = 'none';
                     document.getElementById('hud').style.display = 'none';
-                    showShopHub();
+                    initMainMenu();
                 }
 
                 return;
