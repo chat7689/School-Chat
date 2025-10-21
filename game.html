@@ -573,6 +573,14 @@
         </div>
     </div>
 
+    <!-- Stats Hub Screen (Portal Selection) -->
+    <div id="statsHubScreen" class="screen">
+        <canvas id="statsHubCanvas" width="1200" height="800" style="display: block; margin: 0 auto; background: #87CEEB;"></canvas>
+        <div id="statsHubHUD" style="position: absolute; top: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 15px; border-radius: 10px; color: white; font-size: 18px; text-align: center;">
+            Use arrow keys to move, press SPACE to enter portal
+        </div>
+    </div>
+
     <!-- Cosmetics Shop Screen -->
     <div id="cosmeticsShopScreen" class="screen">
         <h1>Cosmetics Shop</h1>
@@ -1942,7 +1950,7 @@
                     showShop();
                     break;
                 case 'stats':
-                    showStats();
+                    showStatsHub();
                     break;
                 case 'creator':
                     window.location.href = 'creator.html';
@@ -1978,6 +1986,13 @@
         let shopHubKeys = {};
         let shopHubIsJumping = false;
         let savedShopHubPosition = null; // Store player position when entering shop screens
+
+        // Stats Hub variables
+        let statsHubActive = false;
+        let statsHubPlayer = null;
+        let statsHubPlatforms = [];
+        let statsHubKeys = {};
+        let statsHubIsJumping = false;
 
         async function showPracticeLevels() {
             try {
@@ -5609,8 +5624,260 @@
             updateCosmeticsShopUI();
         }
 
-        // Stats screen
-        function showStats() {
+        // Stats Hub
+        function showStatsHub() {
+            showScreen('statsHubScreen');
+            statsHubActive = true;
+
+            const canvas = document.getElementById('statsHubCanvas');
+            const ctx = canvas.getContext('2d');
+
+            const portalWidth = 120;
+            const portalHeight = 40;
+            const groundY = 720;
+
+            statsHubPlatforms = [
+                // Boundary walls
+                { x: 0, y: 0, width: 40, height: 800 }, // Left wall
+                { x: 1160, y: 0, width: 40, height: 800 }, // Right wall
+                { x: 0, y: 0, width: 1200, height: 40 }, // Ceiling
+                { x: 0, y: 720, width: 1200, height: 80 }, // Ground
+
+                // Exit portal (left side)
+                {
+                    x: 200,
+                    y: groundY - 120,
+                    width: portalWidth,
+                    height: portalHeight,
+                    action: 'exit',
+                    label: 'EXIT'
+                },
+
+                // Personal Stats portal (center-left)
+                {
+                    x: 450,
+                    y: groundY - 120,
+                    width: portalWidth,
+                    height: portalHeight,
+                    action: 'personalStats',
+                    label: 'PERSONAL STATS'
+                },
+
+                // Everyone Stats portal (center-right)
+                {
+                    x: 680,
+                    y: groundY - 120,
+                    width: portalWidth,
+                    height: portalHeight,
+                    action: 'everyoneStats',
+                    label: 'EVERYONE STATS'
+                }
+            ];
+
+            // Create player at center
+            const spawnX = 600 - 20;
+            const spawnY = groundY - 40;
+            statsHubPlayer = new Player(spawnX, spawnY, equippedCosmetics);
+
+            // Start render loop
+            let lastFrameTime = performance.now();
+            function statsHubLoop(currentTime) {
+                if (!statsHubActive) return;
+
+                if (!currentTime) currentTime = performance.now();
+                let deltaTime = (currentTime - lastFrameTime) / 16.67;
+                if (deltaTime <= 0 || deltaTime > 10) deltaTime = 1;
+                lastFrameTime = currentTime;
+
+                updateStatsHub(deltaTime);
+                renderStatsHub(ctx, deltaTime);
+
+                requestAnimationFrame(statsHubLoop);
+            }
+            statsHubLoop();
+        }
+
+        function updateStatsHub(deltaTime) {
+            if (!statsHubPlayer) return;
+
+            // Check grounded state
+            let isGrounded = false;
+            let standingOnPlatform = null;
+            for (const platform of statsHubPlatforms) {
+                const onTop = statsHubPlayer.y + statsHubPlayer.height >= platform.y &&
+                              statsHubPlayer.y + statsHubPlayer.height <= platform.y + 5;
+                const horizontalOverlap = statsHubPlayer.x + statsHubPlayer.width > platform.x &&
+                                         statsHubPlayer.x < platform.x + platform.width;
+
+                if (onTop && horizontalOverlap) {
+                    isGrounded = true;
+                    standingOnPlatform = platform;
+                    break;
+                }
+            }
+
+            // Handle portal actions
+            if (standingOnPlatform && standingOnPlatform.action) {
+                if (statsHubKeys[' ']) {
+                    if (standingOnPlatform.action === 'exit') {
+                        statsHubActive = false;
+                        initMainMenu();
+                        return;
+                    } else if (standingOnPlatform.action === 'personalStats') {
+                        statsHubActive = false;
+                        showPersonalStats();
+                        return;
+                    } else if (standingOnPlatform.action === 'everyoneStats') {
+                        statsHubActive = false;
+                        showEveryoneStats();
+                        return;
+                    }
+                }
+            }
+
+            // Physics (exact match to shop hub and main menu)
+            const sizeScale = statsHubPlayer.currentSize / 40;
+            if ((statsHubKeys['s'] || statsHubKeys['ArrowDown']) && !isGrounded) {
+                statsHubPlayer.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
+            } else {
+                statsHubPlayer.velocityY += GRAVITY * sizeScale * deltaTime;
+            }
+
+            const scaledMoveSpeed = MOVE_SPEED * sizeScale;
+            if (statsHubKeys['a'] || statsHubKeys['ArrowLeft']) {
+                statsHubPlayer.velocityX -= scaledMoveSpeed * deltaTime;
+            }
+            if (statsHubKeys['d'] || statsHubKeys['ArrowRight']) {
+                statsHubPlayer.velocityX += scaledMoveSpeed * deltaTime;
+            }
+
+            // Jump
+            if ((statsHubKeys['w'] || statsHubKeys['ArrowUp']) && isGrounded && !statsHubIsJumping) {
+                statsHubPlayer.velocityY = -1.5 * sizeScale;
+                statsHubIsJumping = true;
+                statsHubPlayer.jumpHoldTime = 0;
+            }
+
+            if (statsHubIsJumping && (statsHubKeys['w'] || statsHubKeys['ArrowUp']) && statsHubPlayer.velocityY < 0 && statsHubPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+                statsHubPlayer.jumpHoldTime += deltaTime;
+                const maxJumpVelocity = JUMP_POWER * sizeScale;
+                if (Math.abs(statsHubPlayer.velocityY) < maxJumpVelocity && statsHubPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+                    statsHubPlayer.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
+                }
+            }
+
+            if (statsHubIsJumping && (!statsHubKeys['w'] && !statsHubKeys['ArrowUp'])) {
+                statsHubIsJumping = false;
+            }
+
+            if (statsHubIsJumping && statsHubPlayer.jumpHoldTime >= MAX_JUMP_HOLD_TIME) {
+                statsHubIsJumping = false;
+            }
+
+            if (isGrounded && statsHubPlayer.velocityY >= 0) {
+                statsHubIsJumping = false;
+            }
+
+            // Friction
+            if (isGrounded) {
+                statsHubPlayer.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
+            } else {
+                statsHubPlayer.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
+            }
+
+            const maxFallSpeed = 8 * sizeScale;
+            statsHubPlayer.velocityY = Math.min(statsHubPlayer.velocityY, maxFallSpeed);
+
+            const scaledMaxSpeed = GROUND_MAX_SPEED * sizeScale;
+            statsHubPlayer.velocityX = Math.max(-scaledMaxSpeed, Math.min(scaledMaxSpeed, statsHubPlayer.velocityX));
+
+            // Update position
+            statsHubPlayer.x += statsHubPlayer.velocityX * deltaTime;
+            statsHubPlayer.y += statsHubPlayer.velocityY * deltaTime;
+
+            // Collision detection
+            for (const platform of statsHubPlatforms) {
+                if (checkCollision(statsHubPlayer, platform)) {
+                    if (statsHubPlayer.velocityY > 0) {
+                        statsHubPlayer.y = platform.y - statsHubPlayer.height;
+                        statsHubPlayer.velocityY = 0;
+                    } else if (statsHubPlayer.velocityY < 0) {
+                        statsHubPlayer.y = platform.y + platform.height;
+                        statsHubPlayer.velocityY = 0;
+                    }
+
+                    if (statsHubPlayer.velocityX > 0) {
+                        statsHubPlayer.x = platform.x - statsHubPlayer.width;
+                        statsHubPlayer.velocityX = 0;
+                    } else if (statsHubPlayer.velocityX < 0) {
+                        statsHubPlayer.x = platform.x + platform.width;
+                        statsHubPlayer.velocityX = 0;
+                    }
+                }
+            }
+        }
+
+        function renderStatsHub(ctx, deltaTime) {
+            // Background
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, 1200, 800);
+
+            // Grid
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < 1200; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, 800);
+                ctx.stroke();
+            }
+            for (let y = 0; y < 800; y += 40) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(1200, y);
+                ctx.stroke();
+            }
+
+            // Draw platforms
+            for (const platform of statsHubPlatforms) {
+                if (platform.action && platform.action !== 'none') {
+                    // Portal platforms
+                    ctx.fillStyle = '#4CAF50';
+                    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                    ctx.strokeStyle = '#2E7D32';
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+
+                    // Label
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.font = 'bold 14px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                    ctx.shadowBlur = 3;
+                    ctx.fillText(platform.label, platform.x + platform.width / 2, platform.y + platform.height / 2 + 5);
+                    ctx.shadowBlur = 0;
+                } else {
+                    // Walls and ground
+                    ctx.fillStyle = '#666666';
+                    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                }
+            }
+
+            // Draw player
+            statsHubPlayer.draw(ctx, 0, 0, false);
+
+            // Title
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 36px Arial';
+            ctx.textAlign = 'center';
+            ctx.shadowColor = 'rgba(0,0,0,0.7)';
+            ctx.shadowBlur = 5;
+            ctx.fillText('STATS HUB', 600, 100);
+            ctx.shadowBlur = 0;
+        }
+
+        // Personal Stats (the existing stats screen)
+        function showPersonalStats() {
             showScreen('statsScreen');
             document.getElementById('statsContent').innerHTML = `
                 <div style="margin: 20px 0;">Races Won: ${userStats.racesWon}</div>
@@ -5618,6 +5885,11 @@
                 <div style="margin: 20px 0;">Win Rate: ${userStats.racesPlayed > 0 ? ((userStats.racesWon / userStats.racesPlayed) * 100).toFixed(1) : 0}%</div>
                 <div style="margin: 20px 0;">Total Credits Earned: ${userStats.totalCreditsEarned}</div>
             `;
+        }
+
+        // Rename old showStats to showPersonalStats for compatibility
+        function showStats() {
+            showPersonalStats();
         }
 
         // Zoom variables for all modes
@@ -6994,16 +7266,38 @@
 
                 // Check if choosing time is up
                 if (leftRightGame.phase === 'choosing' && leftRightGame.countdown <= 0) {
-                    // If no side chosen, player loses
-                    if (!leftRightGame.chosenSide) {
-                        leftRightGame.phase = 'result';
-                        leftRightGame.winningSide = null;
-                        return;
-                    }
-
                     // Show divider
                     const divider = leftRightGame.platforms.find(p => p.isDivider);
-                    if (divider) divider.visible = true;
+                    if (divider) {
+                        divider.visible = true;
+
+                        // Check if player is colliding with divider, push them to the closer side
+                        if (player.x + player.width > divider.x &&
+                            player.x < divider.x + divider.width &&
+                            player.y + player.height > divider.y &&
+                            player.y < divider.y + divider.height) {
+
+                            // Determine which side is closer
+                            const leftDist = Math.abs(player.x + player.width / 2 - leftRightGame.leftPlatform.x);
+                            const rightDist = Math.abs(player.x + player.width / 2 - leftRightGame.rightPlatform.x);
+
+                            if (leftDist < rightDist) {
+                                // Push to left
+                                player.x = divider.x - player.width - 1;
+                                if (!leftRightGame.chosenSide) leftRightGame.chosenSide = 'left';
+                            } else {
+                                // Push to right
+                                player.x = divider.x + divider.width + 1;
+                                if (!leftRightGame.chosenSide) leftRightGame.chosenSide = 'right';
+                            }
+                        }
+                    }
+
+                    // If STILL no side chosen after divider check, pick their current side based on position
+                    if (!leftRightGame.chosenSide) {
+                        const centerX = 600; // Middle of screen
+                        leftRightGame.chosenSide = player.x < centerX ? 'left' : 'right';
+                    }
 
                     // Randomly choose winning side
                     leftRightGame.winningSide = Math.random() < 0.5 ? 'left' : 'right';
@@ -7341,6 +7635,8 @@
             levelSelectKeys[e.key.toLowerCase()] = true;
             shopHubKeys[e.key] = true;
             shopHubKeys[e.key.toLowerCase()] = true;
+            statsHubKeys[e.key] = true;
+            statsHubKeys[e.key.toLowerCase()] = true;
             leftRightGame.keys[e.key] = true;
             leftRightGame.keys[e.key.toLowerCase()] = true;
 
@@ -7378,6 +7674,8 @@
             levelSelectKeys[e.key.toLowerCase()] = false;
             shopHubKeys[e.key] = false;
             shopHubKeys[e.key.toLowerCase()] = false;
+            statsHubKeys[e.key] = false;
+            statsHubKeys[e.key.toLowerCase()] = false;
             leftRightGame.keys[e.key] = false;
             leftRightGame.keys[e.key.toLowerCase()] = false;
             delete practiceMode.keys[e.key];
