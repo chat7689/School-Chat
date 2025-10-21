@@ -3324,12 +3324,23 @@
                         <div style="font-size: 24px; font-weight: bold; text-align: center; margin-top: 20px;">GET READY!</div>
                     `;
                 } else {
+                    const creditLimit = userCredits; // Backpack capacity is the limit
+                    const canCollectMore = practiceMode.creditsCollected < creditLimit;
                     hudContent = `
-                        <div style="font-size: 24px; font-weight: bold;">EARN MODE</div>
-                        <div style="font-size: 18px; margin-top: 5px;">Collected This Run: ${practiceMode.creditsCollected}</div>
-                        <div style="font-size: 16px; margin-top: 3px;">Credits: ${secureCredits} <span style="font-size: 12px; color: #aaa;">(${userCredits} on hand)</span></div>
-                        <div style="font-size: 14px; margin-top: 3px; color: #aaa;">Active Credits: ${practiceMode.credits.filter(c => !c.collected).length}</div>
-                        <div style="font-size: 16px; color: #FFD700; margin-top: 5px;">Collect coins!</div>
+                        <div style="font-size: 24px; font-weight: bold; margin-bottom: 15px;">EARN MODE</div>
+                        <div style="background: rgba(0,0,0,0.5); padding: 10px; border-radius: 10px; margin-bottom: 10px;">
+                            <div style="font-size: 14px; color: #4facfe; text-transform: uppercase; margin-bottom: 5px;">Collected This Run</div>
+                            <div style="font-size: 32px; font-weight: bold; color: ${canCollectMore ? '#FFD700' : '#FF0000'};">${practiceMode.creditsCollected} / ${creditLimit}</div>
+                            ${!canCollectMore ? '<div style="font-size: 12px; color: #FF0000; margin-top: 5px;">BACKPACK FULL!</div>' : ''}
+                        </div>
+                        <div style="background: rgba(0,0,0,0.5); padding: 10px; border-radius: 10px; margin-bottom: 5px;">
+                            <div style="font-size: 12px; color: #4facfe; text-transform: uppercase; margin-bottom: 3px;">Backpack Credits</div>
+                            <div style="font-size: 20px; font-weight: bold; color: #BBB;">${userCredits}</div>
+                        </div>
+                        <div style="background: rgba(0,0,0,0.5); padding: 10px; border-radius: 10px;">
+                            <div style="font-size: 12px; color: #4facfe; text-transform: uppercase; margin-bottom: 3px;">Secure Credits (Base)</div>
+                            <div style="font-size: 20px; font-weight: bold; color: #FFD700;">${secureCredits}</div>
+                        </div>
                     `;
                 }
                 document.getElementById('hud').innerHTML = hudContent;
@@ -3737,12 +3748,19 @@
                 practiceIsJumping = false;
             }
 
-            // Check credit collection
+            // Check credit collection (with backpack limit)
+            const creditLimit = userCredits; // Backpack capacity is the limit
             for (const credit of practiceMode.credits) {
                 if (!credit.collected && checkCollision(player, credit)) {
-                    credit.collected = true;
-                    practiceMode.creditsCollected++;
-                    updateCredits(1);
+                    // Only collect if under limit
+                    if (practiceMode.creditsCollected < creditLimit) {
+                        credit.collected = true;
+                        practiceMode.creditsCollected++;
+                        updateCredits(1);
+                    } else {
+                        // Mark as collected so they disappear but don't count
+                        credit.collected = true;
+                    }
                 }
             }
 
@@ -6655,6 +6673,17 @@
         // Exit practice mode
         function exitPracticeMode() {
             practiceMode.active = false;
+
+            // Reset player size to prevent jump height glitch
+            if (practiceMode.player) {
+                practiceMode.player.currentSize = 40;
+                practiceMode.player.targetSize = 40;
+                practiceMode.player.width = 40;
+                practiceMode.player.height = 40;
+                practiceMode.player.sizeTransitioning = false;
+                practiceMode.player.sizeTransitionProgress = 0;
+            }
+
             document.getElementById('practiceCanvas').style.display = 'none';
             document.getElementById('hud').style.display = 'none';
             document.getElementById('practiceBackBtn').style.display = 'none';
