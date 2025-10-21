@@ -616,6 +616,11 @@
         <button onclick="backToMainMenu()">Back to Menu</button>
     </div>
 
+    <!-- Everyone Stats Screen (Visualization) -->
+    <div id="everyoneStatsScreen" class="screen">
+        <canvas id="everyoneStatsCanvas" width="1200" height="800" style="display: block; margin: 0 auto; background: #2C3E50;"></canvas>
+    </div>
+
     <!-- Base Screen -->
     <div id="baseScreen" class="screen">
         <h1>Your Base</h1>
@@ -5892,6 +5897,228 @@
             showPersonalStats();
         }
 
+        // Everyone Stats - Visualization map
+        let everyoneStatsActive = false;
+        let everyoneStatsCanvas, everyoneStatsCtx;
+        let everyoneStatsPlayer = null;
+        let everyoneStatsKeys = {};
+        let everyoneStatsIsJumping = false;
+        let everyoneStatsCameraX = 0;
+        let everyoneStatsCameraY = 0;
+        let everyoneStatsData = [];
+
+        async function showEveryoneStats() {
+            showScreen('everyoneStatsScreen');
+            everyoneStatsActive = true;
+
+            everyoneStatsCanvas = document.getElementById('everyoneStatsCanvas');
+            everyoneStatsCtx = everyoneStatsCanvas.getContext('2d');
+
+            // Load all players' secure credits from Firebase
+            const playersSnapshot = await database.ref('players').once('value');
+            const playersData = playersSnapshot.val();
+
+            everyoneStatsData = [];
+            if (playersData) {
+                Object.entries(playersData).forEach(([uid, playerData]) => {
+                    const secureCredits = playerData.secureCredits || 0;
+                    const username = playerData.username || 'Unknown';
+                    everyoneStatsData.push({
+                        uid,
+                        username,
+                        secureCredits
+                    });
+                });
+            }
+
+            // Sort by secure credits (highest first)
+            everyoneStatsData.sort((a, b) => b.secureCredits - a.secureCredits);
+
+            // Create player
+            everyoneStatsPlayer = new Player(600, 700, equippedCosmetics);
+            everyoneStatsCameraX = 0;
+            everyoneStatsCameraY = 0;
+
+            // Start render loop
+            let lastFrameTime = performance.now();
+            function everyoneStatsLoop(currentTime) {
+                if (!everyoneStatsActive) return;
+
+                if (!currentTime) currentTime = performance.now();
+                let deltaTime = (currentTime - lastFrameTime) / 16.67;
+                if (deltaTime <= 0 || deltaTime > 10) deltaTime = 1;
+                lastFrameTime = currentTime;
+
+                updateEveryoneStats(deltaTime);
+                renderEveryoneStats(deltaTime);
+
+                requestAnimationFrame(everyoneStatsLoop);
+            }
+            everyoneStatsLoop();
+        }
+
+        function updateEveryoneStats(deltaTime) {
+            if (!everyoneStatsPlayer) return;
+
+            // Simple physics for player movement
+            const sizeScale = everyoneStatsPlayer.currentSize / 40;
+
+            // Check if grounded (on ground at y=720)
+            const isGrounded = everyoneStatsPlayer.y + everyoneStatsPlayer.height >= 720;
+
+            // Gravity
+            if (!isGrounded) {
+                everyoneStatsPlayer.velocityY += GRAVITY * sizeScale * deltaTime;
+            } else {
+                everyoneStatsPlayer.y = 720 - everyoneStatsPlayer.height;
+                everyoneStatsPlayer.velocityY = 0;
+            }
+
+            // Movement
+            const scaledMoveSpeed = MOVE_SPEED * sizeScale;
+            if (everyoneStatsKeys['a'] || everyoneStatsKeys['ArrowLeft']) {
+                everyoneStatsPlayer.velocityX -= scaledMoveSpeed * deltaTime;
+            }
+            if (everyoneStatsKeys['d'] || everyoneStatsKeys['ArrowRight']) {
+                everyoneStatsPlayer.velocityX += scaledMoveSpeed * deltaTime;
+            }
+
+            // Jump
+            if ((everyoneStatsKeys['w'] || everyoneStatsKeys['ArrowUp'] || everyoneStatsKeys[' ']) && isGrounded && !everyoneStatsIsJumping) {
+                everyoneStatsPlayer.velocityY = -1.5 * sizeScale;
+                everyoneStatsIsJumping = true;
+                everyoneStatsPlayer.jumpHoldTime = 0;
+            }
+
+            if (everyoneStatsIsJumping && (everyoneStatsKeys['w'] || everyoneStatsKeys['ArrowUp'] || everyoneStatsKeys[' ']) && everyoneStatsPlayer.velocityY < 0 && everyoneStatsPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+                everyoneStatsPlayer.jumpHoldTime += deltaTime;
+                const maxJumpVelocity = JUMP_POWER * sizeScale;
+                if (Math.abs(everyoneStatsPlayer.velocityY) < maxJumpVelocity) {
+                    everyoneStatsPlayer.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
+                }
+            }
+
+            if (everyoneStatsIsJumping && (!everyoneStatsKeys['w'] && !everyoneStatsKeys['ArrowUp'] && !everyoneStatsKeys[' '])) {
+                everyoneStatsIsJumping = false;
+            }
+
+            if (isGrounded && everyoneStatsPlayer.velocityY >= 0) {
+                everyoneStatsIsJumping = false;
+            }
+
+            // Friction
+            if (isGrounded) {
+                everyoneStatsPlayer.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
+            } else {
+                everyoneStatsPlayer.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
+            }
+
+            const scaledMaxSpeed = GROUND_MAX_SPEED * sizeScale;
+            everyoneStatsPlayer.velocityX = Math.max(-scaledMaxSpeed, Math.min(scaledMaxSpeed, everyoneStatsPlayer.velocityX));
+
+            // Update position
+            everyoneStatsPlayer.x += everyoneStatsPlayer.velocityX * deltaTime;
+            everyoneStatsPlayer.y += everyoneStatsPlayer.velocityY * deltaTime;
+
+            // Keep player in bounds
+            everyoneStatsPlayer.x = Math.max(40, Math.min(11960, everyoneStatsPlayer.x));
+
+            // Update camera to follow player
+            everyoneStatsCameraX = everyoneStatsPlayer.x - 600 + everyoneStatsPlayer.width / 2;
+            everyoneStatsCameraX = Math.max(0, Math.min(11000, everyoneStatsCameraX));
+
+            // ESC to exit
+            if (everyoneStatsKeys['Escape']) {
+                everyoneStatsActive = false;
+                showStatsHub();
+            }
+        }
+
+        function renderEveryoneStats(deltaTime) {
+            const ctx = everyoneStatsCtx;
+
+            // Background
+            ctx.fillStyle = '#2C3E50';
+            ctx.fillRect(0, 0, 1200, 800);
+
+            // Grid
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < 12000; x += 40) {
+                const screenX = x - everyoneStatsCameraX;
+                if (screenX >= 0 && screenX <= 1200) {
+                    ctx.beginPath();
+                    ctx.moveTo(screenX, 0);
+                    ctx.lineTo(screenX, 800);
+                    ctx.stroke();
+                }
+            }
+            for (let y = 0; y < 800; y += 40) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(1200, y);
+                ctx.stroke();
+            }
+
+            // Draw ground
+            ctx.fillStyle = '#34495E';
+            ctx.fillRect(0 - everyoneStatsCameraX, 720, 12000, 80);
+
+            // Draw visualization squares for each player
+            let currentX = 100;
+            const squareY = 680; // On ground level
+
+            for (const player of everyoneStatsData) {
+                const credits = player.secureCredits;
+                if (credits === 0) continue;
+
+                // Calculate square size based on credits (sqrt for area proportional to credits)
+                const squareSize = Math.max(20, Math.min(200, Math.sqrt(credits) * 2));
+
+                const screenX = currentX - everyoneStatsCameraX;
+
+                // Draw square
+                ctx.fillStyle = player.uid === currentUser.uid ? '#FFD700' : '#3498DB';
+                ctx.fillRect(screenX, squareY - squareSize, squareSize, squareSize);
+
+                // Border
+                ctx.strokeStyle = player.uid === currentUser.uid ? '#FFA500' : '#2980B9';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(screenX, squareY - squareSize, squareSize, squareSize);
+
+                // Username label
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'center';
+                ctx.shadowColor = 'rgba(0,0,0,0.7)';
+                ctx.shadowBlur = 3;
+                ctx.fillText(player.username, screenX + squareSize / 2, squareY - squareSize - 10);
+
+                // Credits amount
+                ctx.font = 'bold 16px Arial';
+                ctx.fillStyle = '#FFD700';
+                ctx.fillText(credits.toLocaleString(), screenX + squareSize / 2, squareY - squareSize / 2);
+                ctx.shadowBlur = 0;
+
+                currentX += squareSize + 40; // Space between squares
+            }
+
+            // Draw player
+            everyoneStatsPlayer.draw(ctx, everyoneStatsCameraX, 0, false);
+
+            // Title
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = 'bold 32px Arial';
+            ctx.textAlign = 'center';
+            ctx.shadowColor = 'rgba(0,0,0,0.7)';
+            ctx.shadowBlur = 5;
+            ctx.fillText('EVERYONE\'S BASE CREDITS', 600, 50);
+            ctx.font = 'bold 16px Arial';
+            ctx.fillText('(Square size represents total secure credits)', 600, 80);
+            ctx.fillText('Press ESC to go back', 600, 110);
+            ctx.shadowBlur = 0;
+        }
+
         // Zoom variables for all modes
         let baseZoom = 1;
         let practiceZoom = 1;
@@ -5934,10 +6161,16 @@
             let spawnX = 2000;
             let spawnY = 3960; // Default spawn on ground
             if (baseBlocks.length > 0) {
-                // Pick the first block and spawn next to it (to the right)
-                const firstBlock = baseBlocks[0];
-                spawnX = firstBlock.x + 20; // Spawn to the right of the block (20x20 blocks)
-                spawnY = firstBlock.y; // Same height as the block
+                // Find the topmost block to spawn on
+                let highestBlock = baseBlocks[0];
+                for (const block of baseBlocks) {
+                    if (block.y < highestBlock.y) {
+                        highestBlock = block;
+                    }
+                }
+                // Spawn on top of the highest block
+                spawnX = highestBlock.x;
+                spawnY = highestBlock.y - 40; // Spawn on top (player is 40px tall)
             }
             basePlayer = new Player(spawnX, spawnY, equippedCosmetics);
 
@@ -7637,6 +7870,8 @@
             shopHubKeys[e.key.toLowerCase()] = true;
             statsHubKeys[e.key] = true;
             statsHubKeys[e.key.toLowerCase()] = true;
+            everyoneStatsKeys[e.key] = true;
+            everyoneStatsKeys[e.key.toLowerCase()] = true;
             leftRightGame.keys[e.key] = true;
             leftRightGame.keys[e.key.toLowerCase()] = true;
 
@@ -7676,6 +7911,8 @@
             shopHubKeys[e.key.toLowerCase()] = false;
             statsHubKeys[e.key] = false;
             statsHubKeys[e.key.toLowerCase()] = false;
+            everyoneStatsKeys[e.key] = false;
+            everyoneStatsKeys[e.key.toLowerCase()] = false;
             leftRightGame.keys[e.key] = false;
             leftRightGame.keys[e.key.toLowerCase()] = false;
             delete practiceMode.keys[e.key];
