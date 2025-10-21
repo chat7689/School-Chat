@@ -6657,10 +6657,12 @@
             platforms: [],
             leftPlatform: null,
             rightPlatform: null,
+            middlePlatform: null,
             chosenSide: null,
             winningSide: null,
             cameraX: 0,
-            cameraY: 0
+            cameraY: 0,
+            keys: {}
         };
 
         function startLeftRightGame() {
@@ -6706,6 +6708,7 @@
             const groundY = 720;
             const leftPlatformX = 300;
             const rightPlatformX = 700;
+            const middlePlatformX = 580; // Center between left and right
             const platformY = groundY - 120;
 
             leftRightGame.platforms = [
@@ -6720,6 +6723,9 @@
                 // Center divider (will appear after countdown)
                 { x: 598, y: 0, width: 4, height: groundY, isDivider: true, visible: false },
 
+                // Middle starting platform (1 block = 40x40)
+                { x: middlePlatformX, y: platformY, width: 40, height: 40, side: 'middle' },
+
                 // Left platform
                 { x: leftPlatformX, y: platformY, width: 200, height: 40, side: 'left' },
 
@@ -6727,11 +6733,12 @@
                 { x: rightPlatformX, y: platformY, width: 200, height: 40, side: 'right' }
             ];
 
+            leftRightGame.middlePlatform = leftRightGame.platforms[leftRightGame.platforms.length - 3];
             leftRightGame.leftPlatform = leftRightGame.platforms[leftRightGame.platforms.length - 2];
             leftRightGame.rightPlatform = leftRightGame.platforms[leftRightGame.platforms.length - 1];
 
-            // Create player at center
-            leftRightGame.player = new Player(600 - 20, platformY - 40, equippedCosmetics);
+            // Create player on middle platform
+            leftRightGame.player = new Player(middlePlatformX + 0, platformY - 40, equippedCosmetics);
 
             // Initialize camera
             leftRightGame.cameraX = 0;
@@ -6776,10 +6783,10 @@
                 player.velocityY += GRAVITY * deltaTime;
 
                 // Horizontal movement
-                if (keys['a'] || keys['ArrowLeft']) {
+                if (leftRightGame.keys['a'] || leftRightGame.keys['ArrowLeft']) {
                     player.velocityX -= MOVE_SPEED * deltaTime;
                 }
-                if (keys['d'] || keys['ArrowRight']) {
+                if (leftRightGame.keys['d'] || leftRightGame.keys['ArrowRight']) {
                     player.velocityX += MOVE_SPEED * deltaTime;
                 }
 
@@ -6812,8 +6819,8 @@
                         player.velocityY = 0;
                         isGrounded = true;
 
-                        // Mark chosen side
-                        if (!leftRightGame.chosenSide) {
+                        // Mark chosen side (only if landing on left or right, not middle)
+                        if (!leftRightGame.chosenSide && platform.side !== 'middle') {
                             leftRightGame.chosenSide = platform.side;
                         }
                     }
@@ -7127,6 +7134,8 @@
             levelSelectKeys[e.key.toLowerCase()] = true;
             shopHubKeys[e.key] = true;
             shopHubKeys[e.key.toLowerCase()] = true;
+            leftRightGame.keys[e.key] = true;
+            leftRightGame.keys[e.key.toLowerCase()] = true;
 
             if (e.key === 'Escape') {
                 if (practiceMode.active) {
@@ -7162,6 +7171,8 @@
             levelSelectKeys[e.key.toLowerCase()] = false;
             shopHubKeys[e.key] = false;
             shopHubKeys[e.key.toLowerCase()] = false;
+            leftRightGame.keys[e.key] = false;
+            leftRightGame.keys[e.key.toLowerCase()] = false;
             delete practiceMode.keys[e.key];
             delete raceState.keys[e.key];
         });
