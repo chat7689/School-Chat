@@ -6885,12 +6885,14 @@
                 // Collision detection
                 let isGrounded = false;
                 for (const platform of leftRightGame.platforms) {
-                    if (platform.isHazard || platform.isDivider || !platform.side) continue;
+                    // Skip hazards and invisible divider
+                    if (platform.isHazard || (platform.isDivider && !platform.visible)) continue;
 
-                    // Bottom collision (landing on platform)
-                    if (player.velocityY > 0 &&
-                        player.y + player.height <= platform.y + Math.abs(player.velocityY) * deltaTime &&
-                        player.y + player.height >= platform.y &&
+                    // Bottom collision (landing on platform) - for platforms with side property
+                    if (platform.side &&
+                        player.velocityY > 0 &&
+                        player.y + player.height > platform.y &&
+                        player.y < platform.y + platform.height &&
                         player.x + player.width > platform.x &&
                         player.x < platform.x + platform.width) {
 
@@ -6901,6 +6903,33 @@
                         // Mark chosen side (only if landing on left or right, not middle)
                         if (!leftRightGame.chosenSide && platform.side !== 'middle') {
                             leftRightGame.chosenSide = platform.side;
+                        }
+                    }
+
+                    // Wall collisions (boundary walls and visible divider)
+                    if (!platform.side || (platform.isDivider && platform.visible)) {
+                        // Horizontal collision (left/right walls)
+                        if (player.x + player.width > platform.x &&
+                            player.x < platform.x + platform.width &&
+                            player.y + player.height > platform.y &&
+                            player.y < platform.y + platform.height) {
+
+                            // Left wall collision
+                            if (player.velocityX > 0 && player.x < platform.x) {
+                                player.x = platform.x - player.width;
+                                player.velocityX = 0;
+                            }
+                            // Right wall collision
+                            else if (player.velocityX < 0 && player.x > platform.x) {
+                                player.x = platform.x + platform.width;
+                                player.velocityX = 0;
+                            }
+
+                            // Top collision (hitting ceiling)
+                            if (player.velocityY < 0 && player.y > platform.y) {
+                                player.y = platform.y + platform.height;
+                                player.velocityY = 0;
+                            }
                         }
                     }
                 }
@@ -6939,11 +6968,48 @@
 
                 // Update player physics
                 player.velocityY += GRAVITY * deltaTime;
-                player.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
-                player.velocityY *= Math.pow(AIR_RESISTANCE, deltaTime);
 
+                // Update position
                 player.x += player.velocityX * deltaTime;
                 player.y += player.velocityY * deltaTime;
+
+                // Collision detection with winning platform
+                const winningPlatform = leftRightGame.winningSide === 'left' ? leftRightGame.leftPlatform : leftRightGame.rightPlatform;
+                if (winningPlatform &&
+                    player.velocityY > 0 &&
+                    player.y + player.height > winningPlatform.y &&
+                    player.y < winningPlatform.y + winningPlatform.height &&
+                    player.x + player.width > winningPlatform.x &&
+                    player.x < winningPlatform.x + winningPlatform.width) {
+
+                    player.y = winningPlatform.y - player.height;
+                    player.velocityY = 0;
+
+                    // Apply ground friction only when on platform
+                    player.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
+
+                    // Check if player won (stayed on winning platform)
+                    if (leftRightGame.chosenSide === leftRightGame.winningSide) {
+                        const winnings = leftRightGame.betAmount * 2;
+                        userCredits += winnings;
+                        leftRightGame.active = false;
+                        alert(`You won ${winnings} credits!\n\nYour bet: ${leftRightGame.betAmount}\nTotal winnings: ${winnings}`);
+
+                        // Update Firebase
+                        database.ref('players/' + currentUser.uid).update({
+                            credits: userCredits
+                        });
+
+                        document.getElementById('practiceCanvas').style.display = 'none';
+                        document.getElementById('hud').style.display = 'none';
+                        initMainMenu();
+                        return;
+                    }
+                } else {
+                    // Apply air resistance when not on platform
+                    player.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
+                    player.velocityY *= Math.pow(AIR_RESISTANCE, deltaTime);
+                }
 
                 // Check if player touched red ground (lost)
                 const deathZone = leftRightGame.platforms.find(p => p.isHazard);
@@ -6961,28 +7027,6 @@
                     document.getElementById('hud').style.display = 'none';
                     initMainMenu();
                     return;
-                }
-
-                // Check if player is safe on winning platform
-                const winningPlatform = leftRightGame.winningSide === 'left' ? leftRightGame.leftPlatform : leftRightGame.rightPlatform;
-                if (leftRightGame.chosenSide === leftRightGame.winningSide &&
-                    player.y + player.height <= winningPlatform.y + 50 &&
-                    player.y + player.height >= winningPlatform.y - 10) {
-
-                    // Player won!
-                    const winnings = leftRightGame.betAmount * 2;
-                    userCredits += winnings;
-                    leftRightGame.active = false;
-                    alert(`You won ${winnings} credits!\n\nYour bet: ${leftRightGame.betAmount}\nTotal winnings: ${winnings}`);
-
-                    // Update Firebase
-                    database.ref('players/' + currentUser.uid).update({
-                        credits: userCredits
-                    });
-
-                    document.getElementById('practiceCanvas').style.display = 'none';
-                    document.getElementById('hud').style.display = 'none';
-                    initMainMenu();
                 }
 
                 return;
