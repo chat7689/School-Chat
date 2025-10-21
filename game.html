@@ -1707,9 +1707,18 @@
 
             // Check for platform interaction when standing on action platform
             if (standingOnPlatform && standingOnPlatform.action && standingOnPlatform.action !== 'none') {
-                if (menuKeys[' ']) {
+                if (menuKeys[' '] && !menuPlayer.actionExecuted) {
+                    menuPlayer.actionExecuted = true;
                     executePlatformAction(standingOnPlatform.action);
                 }
+            } else {
+                // Reset action flag when not on a portal
+                menuPlayer.actionExecuted = false;
+            }
+
+            // Reset action flag when space is released
+            if (!menuKeys[' ']) {
+                menuPlayer.actionExecuted = false;
             }
 
             // Backpack hold mechanic (E or H key)
