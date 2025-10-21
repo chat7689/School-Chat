@@ -1517,6 +1517,14 @@
             const spawnY = groundY - 40; // On top of ground platform
             menuPlayer = new Player(spawnX, spawnY, equippedCosmetics);
 
+            // Ensure player size is reset (prevent earn mode glitch)
+            menuPlayer.currentSize = 40;
+            menuPlayer.targetSize = 40;
+            menuPlayer.width = 40;
+            menuPlayer.height = 40;
+            menuPlayer.sizeTransitioning = false;
+            menuPlayer.sizeTransitionProgress = 0;
+
             // Center camera on player
             menuCameraX = spawnX + 20 - 600; // Player center - half canvas width
             menuCameraY = spawnY + 20 - 400; // Player center - half canvas height
@@ -5855,27 +5863,59 @@
             // Draw platforms
             for (const platform of statsHubPlatforms) {
                 if (platform.action && platform.action !== 'none') {
-                    // Portal platforms
-                    ctx.fillStyle = '#4CAF50';
+                    // Portal platforms with gradient (EXACT MATCH to main menu)
+                    const gradient = ctx.createLinearGradient(platform.x, platform.y, platform.x, platform.y + platform.height);
+                    gradient.addColorStop(0, 'rgba(79, 172, 254, 0.5)');
+                    gradient.addColorStop(1, 'rgba(79, 172, 254, 0.2)');
+                    ctx.fillStyle = gradient;
                     ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
-                    ctx.strokeStyle = '#2E7D32';
-                    ctx.lineWidth = 3;
-                    ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
 
-                    // Label
-                    ctx.fillStyle = '#FFFFFF';
+                    // Glowing border (inside edge)
+                    ctx.shadowColor = '#4facfe';
+                    ctx.shadowBlur = 15;
+                    ctx.strokeStyle = '#4facfe';
+                    ctx.lineWidth = 4;
+                    ctx.strokeRect(platform.x + 2, platform.y + 2, platform.width - 4, platform.height - 4);
+                    ctx.shadowBlur = 0;
+
+                    // Label with shadow
+                    ctx.fillStyle = '#ffffff';
                     ctx.font = 'bold 14px Arial';
                     ctx.textAlign = 'center';
                     ctx.shadowColor = 'rgba(0,0,0,0.5)';
-                    ctx.shadowBlur = 3;
+                    ctx.shadowBlur = 5;
                     ctx.fillText(platform.label, platform.x + platform.width / 2, platform.y + platform.height / 2 + 5);
                     ctx.shadowBlur = 0;
                 } else {
-                    // Walls and ground
-                    ctx.fillStyle = '#666666';
+                    // Walls and ground - standardized green
+                    ctx.fillStyle = '#4CAF50';
                     ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+
+                    // Border (inside edge)
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 4;
+                    ctx.strokeRect(platform.x + 2, platform.y + 2, platform.width - 4, platform.height - 4);
+
+                    // Inner 40x40 grid lines
+                    ctx.strokeStyle = '#388E3C';
+                    ctx.lineWidth = 1;
+                    for (let gx = 40; gx < platform.width; gx += 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(platform.x + gx, platform.y);
+                        ctx.lineTo(platform.x + gx, platform.y + platform.height);
+                        ctx.stroke();
+                    }
+                    for (let gy = 40; gy < platform.height; gy += 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(platform.x, platform.y + gy);
+                        ctx.lineTo(platform.x + platform.width, platform.y + gy);
+                        ctx.stroke();
+                    }
                 }
             }
+
+            // Draw particles
+            updateAndDrawParticles(ctx, 0, 0, deltaTime);
 
             // Draw player
             statsHubPlayer.draw(ctx, 0, 0, false);
@@ -5969,72 +6009,93 @@
         function updateEveryoneStats(deltaTime) {
             if (!everyoneStatsPlayer) return;
 
-            // Simple physics for player movement
-            const sizeScale = everyoneStatsPlayer.currentSize / 40;
+            const player = everyoneStatsPlayer;
 
-            // Check if grounded (on ground at y=720)
-            const isGrounded = everyoneStatsPlayer.y + everyoneStatsPlayer.height >= 720;
-
-            // Gravity
-            if (!isGrounded) {
-                everyoneStatsPlayer.velocityY += GRAVITY * sizeScale * deltaTime;
-            } else {
-                everyoneStatsPlayer.y = 720 - everyoneStatsPlayer.height;
-                everyoneStatsPlayer.velocityY = 0;
+            // STEP 1: Check if grounded BEFORE applying physics (EXACT MATCH)
+            let isGrounded = false;
+            const groundY = 720;
+            if (player.y + player.height >= groundY - 2 && player.y + player.height <= groundY + 5) {
+                isGrounded = true;
+                player.y = groundY - player.height;
+                player.velocityY = 0;
             }
 
-            // Movement
+            // STEP 2: Apply gravity with fast fall (EXACT MATCH to main menu)
+            const sizeScale = player.currentSize / 40;
+            if ((everyoneStatsKeys['s'] || everyoneStatsKeys['ArrowDown']) && !isGrounded) {
+                player.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
+            } else {
+                player.velocityY += GRAVITY * sizeScale * deltaTime;
+            }
+
+            // STEP 3: Handle input (movement scaled by size)
             const scaledMoveSpeed = MOVE_SPEED * sizeScale;
             if (everyoneStatsKeys['a'] || everyoneStatsKeys['ArrowLeft']) {
-                everyoneStatsPlayer.velocityX -= scaledMoveSpeed * deltaTime;
+                player.velocityX -= scaledMoveSpeed * deltaTime;
             }
             if (everyoneStatsKeys['d'] || everyoneStatsKeys['ArrowRight']) {
-                everyoneStatsPlayer.velocityX += scaledMoveSpeed * deltaTime;
+                player.velocityX += scaledMoveSpeed * deltaTime;
             }
 
-            // Jump
+            // STEP 4: Jump with variable height (W, Up Arrow, or Space)
             if ((everyoneStatsKeys['w'] || everyoneStatsKeys['ArrowUp'] || everyoneStatsKeys[' ']) && isGrounded && !everyoneStatsIsJumping) {
-                everyoneStatsPlayer.velocityY = -1.5 * sizeScale;
+                player.velocityY = -1.5 * sizeScale;
                 everyoneStatsIsJumping = true;
-                everyoneStatsPlayer.jumpHoldTime = 0;
+                player.jumpHoldTime = 0;
             }
 
-            if (everyoneStatsIsJumping && (everyoneStatsKeys['w'] || everyoneStatsKeys['ArrowUp'] || everyoneStatsKeys[' ']) && everyoneStatsPlayer.velocityY < 0 && everyoneStatsPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
-                everyoneStatsPlayer.jumpHoldTime += deltaTime;
+            // Continue adding upward velocity while holding button
+            if (everyoneStatsIsJumping && (everyoneStatsKeys['w'] || everyoneStatsKeys['ArrowUp'] || everyoneStatsKeys[' ']) && player.velocityY < 0 && player.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+                player.jumpHoldTime += deltaTime;
                 const maxJumpVelocity = JUMP_POWER * sizeScale;
-                if (Math.abs(everyoneStatsPlayer.velocityY) < maxJumpVelocity) {
-                    everyoneStatsPlayer.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
+                if (Math.abs(player.velocityY) < maxJumpVelocity && player.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+                    player.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
                 }
             }
 
+            // Stop adding velocity when button released
             if (everyoneStatsIsJumping && (!everyoneStatsKeys['w'] && !everyoneStatsKeys['ArrowUp'] && !everyoneStatsKeys[' '])) {
                 everyoneStatsIsJumping = false;
             }
 
-            if (isGrounded && everyoneStatsPlayer.velocityY >= 0) {
+            // Stop jump when time limit exceeded
+            if (everyoneStatsIsJumping && player.jumpHoldTime >= MAX_JUMP_HOLD_TIME) {
                 everyoneStatsIsJumping = false;
             }
 
-            // Friction
-            if (isGrounded) {
-                everyoneStatsPlayer.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
-            } else {
-                everyoneStatsPlayer.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
+            // Reset jump state when grounded
+            if (isGrounded && player.velocityY >= 0) {
+                everyoneStatsIsJumping = false;
             }
 
-            const scaledMaxSpeed = GROUND_MAX_SPEED * sizeScale;
-            everyoneStatsPlayer.velocityX = Math.max(-scaledMaxSpeed, Math.min(scaledMaxSpeed, everyoneStatsPlayer.velocityX));
+            // STEP 5: Apply friction (EXACT MATCH)
+            if (isGrounded) {
+                player.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
+            } else {
+                player.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
+            }
 
-            // Update position
-            everyoneStatsPlayer.x += everyoneStatsPlayer.velocityX * deltaTime;
-            everyoneStatsPlayer.y += everyoneStatsPlayer.velocityY * deltaTime;
+            // Cap vertical velocity
+            const maxFallSpeed = 8 * sizeScale;
+            player.velocityY = Math.min(player.velocityY, maxFallSpeed);
+
+            // Limit horizontal speed (scaled by size)
+            const scaledMaxSpeed = GROUND_MAX_SPEED * sizeScale;
+            player.velocityX = Math.max(-scaledMaxSpeed, Math.min(scaledMaxSpeed, player.velocityX));
+
+            // STEP 6: Update position
+            player.x += player.velocityX * deltaTime;
+            player.y += player.velocityY * deltaTime;
 
             // Keep player in bounds
-            everyoneStatsPlayer.x = Math.max(40, Math.min(11960, everyoneStatsPlayer.x));
+            player.x = Math.max(40, Math.min(11960, player.x));
 
             // Update camera to follow player
-            everyoneStatsCameraX = everyoneStatsPlayer.x - 600 + everyoneStatsPlayer.width / 2;
+            everyoneStatsCameraX = player.x - 600 + player.width / 2;
             everyoneStatsCameraX = Math.max(0, Math.min(11000, everyoneStatsCameraX));
+
+            // Update trail
+            player.updateTrail();
 
             // ESC to exit
             if (everyoneStatsKeys['Escape']) {
@@ -6046,22 +6107,25 @@
         function renderEveryoneStats(deltaTime) {
             const ctx = everyoneStatsCtx;
 
-            // Background
-            ctx.fillStyle = '#2C3E50';
+            // Sky blue background (EXACT MATCH to main menu)
+            ctx.fillStyle = '#87CEEB';
             ctx.fillRect(0, 0, 1200, 800);
 
-            // Grid
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            // Grid (EXACT MATCH to main menu)
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
             ctx.lineWidth = 1;
-            for (let x = 0; x < 12000; x += 40) {
+
+            // Vertical lines
+            const startX = Math.floor(everyoneStatsCameraX / 40) * 40;
+            for (let x = startX; x < everyoneStatsCameraX + 1200; x += 40) {
                 const screenX = x - everyoneStatsCameraX;
-                if (screenX >= 0 && screenX <= 1200) {
-                    ctx.beginPath();
-                    ctx.moveTo(screenX, 0);
-                    ctx.lineTo(screenX, 800);
-                    ctx.stroke();
-                }
+                ctx.beginPath();
+                ctx.moveTo(screenX, 0);
+                ctx.lineTo(screenX, 800);
+                ctx.stroke();
             }
+
+            // Horizontal lines
             for (let y = 0; y < 800; y += 40) {
                 ctx.beginPath();
                 ctx.moveTo(0, y);
@@ -6069,9 +6133,14 @@
                 ctx.stroke();
             }
 
-            // Draw ground
-            ctx.fillStyle = '#34495E';
+            // Draw ground (standardized green platform)
+            ctx.fillStyle = '#4CAF50';
             ctx.fillRect(0 - everyoneStatsCameraX, 720, 12000, 80);
+
+            // Ground border (inside edge)
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(2 - everyoneStatsCameraX, 722, 12000 - 4, 76);
 
             // Draw visualization squares for each player
             let currentX = 100;
@@ -6111,6 +6180,9 @@
 
                 currentX += squareSize + 40; // Space between squares
             }
+
+            // Draw particles
+            updateAndDrawParticles(ctx, everyoneStatsCameraX, 0, deltaTime);
 
             // Draw player
             everyoneStatsPlayer.draw(ctx, everyoneStatsCameraX, 0, false);
