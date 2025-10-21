@@ -1998,6 +1998,7 @@
         let statsHubPlatforms = [];
         let statsHubKeys = {};
         let statsHubIsJumping = false;
+        let statsHubActionExecuted = false;
 
         async function showPracticeLevels() {
             try {
@@ -5723,7 +5724,8 @@
 
             // Handle portal actions
             if (standingOnPlatform && standingOnPlatform.action) {
-                if (statsHubKeys[' ']) {
+                if (statsHubKeys[' '] && !statsHubActionExecuted) {
+                    statsHubActionExecuted = true;
                     if (standingOnPlatform.action === 'exit') {
                         statsHubActive = false;
                         initMainMenu();
@@ -5738,6 +5740,13 @@
                         return;
                     }
                 }
+            } else {
+                statsHubActionExecuted = false;
+            }
+
+            // Reset action flag when space is released
+            if (!statsHubKeys[' ']) {
+                statsHubActionExecuted = false;
             }
 
             // Physics (exact match to shop hub and main menu)
@@ -7201,7 +7210,8 @@
             active: false,
             betAmount: 0,
             phase: 'betting', // 'betting', 'countdown', 'choosing', 'result'
-            countdown: 180, // 3 seconds at 60fps
+            countdown: 3, // 3, 2, 1 countdown
+            countdownTimer: 0, // Timer to track seconds
             player: null,
             platforms: [],
             leftPlatform: null,
@@ -7286,7 +7296,8 @@
             leftRightGame.betAmount = betAmount;
             leftRightGame.active = true;
             leftRightGame.phase = 'countdown';
-            leftRightGame.countdown = 180; // 3 seconds
+            leftRightGame.countdown = 3; // 3, 2, 1 countdown
+            leftRightGame.countdownTimer = 0; // Reset timer
             leftRightGame.chosenSide = null;
             leftRightGame.winningSide = null;
 
@@ -7358,12 +7369,23 @@
 
             // Phase: Countdown or Choosing - handle player movement
             if (leftRightGame.phase === 'countdown' || leftRightGame.phase === 'choosing') {
-                leftRightGame.countdown -= deltaTime;
+                // Update countdown timer
+                if (leftRightGame.phase === 'countdown') {
+                    leftRightGame.countdownTimer += deltaTime;
+                    // Decrease countdown by 1 every 60 frames (1 second)
+                    if (leftRightGame.countdownTimer >= 60) {
+                        leftRightGame.countdown--;
+                        leftRightGame.countdownTimer = 0;
+                    }
 
-                // Transition from countdown to choosing
-                if (leftRightGame.phase === 'countdown' && leftRightGame.countdown <= 0) {
-                    leftRightGame.phase = 'choosing';
-                    leftRightGame.countdown = 180; // 3 seconds to choose
+                    // Transition from countdown to choosing
+                    if (leftRightGame.countdown <= 0) {
+                        leftRightGame.phase = 'choosing';
+                        leftRightGame.countdown = 180; // 3 seconds to choose (frames)
+                    }
+                } else {
+                    // Choosing phase uses frame-based countdown
+                    leftRightGame.countdown -= deltaTime;
                 }
 
                 // STEP 1: Check if grounded BEFORE physics
@@ -7688,12 +7710,19 @@
             // Update HUD
             let hudContent = '';
             if (leftRightGame.phase === 'countdown') {
-                const countdownNum = Math.ceil(leftRightGame.countdown / 60);
-                hudContent = `
-                    <div style="font-size: 72px; font-weight: bold; color: #FFD700; text-align: center; margin-top: 200px; text-shadow: 3px 3px 6px rgba(0,0,0,0.5);">${countdownNum}</div>
-                    <div style="font-size: 24px; font-weight: bold; text-align: center; margin-top: 20px;">GET READY!</div>
-                    <div style="font-size: 18px; text-align: center; margin-top: 10px;">Bet: ${leftRightGame.betAmount} credits</div>
-                `;
+                // Only show countdown if > 0
+                if (leftRightGame.countdown > 0) {
+                    hudContent = `
+                        <div style="font-size: 72px; font-weight: bold; color: #FFD700; text-align: center; margin-top: 200px; text-shadow: 3px 3px 6px rgba(0,0,0,0.5);">${leftRightGame.countdown}</div>
+                        <div style="font-size: 24px; font-weight: bold; text-align: center; margin-top: 20px;">GET READY!</div>
+                        <div style="font-size: 18px; text-align: center; margin-top: 10px;">Bet: ${leftRightGame.betAmount} credits</div>
+                    `;
+                } else {
+                    hudContent = `
+                        <div style="font-size: 48px; font-weight: bold; color: #4facfe; text-align: center; margin-top: 200px; text-shadow: 3px 3px 6px rgba(0,0,0,0.5);">GO!</div>
+                        <div style="font-size: 18px; text-align: center; margin-top: 10px;">Bet: ${leftRightGame.betAmount} credits</div>
+                    `;
+                }
             } else if (leftRightGame.phase === 'choosing') {
                 const timeLeft = Math.ceil(leftRightGame.countdown / 60);
                 hudContent = `
