@@ -6939,8 +6939,8 @@
 
                 // Update player physics
                 player.velocityY += GRAVITY * deltaTime;
-                player.velocityX *= Math.pow(FRICTION, deltaTime);
-                player.velocityY *= Math.pow(AIR_RES, deltaTime);
+                player.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
+                player.velocityY *= Math.pow(AIR_RESISTANCE, deltaTime);
 
                 player.x += player.velocityX * deltaTime;
                 player.y += player.velocityY * deltaTime;
