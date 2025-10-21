@@ -503,6 +503,21 @@
     <div id="hud"></div>
     <button id="practiceBackBtn" onclick="exitPracticeMode()" style="position: absolute; top: 20px; right: 20px; z-index: 100; display: none; padding: 10px 20px; background: rgba(255,0,0,0.7); color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px;">Back to Menu</button>
 
+    <!-- Betting Input Modal -->
+    <div id="bettingModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: linear-gradient(135deg, #1e3c72, #2a5298); border: 3px solid #4facfe; border-radius: 20px; padding: 40px; max-width: 500px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); font-family: 'Inter', Arial, sans-serif;">
+            <div style="font-size: 32px; font-weight: bold; color: #FFD700; text-align: center; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">PLACE YOUR BET</div>
+            <div style="font-size: 18px; color: #fff; text-align: center; margin-bottom: 30px;">
+                Backpack Credits: <span id="bettingModalCredits" style="color: #FFD700; font-weight: bold;">0</span>
+            </div>
+            <input type="number" id="betAmountInput" min="1" placeholder="Enter bet amount" style="width: 100%; padding: 15px; font-size: 20px; border: 2px solid #4facfe; border-radius: 10px; background: rgba(255,255,255,0.1); color: #fff; text-align: center; margin-bottom: 30px; box-sizing: border-box;" />
+            <div style="display: flex; gap: 15px;">
+                <button id="betCancelBtn" style="flex: 1; padding: 15px; font-size: 18px; font-weight: bold; background: rgba(255,0,0,0.7); color: white; border: none; border-radius: 10px; cursor: pointer; transition: all 0.2s;">CANCEL</button>
+                <button id="betConfirmBtn" style="flex: 1; padding: 15px; font-size: 18px; font-weight: bold; background: linear-gradient(135deg, #00b09b, #96c93d); color: white; border: none; border-radius: 10px; cursor: pointer; transition: all 0.2s;">START GAME</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Level Leaderboard Panel -->
     <div id="levelLeaderboardPanel" style="display: none;">
         <div style="font-family: 'Inter', Arial, sans-serif; font-size: 18px; color: #fff; margin-bottom: 15px; text-align: center; font-weight: bold;">
@@ -6666,7 +6681,7 @@
         };
 
         function startLeftRightGame() {
-            // Show bet input dialog
+            // Show bet input modal
             const maxBet = userCredits;
             if (maxBet <= 0) {
                 alert('You need credits in your backpack to play! Visit the SHOP portal to withdraw credits from your base.');
@@ -6674,21 +6689,60 @@
                 return;
             }
 
-            const betInput = prompt(`How many credits do you want to bet?\n\nYou have ${userCredits} credits in your backpack.\n\nEnter amount (1-${maxBet}):`);
+            // Show modal
+            const modal = document.getElementById('bettingModal');
+            const creditsSpan = document.getElementById('bettingModalCredits');
+            const input = document.getElementById('betAmountInput');
+            const cancelBtn = document.getElementById('betCancelBtn');
+            const confirmBtn = document.getElementById('betConfirmBtn');
 
-            if (!betInput) {
+            modal.style.display = 'flex';
+            creditsSpan.textContent = userCredits;
+            input.value = '';
+            input.max = maxBet;
+            input.focus();
+
+            // Cancel button handler
+            const handleCancel = () => {
+                modal.style.display = 'none';
+                input.removeEventListener('keypress', handleEnter);
+                cancelBtn.removeEventListener('click', handleCancel);
+                confirmBtn.removeEventListener('click', handleConfirm);
                 initMainMenu();
-                return;
-            }
+            };
 
-            const betAmount = parseInt(betInput);
+            // Confirm button handler
+            const handleConfirm = () => {
+                const betAmount = parseInt(input.value);
 
-            if (isNaN(betAmount) || betAmount < 1 || betAmount > maxBet) {
-                alert(`Invalid bet amount! Must be between 1 and ${maxBet}.`);
-                initMainMenu();
-                return;
-            }
+                if (isNaN(betAmount) || betAmount < 1 || betAmount > maxBet) {
+                    alert(`Invalid bet amount! Must be between 1 and ${maxBet}.`);
+                    return;
+                }
 
+                // Clean up event listeners
+                input.removeEventListener('keypress', handleEnter);
+                cancelBtn.removeEventListener('click', handleCancel);
+                confirmBtn.removeEventListener('click', handleConfirm);
+
+                // Hide modal and start game
+                modal.style.display = 'none';
+                startGameWithBet(betAmount);
+            };
+
+            // Enter key handler
+            const handleEnter = (e) => {
+                if (e.key === 'Enter') {
+                    handleConfirm();
+                }
+            };
+
+            input.addEventListener('keypress', handleEnter);
+            cancelBtn.addEventListener('click', handleCancel);
+            confirmBtn.addEventListener('click', handleConfirm);
+        }
+
+        function startGameWithBet(betAmount) {
             // Deduct bet from user credits
             userCredits -= betAmount;
 
@@ -6765,19 +6819,15 @@
         function updateLeftRightGame(deltaTime) {
             const player = leftRightGame.player;
 
-            // Phase: Countdown
-            if (leftRightGame.phase === 'countdown') {
+            // Phase: Countdown or Choosing - handle player movement
+            if (leftRightGame.phase === 'countdown' || leftRightGame.phase === 'choosing') {
                 leftRightGame.countdown -= deltaTime;
-                if (leftRightGame.countdown <= 0) {
+
+                // Transition from countdown to choosing
+                if (leftRightGame.phase === 'countdown' && leftRightGame.countdown <= 0) {
                     leftRightGame.phase = 'choosing';
                     leftRightGame.countdown = 180; // 3 seconds to choose
                 }
-                return;
-            }
-
-            // Phase: Choosing
-            if (leftRightGame.phase === 'choosing') {
-                leftRightGame.countdown -= deltaTime;
 
                 // Handle player movement
                 player.velocityY += GRAVITY * deltaTime;
@@ -6791,11 +6841,11 @@
                 }
 
                 // Apply friction
-                player.velocityX *= Math.pow(FRICTION, deltaTime);
-                player.velocityY *= Math.pow(AIR_RES, deltaTime);
+                player.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
+                player.velocityY *= Math.pow(AIR_RESISTANCE, deltaTime);
 
                 // Limit speed
-                const maxSpeed = MAX_SPEED;
+                const maxSpeed = GROUND_MAX_SPEED;
                 player.velocityX = Math.max(-maxSpeed, Math.min(maxSpeed, player.velocityX));
                 player.velocityY = Math.max(-maxSpeed * 2, Math.min(maxSpeed * 2, player.velocityY));
 
@@ -6826,8 +6876,8 @@
                     }
                 }
 
-                // Check if time is up
-                if (leftRightGame.countdown <= 0) {
+                // Check if choosing time is up
+                if (leftRightGame.phase === 'choosing' && leftRightGame.countdown <= 0) {
                     // If no side chosen, player loses
                     if (!leftRightGame.chosenSide) {
                         leftRightGame.phase = 'result';
