@@ -5715,18 +5715,22 @@
         function updateStatsHub(deltaTime) {
             if (!statsHubPlayer) return;
 
-            // Check grounded state
+            const player = statsHubPlayer;
+
+            // STEP 1: Check grounded state BEFORE applying physics (EXACT MATCH to main menu)
             let isGrounded = false;
             let standingOnPlatform = null;
             for (const platform of statsHubPlatforms) {
-                const onTop = statsHubPlayer.y + statsHubPlayer.height >= platform.y &&
-                              statsHubPlayer.y + statsHubPlayer.height <= platform.y + 5;
-                const horizontalOverlap = statsHubPlayer.x + statsHubPlayer.width > platform.x &&
-                                         statsHubPlayer.x < platform.x + platform.width;
+                const onTop = player.y + player.height >= platform.y - 2 &&
+                              player.y + player.height <= platform.y + 5;
+                const horizontalOverlap = player.x + player.width > platform.x &&
+                                         player.x < platform.x + platform.width;
 
                 if (onTop && horizontalOverlap) {
                     isGrounded = true;
                     standingOnPlatform = platform;
+                    player.y = platform.y - player.height; // Snap to platform
+                    player.velocityY = 0;
                     break;
                 }
             }
@@ -5758,86 +5762,105 @@
                 statsHubActionExecuted = false;
             }
 
-            // Physics (exact match to shop hub and main menu)
-            const sizeScale = statsHubPlayer.currentSize / 40;
+            // STEP 2: Apply gravity with fast fall (EXACT MATCH to main menu)
+            const sizeScale = player.currentSize / 40;
             if ((statsHubKeys['s'] || statsHubKeys['ArrowDown']) && !isGrounded) {
-                statsHubPlayer.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
+                player.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
             } else {
-                statsHubPlayer.velocityY += GRAVITY * sizeScale * deltaTime;
+                player.velocityY += GRAVITY * sizeScale * deltaTime;
             }
 
+            // STEP 3: Handle input (movement scaled by size)
             const scaledMoveSpeed = MOVE_SPEED * sizeScale;
             if (statsHubKeys['a'] || statsHubKeys['ArrowLeft']) {
-                statsHubPlayer.velocityX -= scaledMoveSpeed * deltaTime;
+                player.velocityX -= scaledMoveSpeed * deltaTime;
             }
             if (statsHubKeys['d'] || statsHubKeys['ArrowRight']) {
-                statsHubPlayer.velocityX += scaledMoveSpeed * deltaTime;
+                player.velocityX += scaledMoveSpeed * deltaTime;
             }
 
-            // Jump
-            if ((statsHubKeys['w'] || statsHubKeys['ArrowUp']) && isGrounded && !statsHubIsJumping) {
-                statsHubPlayer.velocityY = -1.5 * sizeScale;
+            // STEP 4: Jump with variable height (W, Up Arrow, or Space)
+            if ((statsHubKeys['w'] || statsHubKeys['ArrowUp'] || statsHubKeys[' ']) && isGrounded && !statsHubIsJumping) {
+                player.velocityY = -1.5 * sizeScale;
                 statsHubIsJumping = true;
-                statsHubPlayer.jumpHoldTime = 0;
+                player.jumpHoldTime = 0;
             }
 
-            if (statsHubIsJumping && (statsHubKeys['w'] || statsHubKeys['ArrowUp']) && statsHubPlayer.velocityY < 0 && statsHubPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
-                statsHubPlayer.jumpHoldTime += deltaTime;
+            // Continue adding upward velocity while holding button
+            if (statsHubIsJumping && (statsHubKeys['w'] || statsHubKeys['ArrowUp'] || statsHubKeys[' ']) && player.velocityY < 0 && player.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+                player.jumpHoldTime += deltaTime;
                 const maxJumpVelocity = JUMP_POWER * sizeScale;
-                if (Math.abs(statsHubPlayer.velocityY) < maxJumpVelocity && statsHubPlayer.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
-                    statsHubPlayer.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
+                if (Math.abs(player.velocityY) < maxJumpVelocity && player.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+                    player.velocityY -= JUMP_CHARGE_RATE * sizeScale * deltaTime;
                 }
             }
 
-            if (statsHubIsJumping && (!statsHubKeys['w'] && !statsHubKeys['ArrowUp'])) {
+            // Stop adding velocity when button released
+            if (statsHubIsJumping && (!statsHubKeys['w'] && !statsHubKeys['ArrowUp'] && !statsHubKeys[' '])) {
                 statsHubIsJumping = false;
             }
 
-            if (statsHubIsJumping && statsHubPlayer.jumpHoldTime >= MAX_JUMP_HOLD_TIME) {
+            // Stop jump when time limit exceeded
+            if (statsHubIsJumping && player.jumpHoldTime >= MAX_JUMP_HOLD_TIME) {
                 statsHubIsJumping = false;
             }
 
-            if (isGrounded && statsHubPlayer.velocityY >= 0) {
+            // Reset jump state when grounded
+            if (isGrounded && player.velocityY >= 0) {
                 statsHubIsJumping = false;
             }
 
-            // Friction
+            // STEP 5: Apply friction (EXACT MATCH)
             if (isGrounded) {
-                statsHubPlayer.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
+                player.velocityX *= Math.pow(GROUND_FRICTION, deltaTime);
             } else {
-                statsHubPlayer.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
+                player.velocityX *= Math.pow(AIR_RESISTANCE, deltaTime);
             }
 
+            // Cap vertical velocity
             const maxFallSpeed = 8 * sizeScale;
-            statsHubPlayer.velocityY = Math.min(statsHubPlayer.velocityY, maxFallSpeed);
+            player.velocityY = Math.min(player.velocityY, maxFallSpeed);
 
+            // Limit horizontal speed (scaled by size)
             const scaledMaxSpeed = GROUND_MAX_SPEED * sizeScale;
-            statsHubPlayer.velocityX = Math.max(-scaledMaxSpeed, Math.min(scaledMaxSpeed, statsHubPlayer.velocityX));
+            player.velocityX = Math.max(-scaledMaxSpeed, Math.min(scaledMaxSpeed, player.velocityX));
 
-            // Update position
-            statsHubPlayer.x += statsHubPlayer.velocityX * deltaTime;
-            statsHubPlayer.y += statsHubPlayer.velocityY * deltaTime;
+            // STEP 6: Update position
+            player.x += player.velocityX * deltaTime;
+            player.y += player.velocityY * deltaTime;
 
-            // Collision detection
+            // STEP 7: Wall collision detection (prevent going through walls)
             for (const platform of statsHubPlatforms) {
-                if (checkCollision(statsHubPlayer, platform)) {
-                    if (statsHubPlayer.velocityY > 0) {
-                        statsHubPlayer.y = platform.y - statsHubPlayer.height;
-                        statsHubPlayer.velocityY = 0;
-                    } else if (statsHubPlayer.velocityY < 0) {
-                        statsHubPlayer.y = platform.y + platform.height;
-                        statsHubPlayer.velocityY = 0;
+                // Skip portals, only check walls
+                if (platform.action && platform.action !== 'none') continue;
+
+                // Horizontal collision (walls)
+                if (player.x + player.width > platform.x &&
+                    player.x < platform.x + platform.width &&
+                    player.y + player.height > platform.y &&
+                    player.y < platform.y + platform.height) {
+
+                    // Left wall collision
+                    if (player.velocityX > 0 && player.x < platform.x) {
+                        player.x = platform.x - player.width;
+                        player.velocityX = 0;
+                    }
+                    // Right wall collision
+                    else if (player.velocityX < 0 && player.x > platform.x) {
+                        player.x = platform.x + platform.width;
+                        player.velocityX = 0;
                     }
 
-                    if (statsHubPlayer.velocityX > 0) {
-                        statsHubPlayer.x = platform.x - statsHubPlayer.width;
-                        statsHubPlayer.velocityX = 0;
-                    } else if (statsHubPlayer.velocityX < 0) {
-                        statsHubPlayer.x = platform.x + platform.width;
-                        statsHubPlayer.velocityX = 0;
+                    // Top collision (ceiling)
+                    if (player.velocityY < 0 && player.y > platform.y) {
+                        player.y = platform.y + platform.height;
+                        player.velocityY = 0;
                     }
                 }
             }
+
+            // Update trail
+            player.updateTrail();
         }
 
         function renderStatsHub(ctx, deltaTime) {
@@ -6088,8 +6111,9 @@
             player.x += player.velocityX * deltaTime;
             player.y += player.velocityY * deltaTime;
 
-            // Keep player in bounds
+            // Keep player in bounds (horizontal and vertical)
             player.x = Math.max(40, Math.min(11960, player.x));
+            player.y = Math.max(0, Math.min(groundY - player.height, player.y)); // Prevent going above screen or below ground
 
             // Update camera to follow player
             everyoneStatsCameraX = player.x - 600 + player.width / 2;
