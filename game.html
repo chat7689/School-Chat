@@ -636,17 +636,35 @@
         <button onclick="backToMainMenu()">Back to Menu</button>
     </div>
 
-    <!-- Leaderboard Screen -->
+    <!-- Unified Leaderboard Screen -->
     <div id="leaderboardScreen" class="screen">
-        <canvas id="leaderboardCanvas" width="1200" height="800" style="display: block; margin: 0 auto; background: #87CEEB;"></canvas>
-    </div>
+        <div style="max-width: 1200px; margin: 0 auto; padding: 30px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px;">
+                <button onclick="backToMainMenu()" style="
+                    background: linear-gradient(135deg, rgba(25, 82, 154, 0.7), rgba(25, 82, 154, 0.4));
+                    border: 3px solid #19529A;
+                    color: #fff;
+                    padding: 12px 24px;
+                    border-radius: 12px;
+                    cursor: pointer;
+                    font-size: 18px;
+                    font-weight: bold;
+                    transition: all 0.3s;
+                    box-shadow: 0 0 15px rgba(25, 82, 154, 0.5);
+                " onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 0 25px rgba(25, 82, 154, 0.8)'"
+                   onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 0 15px rgba(25, 82, 154, 0.5)'">
+                    ← Back to Menu
+                </button>
+                <h1 style="color: #4facfe; margin: 0; font-size: 42px; text-shadow: 0 0 20px rgba(79, 172, 254, 0.6); font-weight: bold;">
+                    🏆 LEADERBOARDS
+                </h1>
+                <div style="width: 180px;"></div>
+            </div>
 
-    <!-- Leaderboard Detail Screen -->
-    <div id="leaderboardDetailScreen" class="screen">
-        <div class="scroll-container" style="padding-top: 20px;">
-            <div id="leaderboardContent" style="max-width: 1000px; margin: 0 auto;"></div>
+            <div id="leaderboardContent" style="background: rgba(0,0,0,0.4); border-radius: 20px; padding: 30px; border: 3px solid #4facfe; box-shadow: 0 0 30px rgba(79, 172, 254, 0.3); max-height: 650px; overflow-y: auto;">
+                <!-- Content will be loaded here -->
+            </div>
         </div>
-        <button onclick="showLeaderboard()" style="margin-top: 20px;">Back to Selection</button>
     </div>
 
     <!-- Settings Screen -->
@@ -7016,126 +7034,116 @@
             return false;
         }
 
-        // Leaderboard screen variables - canvas-based like level select
-        let leaderboardActive = false;
-        let leaderboardPlayer = null;
-        let leaderboardPlatforms = [];
-        let leaderboardKeys = {};
-        let availableLeaderboards = [];
-        let leaderboardIsJumping = false;
-
+        // Unified Leaderboard System
         async function showLeaderboard() {
             try {
                 showScreen('leaderboardScreen');
-                leaderboardActive = true;
-
-                const canvas = document.getElementById('leaderboardCanvas');
-                const ctx = canvas.getContext('2d');
 
                 // Load all levels
                 const levelsSnapshot = await database.ref('levels').once('value');
                 const levelsData = levelsSnapshot.val();
 
-                availableLeaderboards = [];
+                // Load all times history
+                const timesSnapshot = await database.ref('times_history').once('value');
+                const timesData = timesSnapshot.val();
+
+                // Load player data for usernames
+                const playersSnapshot = await database.ref('players').once('value');
+                const playersData = playersSnapshot.val();
+
+                let allLevels = [];
                 if (levelsData) {
                     Object.entries(levelsData).forEach(([levelId, levelInfo]) => {
-                        availableLeaderboards.push({
+                        allLevels.push({
                             id: levelId,
                             name: levelInfo.name || levelId,
                             createdAt: levelInfo.createdAt || 0
                         });
                     });
-                    availableLeaderboards.sort((a, b) => a.createdAt - b.createdAt);
+                    allLevels.sort((a, b) => a.createdAt - b.createdAt);
                 }
 
-                // Setup platforms
-                const portalWidth = 120; // 3 * 40px wide
-                const portalHeight = 40; // 40px tall
-                const portalsPerRow = 3; // 3 portals wide
-                const portalSpacing = 60; // Space between portals
-                const numRows = Math.ceil(availableLeaderboards.length / portalsPerRow);
+                // Build unified leaderboard HTML
+                let html = '';
 
-                const groundY = 720;
+                if (allLevels.length === 0) {
+                    html = '<p style="text-align: center; color: #aaa; font-size: 20px; padding: 40px;">No levels found. Create some levels first!</p>';
+                } else {
+                    // Create a leaderboard section for each level
+                    allLevels.forEach((level, index) => {
+                        const levelId = level.id;
+                        const levelName = level.name;
 
-                leaderboardPlatforms = [
-                    // Boundary walls - thick floor (80px), side walls (40px), ceiling (40px)
-                    { x: 0, y: 0, width: 40, height: 800 }, // Left wall (40px wide)
-                    { x: 1160, y: 0, width: 40, height: 800 }, // Right wall (40px wide)
-                    { x: 0, y: 0, width: 1200, height: 40 }, // Ceiling (40px thick)
-                    { x: 0, y: 720, width: 1200, height: 80 } // Ground (80px thick - twice as thick)
-                ];
+                        // Build leaderboard for this level
+                        const leaderboard = [];
+                        if (timesData) {
+                            for (const [uid, userTimes] of Object.entries(timesData)) {
+                                if (userTimes[levelId]) {
+                                    let bestTime = Infinity;
+                                    Object.values(userTimes[levelId]).forEach(timeEntry => {
+                                        if (timeEntry.time < bestTime) {
+                                            bestTime = timeEntry.time;
+                                        }
+                                    });
 
-                // Add "Back to Menu" portal (left side)
-                leaderboardPlatforms.push({
-                    x: 100,
-                    y: groundY - 120,
-                    width: 120,
-                    height: 40,
-                    action: 'back',
-                    label: 'BACK'
-                });
-
-                // Create portals for each level in rows of 3
-                availableLeaderboards.forEach((level, index) => {
-                    const colIndex = index % portalsPerRow; // 0, 1, or 2
-                    const rowIndex = Math.floor(index / portalsPerRow);
-
-                    // Center the portals horizontally
-                    const totalRowWidth = (portalsPerRow * portalWidth) + ((portalsPerRow - 1) * portalSpacing);
-                    const startX = (1200 - totalRowWidth) / 2;
-
-                    const x = startX + colIndex * (portalWidth + portalSpacing);
-                    const y = groundY - 120 - (rowIndex * (portalHeight + portalSpacing));
-
-                    leaderboardPlatforms.push({
-                        x: x,
-                        y: y,
-                        width: portalWidth,
-                        height: portalHeight,
-                        levelId: level.id,
-                        levelName: level.name
-                    });
-                });
-
-                // Create player
-                leaderboardPlayer = new Player(600, groundY - 40, equippedCosmetics);
-
-                // Setup input
-                leaderboardKeys = {};
-                const leaderboardKeyHandler = (e) => {
-                    if (e.type === 'keydown') {
-                        leaderboardKeys[e.key] = true;
-                        if (e.key === 'Escape') {
-                            leaderboardActive = false;
-                            backToMainMenu();
+                                    if (bestTime < Infinity) {
+                                        leaderboard.push({
+                                            uid: uid,
+                                            username: playersData?.[uid]?.username || 'Unknown',
+                                            time: bestTime
+                                        });
+                                    }
+                                }
+                            }
                         }
-                    } else {
-                        leaderboardKeys[e.key] = false;
-                    }
-                };
 
-                document.removeEventListener('keydown', leaderboardKeyHandler);
-                document.removeEventListener('keyup', leaderboardKeyHandler);
-                document.addEventListener('keydown', leaderboardKeyHandler);
-                document.addEventListener('keyup', leaderboardKeyHandler);
+                        // Sort by time (fastest first)
+                        leaderboard.sort((a, b) => a.time - b.time);
 
-                // Start loop
-                let lastLeaderboardFrameTime = performance.now();
-                function leaderboardLoop(currentTime) {
-                    if (!leaderboardActive) return;
+                        // Build HTML for this level section
+                        html += `<div style="margin-bottom: 30px; background: rgba(79, 172, 254, 0.1); border-radius: 15px; padding: 20px; border: 2px solid rgba(79, 172, 254, 0.3);">`;
+                        html += `<h2 style="color: #4facfe; margin: 0 0 15px 0; font-size: 24px; text-shadow: 0 0 10px rgba(79, 172, 254, 0.5);">${levelName}</h2>`;
 
-                    if (!currentTime) currentTime = performance.now();
-                    let deltaTime = (currentTime - lastLeaderboardFrameTime) / 16.67;
-                    if (deltaTime <= 0 || deltaTime > 10) deltaTime = 1;
-                    lastLeaderboardFrameTime = currentTime;
+                        if (leaderboard.length === 0) {
+                            html += '<p style="color: #999; font-style: italic;">No times recorded yet. Be the first!</p>';
+                        } else {
+                            // Show top 10 for each level
+                            html += '<div style="display: flex; flex-direction: column; gap: 8px;">';
+                            for (let i = 0; i < Math.min(leaderboard.length, 10); i++) {
+                                const player = leaderboard[i];
+                                const isYou = player.uid === currentUser.uid;
+                                const rankColor = i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : '#4facfe';
+                                const rankBg = i === 0 ? 'rgba(255, 215, 0, 0.1)' : i === 1 ? 'rgba(192, 192, 192, 0.1)' : i === 2 ? 'rgba(205, 127, 50, 0.1)' : 'rgba(79, 172, 254, 0.05)';
 
-                    updateLeaderboardPlayer(deltaTime);
-                    renderLeaderboard(ctx, deltaTime);
+                                html += `<div style="
+                                    display: flex;
+                                    justify-content: space-between;
+                                    align-items: center;
+                                    padding: 12px 16px;
+                                    background: ${isYou ? 'rgba(79, 172, 254, 0.25)' : rankBg};
+                                    border-radius: 8px;
+                                    border-left: 4px solid ${rankColor};
+                                    ${isYou ? 'box-shadow: 0 0 15px rgba(79, 172, 254, 0.4);' : ''}
+                                ">
+                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                        <span style="font-size: 20px; font-weight: bold; color: ${rankColor}; min-width: 30px;">#${i + 1}</span>
+                                        <span style="font-size: 16px; color: ${isYou ? '#FFD700' : '#fff'}; font-weight: ${isYou ? 'bold' : 'normal'};">${player.username}${isYou ? ' (You)' : ''}</span>
+                                    </div>
+                                    <span style="font-size: 18px; font-weight: bold; color: ${rankColor};">${(player.time / 1000).toFixed(2)}s</span>
+                                </div>`;
+                            }
+                            html += '</div>';
 
-                    requestAnimationFrame(leaderboardLoop);
+                            if (leaderboard.length > 10) {
+                                html += `<p style="color: #999; font-size: 14px; margin-top: 10px; text-align: center;">... and ${leaderboard.length - 10} more</p>`;
+                            }
+                        }
+
+                        html += '</div>';
+                    });
                 }
 
-                leaderboardLoop();
+                document.getElementById('leaderboardContent').innerHTML = html;
             } catch (error) {
                 console.error('Error loading leaderboards:', error);
                 alert('Error loading leaderboards. Please try again.');
@@ -7143,41 +7151,64 @@
             }
         }
 
-        function updateLeaderboardPlayer(deltaTime) {
-            if (!leaderboardPlayer) return;
+        // Exit practice mode
+        function exitPracticeMode() {
+            practiceMode.active = false;
 
-            // STEP 1: Calculate grounded state BEFORE physics (matches main menu)
-            let isGrounded = false;
-            let standingOnPlatform = null;
-
-            for (const platform of leaderboardPlatforms) {
-                const onTop = leaderboardPlayer.y + leaderboardPlayer.height >= platform.y &&
-                              leaderboardPlayer.y + leaderboardPlayer.height <= platform.y + 5;
-                const horizontalOverlap = leaderboardPlayer.x + leaderboardPlayer.width > platform.x &&
-                                         leaderboardPlayer.x < platform.x + platform.width;
-
-                if (onTop && horizontalOverlap) {
-                    isGrounded = true;
-                    standingOnPlatform = platform;
-                    break;
-                }
+            // Reset player size to prevent jump height glitch (ensure player is back to normal size)
+            if (practiceMode.player) {
+                practiceMode.player.currentSize = 40;
+                practiceMode.player.targetSize = 40;
+                practiceMode.player.width = 40;
+                practiceMode.player.height = 40;
+                practiceMode.player.sizeTransitioning = false;
+                practiceMode.player.sizeTransitionProgress = 0;
             }
 
-            // STEP 2: Apply gravity with fast fall (scaled by size) - MATCHES MAIN MENU
-            const sizeScale = leaderboardPlayer.currentSize / 40;
-            if ((leaderboardKeys['s'] || leaderboardKeys['ArrowDown']) && !isGrounded) {
-                leaderboardPlayer.velocityY += GRAVITY * sizeScale * FAST_FALL_MULTIPLIER * deltaTime;
-            } else {
-                leaderboardPlayer.velocityY += GRAVITY * sizeScale * deltaTime;
+            document.getElementById('practiceCanvas').style.display = 'none';
+            document.getElementById('hud').style.display = 'none';
+            document.getElementById('practiceBackBtn').style.display = 'none';
+            document.getElementById('levelLeaderboardPanel').style.display = 'none';
+            initMainMenu();
+        }
+
+        // Left/Right Betting Game
+        let leftRightGame = {
+            active: false,
+            betAmount: 0,
+            phase: 'betting', // 'betting', 'countdown', 'choosing', 'result'
+            countdown: 3, // 3, 2, 1 countdown
+            countdownTimer: 0, // Timer to track seconds
+            player: null,
+            platforms: [],
+            leftPlatform: null,
+            rightPlatform: null,
+            middlePlatform: null,
+            dividerWall: null,
+            chosenSide: null,
+            winningSide: null,
+            cameraX: 0,
+            cameraY: 0,
+            keys: {},
+            isJumping: false,
+            resultTimer: 0,
+            resultType: null // 'win' or 'lose'
+        };
+
+        function startLeftRightGame() {
+            // Show bet input modal
+            const maxBet = userCredits;
+            if (maxBet <= 0) {
+                alert('You need credits in your backpack to play! Visit the SHOP portal to withdraw credits from your base.');
+                initMainMenu();
+                return;
             }
 
-            // STEP 3: Handle input (movement scaled by size)
-            const scaledMoveSpeed = MOVE_SPEED * sizeScale;
-            if (leaderboardKeys['a'] || leaderboardKeys['ArrowLeft']) {
-                leaderboardPlayer.velocityX -= scaledMoveSpeed * deltaTime;
-            }
-            if (leaderboardKeys['d'] || leaderboardKeys['ArrowRight']) {
-                leaderboardPlayer.velocityX += scaledMoveSpeed * deltaTime;
+            // Show modal
+            const modal = document.getElementById('bettingModal');
+            const creditsSpan = document.getElementById('bettingModalCredits');
+            const input = document.getElementById('betAmountInput');
+            const cancelBtn = document.getElementById('betCancelBtn');
             }
 
             // Old action-based particle system
