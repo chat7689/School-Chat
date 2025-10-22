@@ -7280,49 +7280,6 @@
             resultType: null // 'win' or 'lose'
         };
 
-        // Exit practice mode
-        function exitPracticeMode() {
-            practiceMode.active = false;
-
-            // Reset player size to prevent jump height glitch
-            if (practiceMode.player) {
-                practiceMode.player.currentSize = 40;
-                practiceMode.player.targetSize = 40;
-                practiceMode.player.width = 40;
-                practiceMode.player.height = 40;
-                practiceMode.player.sizeTransitioning = false;
-                practiceMode.player.sizeTransitionProgress = 0;
-            }
-
-            document.getElementById('practiceCanvas').style.display = 'none';
-            document.getElementById('hud').style.display = 'none';
-            document.getElementById('practiceBackBtn').style.display = 'none';
-            document.getElementById('levelLeaderboardPanel').style.display = 'none';
-            initMainMenu();
-        }
-
-        // Left/Right Betting Game
-        let leftRightGame = {
-            active: false,
-            betAmount: 0,
-            phase: 'betting', // 'betting', 'countdown', 'choosing', 'result'
-            countdown: 3, // 3, 2, 1 countdown
-            countdownTimer: 0, // Timer to track seconds
-            player: null,
-            platforms: [],
-            leftPlatform: null,
-            rightPlatform: null,
-            middlePlatform: null,
-            chosenSide: null,
-            winningSide: null,
-            cameraX: 0,
-            cameraY: 0,
-            keys: {},
-            isJumping: false,
-            resultTimer: 0,
-            resultType: null // 'win' or 'lose'
-        };
-
         function startLeftRightGame() {
             // Show bet input modal
             const maxBet = userCredits;
