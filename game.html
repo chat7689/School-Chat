@@ -7294,42 +7294,67 @@
             const creditsSpan = document.getElementById('bettingModalCredits');
             const input = document.getElementById('betAmountInput');
             const cancelBtn = document.getElementById('betCancelBtn');
-            }
+            const confirmBtn = document.getElementById('betConfirmBtn');
 
-            // Old action-based particle system
-            // Track movement state for movement start particles
-            const wasMovingLeft = leaderboardPlayer.prevVelocityX !== undefined && leaderboardPlayer.prevVelocityX < -0.5;
-            const wasMovingRight = leaderboardPlayer.prevVelocityX !== undefined && leaderboardPlayer.prevVelocityX > 0.5;
-            const isMovingLeft = leaderboardPlayer.velocityX < -0.5;
-            const isMovingRight = leaderboardPlayer.velocityX > 0.5;
+            modal.style.display = 'flex';
+            creditsSpan.textContent = userCredits;
+            input.value = '';
+            input.max = maxBet;
+            input.focus();
 
-            // White particles on movement START (when starting to move from stopped/opposite direction)
-            if (isMovingLeft && !wasMovingLeft && Math.random() < 0.3) {
-                spawnParticles(leaderboardPlayer.x + leaderboardPlayer.width / 2, leaderboardPlayer.y + leaderboardPlayer.height / 2, 2, 'rgb(255, 255, 255)', leaderboardPlayer.currentSize);
-            }
-            if (isMovingRight && !wasMovingRight && Math.random() < 0.3) {
-                spawnParticles(leaderboardPlayer.x + leaderboardPlayer.width / 2, leaderboardPlayer.y + leaderboardPlayer.height / 2, 2, 'rgb(255, 255, 255)', leaderboardPlayer.currentSize);
-            }
+            // Cancel button handler
+            const handleCancel = () => {
+                modal.style.display = 'none';
+                input.removeEventListener('keypress', handleEnter);
+                cancelBtn.removeEventListener('click', handleCancel);
+                confirmBtn.removeEventListener('click', handleConfirm);
+                initMainMenu();
+            };
 
-            // Orange speed-based particles (when moving fast horizontally)
-            const speed = Math.abs(leaderboardPlayer.velocityX);
-            if (speed > 0.5) {
-                const particleChance = Math.min(speed / 10, 0.8);
-                if (Math.random() < particleChance) {
-                    const particleCount = Math.floor(speed / 2);
-                    spawnParticles(leaderboardPlayer.x + leaderboardPlayer.width / 2, leaderboardPlayer.y + leaderboardPlayer.height / 2, particleCount, 'rgb(255, 140, 66)', leaderboardPlayer.currentSize);
+            // Confirm button handler
+            const handleConfirm = () => {
+                const betAmount = parseInt(input.value);
+
+                if (isNaN(betAmount) || betAmount < 1 || betAmount > maxBet) {
+                    alert(`Invalid bet amount! Must be between 1 and ${maxBet}.`);
+                    return;
                 }
-            }
 
-            // Store current velocity for next frame
-            leaderboardPlayer.prevVelocityX = leaderboardPlayer.velocityX;
+                // Clean up event listeners
+                input.removeEventListener('keypress', handleEnter);
+                cancelBtn.removeEventListener('click', handleCancel);
+                confirmBtn.removeEventListener('click', handleConfirm);
 
-            // Handle platform selection
-            if (standingOnPlatform && (leaderboardKeys[' '] || leaderboardKeys['Space'])) {
-                if (standingOnPlatform.action === 'back') {
-                    leaderboardActive = false;
-                    backToMainMenu();
-                } else if (standingOnPlatform.levelId) {
+                // Hide modal and start game
+                modal.style.display = 'none';
+                startGameWithBet(betAmount);
+            };
+
+            // Enter key handler
+            const handleEnter = (e) => {
+                if (e.key === 'Enter') {
+                    handleConfirm();
+                }
+            };
+
+            input.addEventListener('keypress', handleEnter);
+            cancelBtn.addEventListener('click', handleCancel);
+            confirmBtn.addEventListener('click', handleConfirm);
+        }
+
+        function startGameWithBet(betAmount) {
+            // Deduct bet from user credits
+            userCredits -= betAmount;
+
+            leftRightGame.betAmount = betAmount;
+            leftRightGame.active = true;
+            leftRightGame.phase = 'countdown';
+            leftRightGame.countdown = 3; // 3, 2, 1 countdown
+            leftRightGame.countdownTimer = 0; // Reset timer
+            leftRightGame.chosenSide = null;
+            leftRightGame.winningSide = null;
+
+            const canvas = document.getElementById('practiceCanvas');
                     leaderboardActive = false;
                     showLevelLeaderboard(standingOnPlatform.levelId, standingOnPlatform.levelName);
                 }
