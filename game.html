@@ -3256,6 +3256,85 @@
                 console.log('Default level "The Labyrinth" added to database');
             }
 
+            // Vertical Gauntlet - Complex vertical level with pillars and tight gaps
+            if (!existingLevelNames.includes('Vertical Gauntlet')) {
+                const verticalGauntletData = {
+                    "platforms": [
+                        {"x": 160, "y": -120, "width": 40, "height": 160},
+                        {"x": 320, "y": -400, "width": 40, "height": 160},
+                        {"x": 400, "y": -240, "width": 40, "height": 280},
+                        {"x": 480, "y": -120, "width": 40, "height": 160},
+                        {"x": 0, "y": 40, "width": 640, "height": 20},
+                        {"x": 0, "y": 90, "width": 640, "height": 30},
+                        {"x": -40, "y": -560, "width": 40, "height": 320},
+                        {"x": -40, "y": -200, "width": 40, "height": 260},
+                        {"x": 0, "y": -560, "width": 680, "height": 40},
+                        {"x": 680, "y": -560, "width": 40, "height": 320},
+                        {"x": 680, "y": -200, "width": 40, "height": 280},
+                        {"x": -160, "y": 120, "width": 1000, "height": 40},
+                        {"x": -80, "y": -200, "width": 40, "height": 40},
+                        {"x": -360, "y": -360, "width": 40, "height": 40},
+                        {"x": 720, "y": -200, "width": 40, "height": 40},
+                        {"x": 1000, "y": -360, "width": 40, "height": 40},
+                        {"x": 310, "y": -110, "width": 10, "height": 10},
+                        {"x": 360, "y": -110, "width": 10, "height": 10},
+                        {"x": 360, "y": -30, "width": 10, "height": 10},
+                        {"x": 310, "y": -30, "width": 10, "height": 10},
+                        {"x": -80, "y": -520, "width": 40, "height": 40},
+                        {"x": 720, "y": -520, "width": 40, "height": 40},
+                        {"x": 60, "y": -260, "width": 40, "height": 20},
+                        {"x": 580, "y": -260, "width": 40, "height": 20},
+                        {"x": 660, "y": -210, "width": 20, "height": 10},
+                        {"x": 0, "y": -210, "width": 20, "height": 10},
+                        {"x": 240, "y": -240, "width": 40, "height": 280},
+                        {"x": -360, "y": -120, "width": 40, "height": 40},
+                        {"x": 1000, "y": -120, "width": 40, "height": 40}
+                    ],
+                    "hazards": [
+                        {"x": 120, "y": -60, "width": 40, "height": 100},
+                        {"x": 200, "y": -140, "width": 40, "height": 180},
+                        {"x": 280, "y": -120, "width": 30, "height": 160},
+                        {"x": 370, "y": -120, "width": 30, "height": 160},
+                        {"x": 440, "y": -140, "width": 40, "height": 180},
+                        {"x": 520, "y": -60, "width": 40, "height": 100},
+                        {"x": 720, "y": -480, "width": 160, "height": 40},
+                        {"x": -200, "y": -480, "width": 160, "height": 40},
+                        {"x": 280, "y": -260, "width": 10, "height": 140},
+                        {"x": 390, "y": -260, "width": 10, "height": 140}
+                    ],
+                    "growers": [
+                        {"x": -120, "y": 80, "width": 40, "height": 40},
+                        {"x": -360, "y": -400, "width": 40, "height": 40}
+                    ],
+                    "shrinkers": [
+                        {"x": 760, "y": 80, "width": 40, "height": 40},
+                        {"x": -40, "y": -240, "width": 40, "height": 40},
+                        {"x": 680, "y": -240, "width": 40, "height": 40}
+                    ],
+                    "defaultSizeBlocks": [
+                        {"x": 1000, "y": -400, "width": 40, "height": 40}
+                    ],
+                    "backgroundBlocks": [],
+                    "foregroundBlocks": [],
+                    "triggers": [],
+                    "comments": [],
+                    "start": {"x": 0, "y": 0, "width": 40, "height": 40},
+                    "finish": {"x": 320, "y": 0, "width": 40, "height": 40},
+                    "physics": {
+                        "gravity": 0.132,
+                        "moveSpeed": 0.45,
+                        "jumpPower": 5.13,
+                        "maxSpeed": 5.625,
+                        "friction": 0.94,
+                        "airRes": 0.88,
+                        "fastFallMultiplier": 3.5,
+                        "jumpChargeRate": 0.41
+                    }
+                };
+                await addLevelToDatabase('Vertical Gauntlet', 'System', verticalGauntletData);
+                console.log('Default level "Vertical Gauntlet" added to database');
+            }
+
         }
 
         // Practice mode (infinite runner with credit earning)
