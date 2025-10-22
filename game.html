@@ -527,6 +527,33 @@
         </div>
     </div>
 
+    <!-- Earnings Modal (for earn mode death) -->
+    <div id="earningsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: linear-gradient(135deg, #1e3c72, #2a5298); border: 3px solid #4facfe; border-radius: 20px; padding: 40px; max-width: 500px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); font-family: 'Inter', Arial, sans-serif; text-align: center;">
+            <div style="font-size: 48px; margin-bottom: 20px;">💀</div>
+            <div style="font-size: 32px; font-weight: bold; color: #FF4444; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">YOU DIED!</div>
+            <div style="font-size: 20px; color: #fff; margin-bottom: 30px;">
+                Credits Earned: <span id="earningsAmount" style="color: #FFD700; font-weight: bold; font-size: 36px;">0</span>
+            </div>
+            <div id="earningsMessage" style="font-size: 16px; color: #aaa; margin-bottom: 30px;"></div>
+            <button id="earningsOkBtn" style="
+                background: linear-gradient(135deg, #4facfe, #00f2fe);
+                border: none;
+                color: #fff;
+                padding: 15px 40px;
+                font-size: 20px;
+                font-weight: bold;
+                border-radius: 12px;
+                cursor: pointer;
+                box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+                transition: all 0.3s;
+            " onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 6px 20px rgba(79, 172, 254, 0.6)'"
+               onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 15px rgba(79, 172, 254, 0.4)'">
+                OK
+            </button>
+        </div>
+    </div>
+
     <!-- Race Canvas -->
     <canvas id="raceCanvas" width="1200" height="800" style="display: none;"></canvas>
     <div id="timer"></div>
@@ -1482,9 +1509,15 @@
             }
         }
 
-        function initMainMenu() {
+        async function initMainMenu() {
             try {
                 console.log('initMainMenu: Starting initialization...');
+
+                // Reload base blocks to ensure secure credits are up to date
+                const baseSnapshot = await database.ref('players/' + currentUser.uid + '/baseBlocks').once('value');
+                baseBlocks = baseSnapshot.val() || [];
+                recalcSecureCredits(); // Recalculate secure credits from base blocks
+
                 const canvas = document.getElementById('menuCanvas');
                 const ctx = canvas.getContext('2d');
 
@@ -3892,16 +3925,31 @@
                     practiceMode.isDead = false;
                     return;
                 } else {
-                    // Earn mode (infinite runner) - show death summary and exit
+                    // Earn mode (infinite runner) - show death summary modal and exit
                     const creditsEarned = practiceMode.creditsCollected;
 
+                    // Show earnings modal
+                    const modal = document.getElementById('earningsModal');
+                    const amountSpan = document.getElementById('earningsAmount');
+                    const messageDiv = document.getElementById('earningsMessage');
+                    const okBtn = document.getElementById('earningsOkBtn');
+
+                    amountSpan.textContent = creditsEarned;
+
                     if (creditsEarned > 0) {
-                        alert(`You died!\n\nCredits earned this run: ${creditsEarned}\nThese credits have been added to your backpack!`);
+                        messageDiv.textContent = 'These credits have been added to your backpack!';
                     } else {
-                        alert(`You died!\n\nNo credits earned this run.`);
+                        messageDiv.textContent = 'Better luck next time!';
                     }
 
-                    exitPracticeMode();
+                    modal.style.display = 'flex';
+
+                    // Handle OK button click
+                    okBtn.onclick = () => {
+                        modal.style.display = 'none';
+                        exitPracticeMode();
+                    };
+
                     return;
                 }
             }
