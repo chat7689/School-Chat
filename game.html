@@ -613,12 +613,13 @@
     <div id="statsScreen" class="screen">
         <h1>Your Stats</h1>
         <div id="statsContent" style="font-size: 20px;"></div>
-        <button onclick="backToMainMenu()">Back to Menu</button>
+        <button onclick="showStatsHub()">Back to Stats Hub</button>
     </div>
 
     <!-- Everyone Stats Screen (Visualization) -->
     <div id="everyoneStatsScreen" class="screen">
-        <canvas id="everyoneStatsCanvas" width="1200" height="800" style="display: block; margin: 0 auto; background: #2C3E50;"></canvas>
+        <canvas id="everyoneStatsCanvas" width="1200" height="800" style="display: block; margin: 0 auto; background: #87CEEB;"></canvas>
+        <button id="everyoneStatsBackBtn" class="back-button" onclick="everyoneStatsActive = false; showStatsHub();">Back to Stats Hub</button>
     </div>
 
     <!-- Base Screen -->
@@ -5961,15 +5962,15 @@
                 player.velocityX += scaledMoveSpeed * deltaTime;
             }
 
-            // STEP 4: Jump with variable height (W, Up Arrow, or Space)
-            if ((statsHubKeys['w'] || statsHubKeys['ArrowUp'] || statsHubKeys[' ']) && isGrounded && !statsHubIsJumping) {
+            // STEP 4: Jump with variable height (W or Up Arrow ONLY - NOT Space, that's for portals)
+            if ((statsHubKeys['w'] || statsHubKeys['ArrowUp']) && isGrounded && !statsHubIsJumping) {
                 player.velocityY = -1.5 * sizeScale;
                 statsHubIsJumping = true;
                 player.jumpHoldTime = 0;
             }
 
             // Continue adding upward velocity while holding button
-            if (statsHubIsJumping && (statsHubKeys['w'] || statsHubKeys['ArrowUp'] || statsHubKeys[' ']) && player.velocityY < 0 && player.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
+            if (statsHubIsJumping && (statsHubKeys['w'] || statsHubKeys['ArrowUp']) && player.velocityY < 0 && player.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
                 player.jumpHoldTime += deltaTime;
                 const maxJumpVelocity = JUMP_POWER * sizeScale;
                 if (Math.abs(player.velocityY) < maxJumpVelocity && player.jumpHoldTime < MAX_JUMP_HOLD_TIME) {
@@ -5978,7 +5979,7 @@
             }
 
             // Stop adding velocity when button released
-            if (statsHubIsJumping && (!statsHubKeys['w'] && !statsHubKeys['ArrowUp'] && !statsHubKeys[' '])) {
+            if (statsHubIsJumping && (!statsHubKeys['w'] && !statsHubKeys['ArrowUp'])) {
                 statsHubIsJumping = false;
             }
 
@@ -6069,20 +6070,37 @@
             // Draw platforms
             for (const platform of statsHubPlatforms) {
                 if (platform.action && platform.action !== 'none') {
-                    // Portal platforms with gradient (EXACT MATCH to main menu)
+                    // Different colors for exit vs other portals (EXACT MATCH to main menu pattern)
                     const gradient = ctx.createLinearGradient(platform.x, platform.y, platform.x, platform.y + platform.height);
-                    gradient.addColorStop(0, 'rgba(79, 172, 254, 0.5)');
-                    gradient.addColorStop(1, 'rgba(79, 172, 254, 0.2)');
-                    ctx.fillStyle = gradient;
-                    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                    if (platform.action === 'exit') {
+                        // Exit portal - dark blue with glow
+                        gradient.addColorStop(0, 'rgba(25, 82, 154, 0.7)');
+                        gradient.addColorStop(1, 'rgba(25, 82, 154, 0.4)');
+                        ctx.fillStyle = gradient;
+                        ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
 
-                    // Glowing border (inside edge)
-                    ctx.shadowColor = '#4facfe';
-                    ctx.shadowBlur = 15;
-                    ctx.strokeStyle = '#4facfe';
-                    ctx.lineWidth = 4;
-                    ctx.strokeRect(platform.x + 2, platform.y + 2, platform.width - 4, platform.height - 4);
-                    ctx.shadowBlur = 0;
+                        // Dark blue glowing border
+                        ctx.shadowColor = '#19529A';
+                        ctx.shadowBlur = 15;
+                        ctx.strokeStyle = '#19529A';
+                        ctx.lineWidth = 4;
+                        ctx.strokeRect(platform.x + 2, platform.y + 2, platform.width - 4, platform.height - 4);
+                        ctx.shadowBlur = 0;
+                    } else {
+                        // Other portals - light blue with glow
+                        gradient.addColorStop(0, 'rgba(79, 172, 254, 0.5)');
+                        gradient.addColorStop(1, 'rgba(79, 172, 254, 0.2)');
+                        ctx.fillStyle = gradient;
+                        ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+
+                        // Light blue glowing border
+                        ctx.shadowColor = '#4facfe';
+                        ctx.shadowBlur = 15;
+                        ctx.strokeStyle = '#4facfe';
+                        ctx.lineWidth = 4;
+                        ctx.strokeRect(platform.x + 2, platform.y + 2, platform.width - 4, platform.height - 4);
+                        ctx.shadowBlur = 0;
+                    }
 
                     // Label with shadow
                     ctx.fillStyle = '#ffffff';
