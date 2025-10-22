@@ -3439,6 +3439,76 @@
                 console.log('Default level "Pi" added to database');
             }
 
+            // The Enclosure - Compact puzzle level with size mechanics and tight spaces
+            if (!existingLevelNames.includes('The Enclosure')) {
+                const enclosureData = {
+                    "platforms": [
+                        {"x": -40, "y": 30, "width": 280, "height": 10},
+                        {"x": -40, "y": 0, "width": 5, "height": 30},
+                        {"x": -5, "y": 0, "width": 50, "height": 30},
+                        {"x": 75, "y": 0, "width": 85, "height": 10},
+                        {"x": 200, "y": 0, "width": 40, "height": 10},
+                        {"x": 180, "y": 20, "width": 60, "height": 10},
+                        {"x": 190, "y": 10, "width": 50, "height": 10},
+                        {"x": 40, "y": -40, "width": 5, "height": 40},
+                        {"x": 75, "y": -40, "width": 5, "height": 40},
+                        {"x": -40, "y": -120, "width": 5, "height": 120},
+                        {"x": -5, "y": -120, "width": 5, "height": 120},
+                        {"x": -40, "y": -140, "width": 5, "height": 20},
+                        {"x": -5, "y": -140, "width": 165, "height": 20},
+                        {"x": -40, "y": -160, "width": 5, "height": 20},
+                        {"x": -5, "y": -160, "width": 5, "height": 20},
+                        {"x": 120, "y": -160, "width": 40, "height": 20},
+                        {"x": 120, "y": -120, "width": 40, "height": 120},
+                        {"x": -40, "y": 100, "width": 110, "height": 20},
+                        {"x": 130, "y": 100, "width": 110, "height": 20},
+                        {"x": 60, "y": 120, "width": 10, "height": 20},
+                        {"x": 130, "y": 120, "width": 10, "height": 20},
+                        {"x": 60, "y": 140, "width": 80, "height": 20},
+                        {"x": 260, "y": 60, "width": 40, "height": 20},
+                        {"x": 260, "y": -100, "width": 40, "height": 20},
+                        {"x": -50, "y": -160, "width": 10, "height": 200},
+                        {"x": -50, "y": 40, "width": 290, "height": 10},
+                        {"x": -120, "y": 120, "width": 80, "height": 20},
+                        {"x": 300, "y": -20, "width": 40, "height": 20}
+                    ],
+                    "hazards": [
+                        {"x": -200, "y": 200, "width": 640, "height": 40},
+                        {"x": -240, "y": -400, "width": 40, "height": 640},
+                        {"x": -240, "y": -440, "width": 680, "height": 40},
+                        {"x": 400, "y": -400, "width": 40, "height": 600}
+                    ],
+                    "growers": [
+                        {"x": 220, "y": -20, "width": 20, "height": 20}
+                    ],
+                    "shrinkers": [
+                        {"x": 80, "y": -40, "width": 40, "height": 40},
+                        {"x": 70, "y": 120, "width": 60, "height": 20}
+                    ],
+                    "defaultSizeBlocks": [
+                        {"x": 0, "y": -160, "width": 120, "height": 20}
+                    ],
+                    "backgroundBlocks": [],
+                    "foregroundBlocks": [],
+                    "triggers": [],
+                    "comments": [],
+                    "start": {"x": 0, "y": -40, "width": 40, "height": 40},
+                    "finish": {"x": -40, "y": 0, "width": 40, "height": 40},
+                    "physics": {
+                        "gravity": 0.132,
+                        "moveSpeed": 0.45,
+                        "jumpPower": 5.13,
+                        "maxSpeed": 5.625,
+                        "friction": 0.94,
+                        "airRes": 0.88,
+                        "fastFallMultiplier": 3.5,
+                        "jumpChargeRate": 0.41
+                    }
+                };
+                await addLevelToDatabase('The Enclosure', 'System', enclosureData);
+                console.log('Default level "The Enclosure" added to database');
+            }
+
         }
 
         // Practice mode (infinite runner with credit earning)
