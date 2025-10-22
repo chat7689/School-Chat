@@ -3388,6 +3388,56 @@
                 console.log('Default level "Size Shift Circuit" added to database');
             }
 
+            // Pi - Horizontal platforming level with pillars and hazardous ground
+            if (!existingLevelNames.includes('Pi')) {
+                const piData = {
+                    "platforms": [
+                        {"x": 0, "y": -120, "width": 40, "height": 120},
+                        {"x": 80, "y": -40, "width": 40, "height": 40},
+                        {"x": 160, "y": -160, "width": 40, "height": 160},
+                        {"x": 240, "y": -40, "width": 40, "height": 40},
+                        {"x": 320, "y": -200, "width": 40, "height": 200},
+                        {"x": 400, "y": -360, "width": 40, "height": 360},
+                        {"x": 480, "y": -80, "width": 40, "height": 80},
+                        {"x": 560, "y": -240, "width": 40, "height": 240},
+                        {"x": 640, "y": -200, "width": 40, "height": 200},
+                        {"x": 720, "y": -120, "width": 40, "height": 120},
+                        {"x": 800, "y": -200, "width": 40, "height": 200},
+                        {"x": 880, "y": -320, "width": 40, "height": 320},
+                        {"x": 960, "y": -360, "width": 40, "height": 360},
+                        {"x": 1040, "y": -280, "width": 40, "height": 280},
+                        {"x": 1120, "y": -360, "width": 40, "height": 360},
+                        {"x": 1200, "y": -120, "width": 40, "height": 120},
+                        {"x": 1280, "y": -80, "width": 40, "height": 80},
+                        {"x": 1360, "y": -120, "width": 40, "height": 120}
+                    ],
+                    "hazards": [
+                        {"x": -600, "y": 0, "width": 2680, "height": 40}
+                    ],
+                    "growers": [],
+                    "shrinkers": [],
+                    "defaultSizeBlocks": [],
+                    "backgroundBlocks": [],
+                    "foregroundBlocks": [],
+                    "triggers": [],
+                    "comments": [],
+                    "start": {"x": 0, "y": -160, "width": 40, "height": 40},
+                    "finish": {"x": 1440, "y": -320, "width": 40, "height": 320},
+                    "physics": {
+                        "gravity": 0.132,
+                        "moveSpeed": 0.45,
+                        "jumpPower": 5.13,
+                        "maxSpeed": 5.625,
+                        "friction": 0.94,
+                        "airRes": 0.88,
+                        "fastFallMultiplier": 3.5,
+                        "jumpChargeRate": 0.41
+                    }
+                };
+                await addLevelToDatabase('Pi', 'System', piData);
+                console.log('Default level "Pi" added to database');
+            }
+
         }
 
         // Practice mode (infinite runner with credit earning)
