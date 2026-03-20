@@ -3,75 +3,283 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Speedrun - Login</title>
+    <title>Block Racers Online</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="icon" type="image/png" id="favicon">
     <style>
+        :root {
+            --bg: #07111f;
+            --bg-accent: #142742;
+            --panel: rgba(7, 17, 31, 0.82);
+            --panel-border: rgba(138, 242, 255, 0.24);
+            --text: #f3f8ff;
+            --muted: #8ea8c7;
+            --cyan: #75f0ff;
+            --gold: #ffc857;
+            --shadow: 0 28px 80px rgba(0, 0, 0, 0.45);
+        }
+
         * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
         }
 
         body {
-            overflow-y: auto;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            font-family: 'Arial', sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
             min-height: 100vh;
-            padding: 20px 0;
+            overflow-x: hidden;
+            background:
+                radial-gradient(circle at top, rgba(117, 240, 255, 0.15), transparent 35%),
+                radial-gradient(circle at 20% 20%, rgba(255, 200, 87, 0.18), transparent 25%),
+                linear-gradient(145deg, var(--bg) 0%, #0b1930 54%, var(--bg-accent) 100%);
+            color: var(--text);
+            font-family: "Chakra Petch", sans-serif;
         }
 
-        .container {
-            background: rgba(0,0,0,0.9);
-            color: white;
-            padding: 40px;
+        body::before,
+        body::after {
+            content: "";
+            position: fixed;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        body::before {
+            top: 6vh;
+            right: -6rem;
+            width: 18rem;
+            height: 18rem;
+            border-radius: 50%;
+            background: rgba(117, 240, 255, 0.12);
+            filter: blur(18px);
+        }
+
+        body::after {
+            left: -4rem;
+            bottom: 5vh;
+            width: 16rem;
+            height: 16rem;
+            border-radius: 2rem;
+            background: rgba(255, 200, 87, 0.12);
+            transform: rotate(24deg);
+            filter: blur(20px);
+        }
+
+        .shell {
+            position: relative;
+            z-index: 1;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            padding: 32px 18px;
+        }
+
+        .layout {
+            width: min(1180px, 100%);
+            display: grid;
+            grid-template-columns: 1.15fr 0.85fr;
+            gap: 28px;
+            align-items: stretch;
+        }
+
+        .hero,
+        .auth-panel {
+            background: var(--panel);
+            border: 1px solid var(--panel-border);
+            border-radius: 28px;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(16px);
+        }
+
+        .hero {
+            position: relative;
+            overflow: hidden;
+            padding: 42px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .hero::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(transparent 0 92%, rgba(117, 240, 255, 0.1) 92% 100%),
+                linear-gradient(90deg, transparent 0 92%, rgba(117, 240, 255, 0.08) 92% 100%);
+            background-size: 100% 48px, 48px 100%;
+            opacity: 0.35;
+            pointer-events: none;
+        }
+
+        .hero-top,
+        .hero-bottom {
+            position: relative;
+            z-index: 1;
+        }
+
+        .eyebrow,
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(117, 240, 255, 0.26);
+            background: rgba(117, 240, 255, 0.08);
+            color: var(--cyan);
+            font-size: 0.86rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .hero h1 {
+            margin-top: 22px;
+            font-family: "Black Ops One", sans-serif;
+            font-size: clamp(3rem, 5vw, 5.3rem);
+            line-height: 0.94;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            text-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        }
+
+        .hero h1 span {
+            color: var(--gold);
+        }
+
+        .hero-copy {
+            max-width: 34rem;
+            margin-top: 20px;
+            color: var(--muted);
+            font-size: 1.02rem;
+            line-height: 1.75;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+            margin-top: 30px;
+        }
+
+        .stat-card {
+            padding: 18px;
             border-radius: 20px;
-            text-align: center;
-            max-width: 450px;
-            width: 90%;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
 
-        h1 {
-            font-size: 64px;
-            margin-bottom: 10px;
-            color: #FFC107;
-            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+        .stat-card strong {
+            display: block;
+            font-size: 1.7rem;
         }
 
-        .version {
-            color: #888;
-            font-size: 14px;
-            margin-bottom: 30px;
+        .stat-card span {
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+            margin-top: 26px;
+        }
+
+        .feature-card {
+            padding: 18px;
+            border-radius: 20px;
+            background: rgba(5, 13, 24, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .feature-card h3 {
+            margin-bottom: 8px;
+            color: var(--gold);
+            font-size: 1rem;
+        }
+
+        .feature-card p {
+            color: var(--muted);
+            line-height: 1.55;
+            font-size: 0.95rem;
+        }
+
+        .auth-panel {
+            padding: 26px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .auth-head {
+            margin-bottom: 24px;
+        }
+
+        .auth-head h2 {
+            margin-top: 14px;
+            font-size: 2rem;
+        }
+
+        .auth-head p {
+            margin-top: 10px;
+            color: var(--muted);
+            line-height: 1.65;
         }
 
         .tab-buttons {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 10px;
-            margin-bottom: 30px;
+            margin-bottom: 18px;
+            padding: 6px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.05);
         }
 
         .tab-button {
-            flex: 1;
-            padding: 15px;
-            font-size: 18px;
-            background: rgba(255,255,255,0.1);
-            color: white;
-            border: 2px solid transparent;
-            border-radius: 10px;
+            border: 0;
+            border-radius: 14px;
+            padding: 14px;
+            font: inherit;
+            font-weight: 700;
+            color: var(--muted);
+            background: transparent;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
         }
 
         .tab-button.active {
-            background: rgba(79, 172, 254, 0.3);
-            border-color: #4facfe;
+            background: linear-gradient(135deg, rgba(117, 240, 255, 0.18), rgba(255, 200, 87, 0.16));
+            color: var(--text);
         }
 
         .tab-button:hover {
-            background: rgba(255,255,255,0.2);
+            transform: translateY(-1px);
+            color: var(--text);
+        }
+
+        .message {
+            display: none;
+            padding: 14px 16px;
+            border-radius: 16px;
+            margin-bottom: 16px;
+            font-size: 0.96rem;
+            line-height: 1.5;
+        }
+
+        .message.is-error {
+            background: rgba(255, 124, 124, 0.12);
+            border: 1px solid rgba(255, 124, 124, 0.3);
+            color: #ffd6d6;
+        }
+
+        .message.is-success {
+            background: rgba(140, 255, 170, 0.12);
+            border: 1px solid rgba(140, 255, 170, 0.28);
+            color: #d8ffe2;
         }
 
         .form-container {
@@ -83,205 +291,241 @@
         }
 
         .input-group {
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
 
         .input-group label {
             display: block;
-            text-align: left;
             margin-bottom: 8px;
-            color: #4facfe;
-            font-weight: bold;
+            font-size: 0.95rem;
+            font-weight: 600;
         }
 
         .input-group input {
             width: 100%;
-            padding: 15px;
-            font-size: 16px;
-            border: 2px solid #4facfe;
-            border-radius: 10px;
-            background: rgba(255,255,255,0.1);
-            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 16px;
+            padding: 16px 18px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text);
+            font: inherit;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
         }
 
         .input-group input::placeholder {
-            color: rgba(255,255,255,0.5);
+            color: #7b93b3;
         }
 
         .input-group input:focus {
             outline: none;
-            border-color: #FFC107;
-            background: rgba(255,255,255,0.15);
+            border-color: rgba(117, 240, 255, 0.7);
+            box-shadow: 0 0 0 4px rgba(117, 240, 255, 0.12);
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .info-text {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 0.84rem;
         }
 
         .submit-btn {
             width: 100%;
-            padding: 15px;
-            font-size: 20px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 10px;
+            border: 0;
+            border-radius: 18px;
+            padding: 16px 18px;
+            font: inherit;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #08111d;
+            background: linear-gradient(135deg, var(--gold), #ffde87);
             cursor: pointer;
-            transition: all 0.3s;
-            font-weight: bold;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+            box-shadow: 0 16px 32px rgba(255, 200, 87, 0.24);
         }
 
         .submit-btn:hover {
-            transform: scale(1.05);
-            background: #45a049;
+            transform: translateY(-1px);
+            filter: brightness(1.02);
         }
 
         .submit-btn:disabled {
-            background: #666;
-            cursor: not-allowed;
+            cursor: wait;
+            filter: grayscale(0.18);
             transform: none;
-        }
-
-        .error-message {
-            background: rgba(255, 0, 0, 0.2);
-            border: 2px solid #ff4444;
-            color: #ff4444;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: none;
-        }
-
-        .success-message {
-            background: rgba(0, 255, 0, 0.2);
-            border: 2px solid #44ff44;
-            color: #44ff44;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: none;
-        }
-
-        .info-text {
-            color: #888;
-            font-size: 12px;
-            margin-top: 10px;
+            opacity: 0.72;
         }
 
         .loading {
             display: none;
-            margin-top: 10px;
-            color: #4facfe;
+            margin-top: 14px;
+            color: var(--cyan);
+            text-align: center;
+            font-size: 0.95rem;
         }
 
-        .features {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid rgba(255,255,255,0.2);
+        .loading.is-visible {
+            display: block;
         }
 
-        .features h3 {
-            color: #4facfe;
-            margin-bottom: 15px;
+        @media (max-width: 960px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .hero {
+                padding: 30px;
+            }
         }
 
-        .feature-list {
-            list-style: none;
-            padding: 0;
-        }
+        @media (max-width: 640px) {
+            .shell {
+                padding: 18px 12px;
+            }
 
-        .feature-list li {
-            margin: 8px 0;
-            color: #ccc;
-        }
+            .hero,
+            .auth-panel {
+                padding: 22px;
+                border-radius: 22px;
+            }
 
-        .feature-list li::before {
-            content: "⚡ ";
-            color: #FFC107;
+            .stats,
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
         }
-
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>⚡ SPEEDRUN ⚡</h1>
-        <p class="version">v10.2 - Online Edition</p>
-
-        <div class="tab-buttons">
-            <button class="tab-button active" onclick="switchTab('login')">Login</button>
-            <button class="tab-button" onclick="switchTab('register')">Register</button>
-        </div>
-
-        <div id="error-message" class="error-message"></div>
-        <div id="success-message" class="success-message"></div>
-
-        <!-- Login Form -->
-        <div id="login-form" class="form-container active">
-            <form onsubmit="handleLogin(event)">
-                <div class="input-group">
-                    <label for="login-username">Username</label>
-                    <input type="text" id="login-username" placeholder="Enter username" required autocomplete="username">
+    <main class="shell">
+        <section class="layout">
+            <article class="hero">
+                <div class="hero-top">
+                    <div class="eyebrow">Version 10.2 | Multiplayer platform racing</div>
+                    <h1>Block <span>Racers</span> Online</h1>
+                    <p class="hero-copy">
+                        Race through custom maps, build your own levels, and chase faster times without losing the arcade feel.
+                        The landing page now reflects the game instead of reading like a quick prototype.
+                    </p>
+                    <div class="stats">
+                        <div class="stat-card">
+                            <strong>8</strong>
+                            <span>core levels</span>
+                        </div>
+                        <div class="stat-card">
+                            <strong>14+</strong>
+                            <span>editor tools</span>
+                        </div>
+                        <div class="stat-card">
+                            <strong>Live</strong>
+                            <span>party racing</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="input-group">
-                    <label for="login-password">Password</label>
-                    <input type="password" id="login-password" placeholder="Enter password" required autocomplete="current-password">
+                <div class="hero-bottom">
+                    <div class="pill">Built for speedrunning, creation, and leaderboard chasing</div>
+                    <div class="feature-grid">
+                        <div class="feature-card">
+                            <h3>Race Together</h3>
+                            <p>Compete in real time with party invites, live position tracking, and global leaderboard pressure.</p>
+                        </div>
+                        <div class="feature-card">
+                            <h3>Build Maps</h3>
+                            <p>Use the editor to create routes, hazards, movement timing, and custom runs for other players.</p>
+                        </div>
+                        <div class="feature-card">
+                            <h3>Track Progress</h3>
+                            <p>Keep personal bests, compare history across runs, and push for cleaner movement on every map.</p>
+                        </div>
+                        <div class="feature-card">
+                            <h3>In-Game Economy</h3>
+                            <p>Earn credits, customize your player, and manage secure storage through the BASE system.</p>
+                        </div>
+                    </div>
                 </div>
-                <button type="submit" class="submit-btn" id="login-btn">Login</button>
-            </form>
-        </div>
+            </article>
 
-        <!-- Register Form -->
-        <div id="register-form" class="form-container">
-            <form onsubmit="handleRegister(event)">
-                <div class="input-group">
-                    <label for="register-username">Username</label>
-                    <input type="text" id="register-username" placeholder="Choose username (max 10 chars)" maxlength="10" required autocomplete="username">
-                    <p class="info-text">3-10 characters, alphanumeric only</p>
+            <aside class="auth-panel">
+                <div class="auth-head">
+                    <div class="pill">Account access</div>
+                    <h2>Enter the race queue</h2>
+                    <p>Use your username to log in or create an account. Existing Firebase auth behavior is preserved.</p>
                 </div>
-                <div class="input-group">
-                    <label for="register-password">Password</label>
-                    <input type="password" id="register-password" placeholder="Choose password" required autocomplete="new-password">
-                    <p class="info-text">Minimum 6 characters</p>
+
+                <div class="tab-buttons" role="tablist" aria-label="Authentication tabs">
+                    <button class="tab-button active" type="button" data-tab="login" aria-selected="true">Login</button>
+                    <button class="tab-button" type="button" data-tab="register" aria-selected="false">Register</button>
                 </div>
-                <div class="input-group">
-                    <label for="register-password-confirm">Confirm Password</label>
-                    <input type="password" id="register-password-confirm" placeholder="Confirm password" required autocomplete="new-password">
+
+                <div id="error-message" class="message is-error" role="alert"></div>
+                <div id="success-message" class="message is-success" role="status"></div>
+
+                <div id="login-form" class="form-container active">
+                    <form onsubmit="handleLogin(event)">
+                        <div class="input-group">
+                            <label for="login-username">Username</label>
+                            <input type="text" id="login-username" placeholder="Enter username" required autocomplete="username">
+                        </div>
+                        <div class="input-group">
+                            <label for="login-password">Password</label>
+                            <input type="password" id="login-password" placeholder="Enter password" required autocomplete="current-password">
+                        </div>
+                        <button type="submit" class="submit-btn" id="login-btn">Login</button>
+                    </form>
                 </div>
-                <button type="submit" class="submit-btn" id="register-btn">Create Account</button>
-            </form>
-        </div>
 
-        <div id="loading" class="loading">Loading...</div>
+                <div id="register-form" class="form-container">
+                    <form onsubmit="handleRegister(event)">
+                        <div class="input-group">
+                            <label for="register-username">Username</label>
+                            <input type="text" id="register-username" placeholder="Choose username" maxlength="10" required autocomplete="username">
+                            <p class="info-text">3 to 10 characters. Letters and numbers only.</p>
+                        </div>
+                        <div class="input-group">
+                            <label for="register-password">Password</label>
+                            <input type="password" id="register-password" placeholder="Choose password" required autocomplete="new-password">
+                            <p class="info-text">Minimum 6 characters.</p>
+                        </div>
+                        <div class="input-group">
+                            <label for="register-password-confirm">Confirm Password</label>
+                            <input type="password" id="register-password-confirm" placeholder="Confirm password" required autocomplete="new-password">
+                        </div>
+                        <button type="submit" class="submit-btn" id="register-btn">Create account</button>
+                    </form>
+                </div>
 
-        <div class="features">
-            <h3>Game Features</h3>
-            <ul class="feature-list">
-                <li>8 Challenging Levels</li>
-                <li>Online Leaderboards</li>
-                <li>Personal Best Tracking</li>
-                <li>Smooth Platforming Physics</li>
-                <li>Global Rankings</li>
-            </ul>
-        </div>
-    </div>
+                <div id="loading" class="loading">Connecting to Firebase...</div>
+            </aside>
+        </section>
+    </main>
 
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-functions-compat.js"></script>
-
-    <!-- Secure Configuration System -->
     <script src="public/config-loader.js"></script>
 
     <script>
-        // Initialize Firebase with secure configuration
-        let auth, database, functions;
+        let auth;
+        let database;
 
-        (async function() {
+        const tabButtons = Array.from(document.querySelectorAll('.tab-button'));
+        const forms = Array.from(document.querySelectorAll('.form-container'));
+        const errorDiv = document.getElementById('error-message');
+        const successDiv = document.getElementById('success-message');
+        const loadingDiv = document.getElementById('loading');
+
+        tabButtons.forEach((button) => {
+            button.addEventListener('click', () => switchTab(button.dataset.tab));
+        });
+
+        (async function initializeApp() {
             try {
+                setLoadingState(true, 'Connecting to Firebase...');
                 const fb = await initializeFirebase();
                 auth = fb.auth;
                 database = fb.database;
-                functions = fb.functions;
+                setLoadingState(false);
 
-                // Check if already logged in
                 auth.onAuthStateChanged((user) => {
                     if (user) {
                         window.location.href = 'game.html';
@@ -289,72 +533,66 @@
                 });
             } catch (error) {
                 console.error('Initialization error:', error);
-                // Don't show error UI here, just log it
+                showError('Failed to initialize app. Please refresh and try again.');
+                setLoadingState(false);
             }
         })();
 
-        // Don't set persistence here - it will be set to SESSION during login/register
+        createFavicon();
 
-        // Create favicon with orange square character
-        const faviconCanvas = document.createElement('canvas');
-        faviconCanvas.width = 32;
-        faviconCanvas.height = 32;
-        const faviconCtx = faviconCanvas.getContext('2d');
+        function createFavicon() {
+            const faviconCanvas = document.createElement('canvas');
+            faviconCanvas.width = 32;
+            faviconCanvas.height = 32;
+            const faviconCtx = faviconCanvas.getContext('2d');
 
-        // Draw orange square character
-        faviconCtx.fillStyle = '#FF8C42';
-        faviconCtx.fillRect(6, 6, 20, 20);
-        faviconCtx.strokeStyle = '#333';
-        faviconCtx.lineWidth = 2;
-        faviconCtx.strokeRect(6, 6, 20, 20);
+            faviconCtx.fillStyle = '#ffb547';
+            faviconCtx.fillRect(6, 6, 20, 20);
+            faviconCtx.strokeStyle = '#07111f';
+            faviconCtx.lineWidth = 2;
+            faviconCtx.strokeRect(6, 6, 20, 20);
 
-        // Set favicon
-        const favicon = document.getElementById('favicon');
-        favicon.href = faviconCanvas.toDataURL('image/png');
+            document.getElementById('favicon').href = faviconCanvas.toDataURL('image/png');
+        }
 
         function switchTab(tab) {
-            document.querySelectorAll('.tab-button').forEach(btn => {
-                btn.classList.remove('active');
+            tabButtons.forEach((button) => {
+                const isActive = button.dataset.tab === tab;
+                button.classList.toggle('active', isActive);
+                button.setAttribute('aria-selected', String(isActive));
             });
-            event.target.classList.add('active');
 
-            document.querySelectorAll('.form-container').forEach(form => {
-                form.classList.remove('active');
+            forms.forEach((form) => {
+                form.classList.toggle('active', form.id === tab + '-form');
             });
-            document.getElementById(tab + '-form').classList.add('active');
 
             hideError();
             hideSuccess();
         }
 
         function showError(message) {
-            const errorDiv = document.getElementById('error-message');
             errorDiv.textContent = message;
             errorDiv.style.display = 'block';
             hideSuccess();
         }
 
         function hideError() {
-            document.getElementById('error-message').style.display = 'none';
+            errorDiv.style.display = 'none';
         }
 
         function showSuccess(message) {
-            const successDiv = document.getElementById('success-message');
             successDiv.textContent = message;
             successDiv.style.display = 'block';
             hideError();
         }
 
         function hideSuccess() {
-            document.getElementById('success-message').style.display = 'none';
+            successDiv.style.display = 'none';
         }
 
-        function showLoading() {
-            document.getElementById('loading').style.display = 'block';
-        }
-
-        function hideLoading() {
-            document.getElementById('loading').style.display = 'none';
+        function setLoadingState(isVisible, message) {
+            loadingDiv.textContent = message || 'Loading...';
+            loadingDiv.classList.toggle('is-visible', isVisible);
         }
 
         async function handleLogin(event) {
@@ -364,39 +602,36 @@
 
             const loginBtn = document.getElementById('login-btn');
             loginBtn.disabled = true;
-            showLoading();
+            setLoadingState(true, 'Signing in...');
 
             const username = document.getElementById('login-username').value.trim();
             const password = document.getElementById('login-password').value;
-
-            // Firebase Auth uses email format, so we'll use username@speedrun.local
             const email = username.toLowerCase() + '@speedrun.local';
 
             try {
-                // Set persistence to SESSION before logging in
                 await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
                 await auth.signInWithEmailAndPassword(email, password);
-                showSuccess('Login successful! Redirecting...');
+                showSuccess('Login successful. Redirecting...');
                 setTimeout(() => {
                     window.location.href = 'game.html';
-                }, 1000);
+                }, 900);
             } catch (error) {
-                let errorMessage = '';
+                let errorMessage = 'Login failed. Please check your credentials.';
+
                 if (error.code === 'auth/user-not-found') {
-                    errorMessage = 'This account does not exist';
+                    errorMessage = 'This account does not exist.';
                 } else if (error.code === 'auth/wrong-password') {
-                    errorMessage = 'Incorrect password';
+                    errorMessage = 'Incorrect password.';
                 } else if (error.code === 'auth/invalid-email' || error.code === 'auth/invalid-credential') {
-                    errorMessage = 'This account does not exist';
+                    errorMessage = 'This account does not exist.';
                 } else if (error.code === 'auth/too-many-requests') {
-                    errorMessage = 'Too many failed attempts. Please try again later';
-                } else {
-                    errorMessage = 'Login failed. Please check your credentials';
+                    errorMessage = 'Too many failed attempts. Please try again later.';
                 }
+
                 showError(errorMessage);
                 loginBtn.disabled = false;
             } finally {
-                hideLoading();
+                setLoadingState(false);
             }
         }
 
@@ -410,7 +645,6 @@
             const password = document.getElementById('register-password').value;
             const passwordConfirm = document.getElementById('register-password-confirm').value;
 
-            // Validation using secure validators
             const usernameValidation = Validators.validateUsername(username);
             if (!usernameValidation.valid) {
                 showError(usernameValidation.error);
@@ -424,79 +658,62 @@
             }
 
             if (password !== passwordConfirm) {
-                showError('Passwords do not match');
+                showError('Passwords do not match.');
                 return;
             }
 
             registerBtn.disabled = true;
-            showLoading();
+            setLoadingState(true, 'Creating account...');
 
-            // Firebase Auth uses email format, so we'll use username@speedrun.local
             const email = username.toLowerCase() + '@speedrun.local';
 
             try {
-                console.log('Starting registration for username:', username);
-
-                // Check if username is already taken
-                console.log('Checking if username exists...');
                 const usernameCheck = await database.ref('usernames/' + username.toLowerCase()).once('value');
                 if (usernameCheck.exists()) {
-                    console.log('Username already taken');
-                    showError('Username already taken');
+                    showError('Username already taken.');
                     registerBtn.disabled = false;
-                    hideLoading();
+                    setLoadingState(false);
                     return;
                 }
 
-                // Set persistence to SESSION before creating account
                 await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
 
-                // Create user
-                console.log('Creating Firebase auth user with email:', email);
                 const userCredential = await auth.createUserWithEmailAndPassword(email, password);
                 const user = userCredential.user;
-                console.log('User created successfully:', user.uid);
 
-                // Store username mapping
-                console.log('Storing username mapping...');
                 await database.ref('usernames/' + username.toLowerCase()).set({
                     uid: user.uid,
                     username: username,
                     createdAt: firebase.database.ServerValue.TIMESTAMP
                 });
 
-                // Store user profile
-                console.log('Storing user profile...');
                 await database.ref('users/' + user.uid).set({
                     username: username,
                     createdAt: firebase.database.ServerValue.TIMESTAMP
                 });
 
-                console.log('Registration complete!');
-                showSuccess('Account created! Redirecting...');
+                showSuccess('Account created. Redirecting...');
                 setTimeout(() => {
                     window.location.href = 'game.html';
-                }, 1000);
+                }, 900);
             } catch (error) {
                 console.error('Registration error:', error);
-                console.error('Error code:', error.code);
-                console.error('Error message:', error.message);
-                let errorMessage = '';
+                let errorMessage = 'Registration failed. Please try again.';
+
                 if (error.code === 'auth/email-already-in-use') {
-                    errorMessage = 'Username already taken';
+                    errorMessage = 'Username already taken.';
                 } else if (error.code === 'auth/weak-password') {
-                    errorMessage = 'Password must be at least 6 characters';
+                    errorMessage = 'Password must be at least 6 characters.';
                 } else if (error.code === 'auth/operation-not-allowed') {
-                    errorMessage = 'Account creation is currently disabled. Please contact support';
+                    errorMessage = 'Account creation is disabled right now.';
                 } else if (error.code === 'auth/network-request-failed') {
-                    errorMessage = 'Network error. Please check your connection';
-                } else {
-                    errorMessage = 'Registration failed. Please try again';
+                    errorMessage = 'Network error. Please check your connection.';
                 }
+
                 showError(errorMessage);
                 registerBtn.disabled = false;
             } finally {
-                hideLoading();
+                setLoadingState(false);
             }
         }
     </script>
